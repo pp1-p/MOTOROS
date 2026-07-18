@@ -3,12 +3,14 @@ import {
   Check,
   Clock3,
   MailCheck,
+  MessageSquareText,
   Phone,
 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
+import { getPublicContactDetails } from "@/lib/public-contact";
 
 export async function ConfirmationPage({
   eyebrow,
@@ -26,6 +28,7 @@ export async function ConfirmationPage({
   primaryLabel?: string;
 }) {
   const publicSiteConfig = await getPublicSiteConfig();
+  const contact = getPublicContactDetails(publicSiteConfig);
   return (
     <section className="relative overflow-hidden bg-[#15221d] py-16 text-white sm:py-24">
       <div className="absolute top-0 right-0 size-[34rem] rounded-full bg-[#d7ad69]/10 blur-3xl" />
@@ -78,10 +81,17 @@ export async function ConfirmationPage({
               variant="outline"
               className="border-white/25 text-white hover:bg-white/10"
             >
-              <a href={publicSiteConfig.phoneHref}>
-                <Phone aria-hidden />
-                {publicSiteConfig.phone}
-              </a>
+              {contact.phone && contact.phoneHref ? (
+                <a href={contact.phoneHref}>
+                  <Phone aria-hidden />
+                  {contact.phone}
+                </a>
+              ) : (
+                <Link href="/contact">
+                  <MessageSquareText aria-hidden />
+                  Contact the team
+                </Link>
+              )}
             </Button>
           </div>
         </div>

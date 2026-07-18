@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { LegalPage } from "@/components/public/legal-page";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
+import { getPublicContactDetails } from "@/lib/public-contact";
 
 export const metadata: Metadata = {
   title: "Privacy notice",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 
 export default async function PrivacyPage() {
   const publicSiteConfig = await getPublicSiteConfig();
+  const contact = getPublicContactDetails(publicSiteConfig);
   return (
     <LegalPage
       eyebrow="Your information"
@@ -24,17 +26,29 @@ export default async function PrivacyPage() {
             <>
               <p>
                 The dealership operating this website is the data controller for
-                customer information submitted here. The final trading name,
-                registered address, company number and privacy contact must be
-                published from DealerOS settings before launch.
+                customer information submitted here.
               </p>
-              <p>
-                For privacy questions, email{" "}
-                <a href={`mailto:${publicSiteConfig.email}`}>
-                  {publicSiteConfig.email}
-                </a>{" "}
-                or use the <Link href="/contact">contact form</Link>.
-              </p>
+              {contact.address ? (
+                <p>Published contact address: {contact.address}.</p>
+              ) : (
+                <p>
+                  A postal contact address has not been published yet. You can
+                  request it through the <Link href="/contact">contact form</Link>.
+                </p>
+              )}
+              {contact.email && contact.emailHref ? (
+                <p>
+                  For privacy questions, email{" "}
+                  <a href={contact.emailHref}>{contact.email}</a> or use the{" "}
+                  <Link href="/contact">contact form</Link>.
+                </p>
+              ) : (
+                <p>
+                  For privacy questions, use the{" "}
+                  <Link href="/contact">contact form</Link>. The dealership will
+                  reply using the details you provide.
+                </p>
+              )}
             </>
           ),
         },

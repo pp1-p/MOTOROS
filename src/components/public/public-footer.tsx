@@ -3,11 +3,13 @@ import {
   Clock3,
   Mail,
   MapPin,
+  MessageSquareText,
   Phone,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 
+import { getPublicContactDetails } from "@/lib/public-contact";
 import { getSiteLogoInitial } from "@/lib/site-metadata";
 
 import {
@@ -28,6 +30,8 @@ export function PublicFooter({
 }: {
   config?: PublicSiteConfig;
 }) {
+  const contact = getPublicContactDetails(config);
+
   return (
     <footer className="bg-[#101512] text-white">
       <div className="container-shell grid gap-12 py-14 md:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr_1fr] lg:py-20">
@@ -75,36 +79,55 @@ export function PublicFooter({
 
         <div>
           <h2 className="mb-5 text-xs font-extrabold tracking-[0.16em] text-[#d7ad69] uppercase">
-            Visit or speak to us
+            Contact the team
           </h2>
           <ul className="grid gap-4 text-sm leading-6 text-white/65">
+            {contact.phone && contact.phoneHref ? (
+              <li className="flex gap-3">
+                <Phone className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
+                <a className="hover:text-white" href={contact.phoneHref}>
+                  {contact.phone}
+                </a>
+              </li>
+            ) : null}
+            {contact.email && contact.emailHref ? (
+              <li className="flex gap-3">
+                <Mail className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
+                <a
+                  className="break-all hover:text-white"
+                  href={contact.emailHref}
+                >
+                  {contact.email}
+                </a>
+              </li>
+            ) : null}
+            {contact.address ? (
+              <li className="flex gap-3">
+                <MapPin className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
+                <span>{contact.address}</span>
+              </li>
+            ) : null}
+            {contact.hours.length > 0 ? (
+              <li className="flex gap-3">
+                <Clock3 className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
+                <span>
+                  {contact.hours
+                    .slice(0, 3)
+                    .map((row) => `${row.days} ${row.times}`)
+                    .join(" · ")}
+                </span>
+              </li>
+            ) : null}
             <li className="flex gap-3">
-              <Phone className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
-              <a className="hover:text-white" href={config.phoneHref}>
-                {config.phone}
-              </a>
-            </li>
-            <li className="flex gap-3">
-              <Mail className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
-              <a
-                className="break-all hover:text-white"
-                href={`mailto:${config.email}`}
-              >
-                {config.email}
-              </a>
-            </li>
-            <li className="flex gap-3">
-              <MapPin className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
-              <span>{config.address}</span>
-            </li>
-            <li className="flex gap-3">
-              <Clock3 className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
-              <span>
-                {config.hours
-                  .slice(0, 3)
-                  .map((row) => `${row.days} ${row.times}`)
-                  .join(" · ")}
-              </span>
+              <MessageSquareText
+                className="mt-1 size-4 shrink-0 text-[#d7ad69]"
+                aria-hidden
+              />
+              <Link className="hover:text-white" href="/contact">
+                {contact.phone || contact.email
+                  ? "Send us a message"
+                  : "Use our contact form to reach the team"}
+              </Link>
             </li>
           </ul>
         </div>

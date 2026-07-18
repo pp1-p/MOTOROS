@@ -2173,6 +2173,23 @@ begin
       using errcode = '42501';
   end if;
 
+  if p_changes ? 'status'
+    and target_job.status not in (
+      'awaiting_inspection',
+      'diagnosing',
+      'estimate_preparing',
+      'approved',
+      'parts_ordered',
+      'parts_received',
+      'work_in_progress',
+      'quality_check',
+      'ready_for_collection'
+    )
+  then
+    raise exception 'A manager must change this repair status'
+      using errcode = '22023';
+  end if;
+
   update public.repair_jobs
   set
     status = case

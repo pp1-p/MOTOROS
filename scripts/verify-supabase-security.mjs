@@ -8,6 +8,10 @@ const hardeningPath = join(
   migrationsDirectory,
   "202607180001_security_hardening.sql",
 );
+const technicianStatusGuardPath = join(
+  migrationsDirectory,
+  "202607180002_technician_status_guard.sql",
+);
 
 function read(path) {
   return readFileSync(path, "utf8").replaceAll("\r\n", "\n");
@@ -52,6 +56,91 @@ const workflows = read(
 assert(
   !/(?<!extensions\.)\bdigest\(/u.test(workflows),
   "A public workflow still has an unqualified digest call",
+);
+
+const technicianStatuses = [
+  "awaiting_inspection",
+  "diagnosing",
+  "estimate_preparing",
+  "approved",
+  "parts_ordered",
+  "parts_received",
+  "work_in_progress",
+  "quality_check",
+  "ready_for_collection",
+];
+
+function assertTechnicianCurrentStatusGuard(sql, label) {
+  const signature = `create or replace function public.update_assigned_repair_job(
+  p_repair_job_id uuid,
+  p_changes jsonb
+)`;
+  const functionStart = sql.indexOf(signature);
+  assert(functionStart >= 0, `${label} is missing the guarded repair RPC`);
+
+  const functionEnd = sql.indexOf("\n$$;", functionStart);
+  assert(functionEnd >= 0, `${label} has an incomplete guarded repair RPC`);
+  const functionBody = sql.slice(functionStart, functionEnd);
+  const lockIndex = functionBody.indexOf("for update;");
+  const guardIndex = functionBody.indexOf(
+    "if p_changes ? 'status'\n    and target_job.status not in (",
+  );
+  const updateIndex = functionBody.indexOf(
+    "update public.repair_jobs",
+    guardIndex,
+  );
+
+  assert(lockIndex >= 0, `${label} does not lock the target repair row`);
+  assert(
+    guardIndex > lockIndex,
+    `${label} does not guard the current repair status after locking the row`,
+  );
+  assert(
+    updateIndex > guardIndex,
+    `${label} does not guard the current repair status before updating`,
+  );
+
+  const guardEnd = functionBody.indexOf("  then", guardIndex);
+  assert(guardEnd > guardIndex, `${label} has an incomplete current-status guard`);
+  const guardBody = functionBody.slice(guardIndex, guardEnd);
+  for (const status of technicianStatuses) {
+    assert(
+      guardBody.includes(`'${status}'`),
+      `${label} current-status guard is missing ${status}`,
+    );
+  }
+  for (const managerStatus of [
+    "awaiting_customer_approval",
+    "collected",
+    "cancelled",
+  ]) {
+    assert(
+      !guardBody.includes(`'${managerStatus}'`),
+      `${label} lets technicians move a manager-controlled ${managerStatus} repair`,
+    );
+  }
+  assert(
+    functionBody.includes("raise exception 'A manager must change this repair status'"),
+    `${label} is missing the manager-controlled status rejection`,
+  );
+}
+
+assertTechnicianCurrentStatusGuard(workflows, "Canonical workflow migration");
+
+const technicianStatusGuard = read(technicianStatusGuardPath);
+assertTechnicianCurrentStatusGuard(
+  technicianStatusGuard,
+  "Technician status follow-up migration",
+);
+assert(
+  technicianStatusGuard.includes(
+    "from public, anon, authenticated, service_role;\ngrant execute on function public.update_assigned_repair_job(uuid, jsonb)\n  to authenticated;",
+  ),
+  "Technician status follow-up migration does not restate the guarded RPC ACL",
+);
+assert(
+  technicianStatusGuard.includes("do $verify_technician_repair_acl$"),
+  "Technician status follow-up migration is missing its ACL verification",
 );
 
 const hardening = read(hardeningPath);
@@ -147,5 +236,5 @@ for (const key of [
 }
 
 console.log(
-  `Verified ${migrationFiles.length} migrations, combined parity, digest qualification, service RPC ACL declarations and customer audit redaction.`,
+  `Verified ${migrationFiles.length} migrations, combined parity, technician status guard, digest qualification, service RPC ACL declarations and customer audit redaction.`,
 );

@@ -34,6 +34,7 @@ import {
   getVehiclePresentation,
 } from "@/lib/data/vehicles";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
+import { getPublicContactDetails } from "@/lib/public-contact";
 import { formatCurrency, formatMileage } from "@/lib/utils";
 
 type PageProps = {
@@ -85,6 +86,7 @@ export default async function VehicleDetailPage({
 }: PageProps) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const publicSiteConfig = await getPublicSiteConfig();
+  const contact = getPublicContactDetails(publicSiteConfig);
   const vehicle = await getPublicVehicleBySlug(slug);
   if (!vehicle) notFound();
 
@@ -278,15 +280,25 @@ export default async function VehicleDetailPage({
                     <ShareButton title={vehicle.publicTitle} />
                   </div>
                 </div>
-                <p className="mt-5 text-center text-xs leading-5 text-foreground/45">
-                  Prefer to call?{" "}
-                  <a
-                    className="font-bold text-brand"
-                    href={publicSiteConfig.phoneHref}
-                  >
-                    {publicSiteConfig.phone}
-                  </a>
-                </p>
+                {contact.phone && contact.phoneHref ? (
+                  <p className="mt-5 text-center text-xs leading-5 text-foreground/45">
+                    Prefer to call?{" "}
+                    <a
+                      className="font-bold text-brand"
+                      href={contact.phoneHref}
+                    >
+                      {contact.phone}
+                    </a>
+                  </p>
+                ) : (
+                  <p className="mt-5 text-center text-xs leading-5 text-foreground/45">
+                    Need another way to get in touch?{" "}
+                    <Link className="font-bold text-brand" href="/contact">
+                      Contact the team
+                    </Link>
+                    .
+                  </p>
+                )}
               </div>
             </aside>
           </div>

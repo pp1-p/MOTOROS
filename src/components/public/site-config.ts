@@ -14,20 +14,13 @@ export const publicSiteConfig = {
   seoTitle: "Quality used cars, sourcing and repairs",
   seoDescription:
     "Explore carefully selected used cars, ask us to source something specific, or book a repair discussion with an independent UK dealership.",
-  phone: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE ?? "01632 960 482",
-  phoneHref: `tel:${(
-    process.env.NEXT_PUBLIC_DEALERSHIP_PHONE ?? "01632 960 482"
-  ).replace(/\s/g, "")}`,
-  email:
-    process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL ?? "hello@dealeros.example",
-  address:
-    process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS ??
-    "Independent dealership · United Kingdom",
-  hours: [
-    { days: "Monday – Friday", times: "08:30 – 18:00" },
-    { days: "Saturday", times: "09:00 – 17:00" },
-    { days: "Sunday", times: "By appointment" },
-  ],
+  phone: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim() ?? "",
+  phoneHref: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim()
+    ? `tel:${process.env.NEXT_PUBLIC_DEALERSHIP_PHONE.replace(/\s/g, "")}`
+    : "/contact",
+  email: process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL?.trim() ?? "",
+  address: process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS?.trim() ?? "",
+  hours: [] as { days: string; times: string }[],
   logoUrl: null as string | null,
   primaryColour: "#172033",
   accentColour: "#D4A853",

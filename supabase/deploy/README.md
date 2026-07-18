@@ -7,7 +7,7 @@ remains the recommended path for teams that use it.
 Run in the Supabase SQL Editor, in this order:
 
 1. `combined_migrations.sql` — all migrations from `supabase/migrations/`
-   (0001–0007) concatenated in order. Run once on an empty project. If new
+   (0001–0008) concatenated in order. Run once on an empty project. If new
    migration files are added to the repository later, apply those individually;
    do not re-run this file.
 2. `first_owner_setup.sql` — after creating your first user in
@@ -26,5 +26,7 @@ history by assumption: an incorrect applied marker can hide a partially applied
 schema.
 
 For a project that already ran the older 0001–0006 combined file, apply
-`../migrations/202607180001_security_hardening.sql` once as a separate forward
-migration. Do not re-run the combined file.
+`../migrations/202607180001_security_hardening.sql` and then
+`../migrations/202607180002_technician_status_guard.sql` as separate forward
+migrations. If 0007 is already applied, run only 0008. Do not re-run the
+combined file.

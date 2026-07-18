@@ -36,9 +36,10 @@ supabase migration list
 ```
 
 Only after that history matches should `supabase db push` apply
-`202607180001_security_hardening.sql`. If the hardening migration was already
-run manually, verify its ACL, audit-scrub and function changes too, then repair
-that version as applied instead of running it twice.
+`202607180001_security_hardening.sql` and
+`202607180002_technician_status_guard.sql`, in that order. If either migration
+was already run manually, verify its ACL and function changes, then repair that
+specific version as applied instead of running it twice.
 
 ## 3. Create the first owner
 

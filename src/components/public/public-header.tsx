@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { getPublicContactDetails } from "@/lib/public-contact";
 import { cn } from "@/lib/utils";
 
 import {
@@ -34,6 +35,7 @@ export function PublicHeader({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const contact = getPublicContactDetails(config);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -50,13 +52,23 @@ export function PublicHeader({
             <ShieldCheck className="size-3.5 text-[#d7ad69]" aria-hidden />
             Carefully selected. Properly prepared.
           </span>
-          <a
-            className="hidden items-center gap-2 transition hover:text-white sm:inline-flex"
-            href={config.phoneHref}
-          >
-            <Phone className="size-3.5" aria-hidden />
-            {config.phone}
-          </a>
+          {contact.phone && contact.phoneHref ? (
+            <a
+              className="hidden items-center gap-2 transition hover:text-white sm:inline-flex"
+              href={contact.phoneHref}
+            >
+              <Phone className="size-3.5" aria-hidden />
+              {contact.phone}
+            </a>
+          ) : (
+            <Link
+              className="hidden items-center gap-2 transition hover:text-white sm:inline-flex"
+              href="/contact"
+            >
+              Contact the dealership
+              <ChevronRight className="size-3.5" aria-hidden />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -178,13 +190,17 @@ export function PublicHeader({
                 asChild
                 className="bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
               >
-                <a
-                  href={config.phoneHref}
-                  onClick={() => setOpen(false)}
-                >
-                  <Phone aria-hidden />
-                  {config.phone}
-                </a>
+                {contact.phone && contact.phoneHref ? (
+                  <a href={contact.phoneHref} onClick={() => setOpen(false)}>
+                    <Phone aria-hidden />
+                    {contact.phone}
+                  </a>
+                ) : (
+                  <Link href="/contact" onClick={() => setOpen(false)}>
+                    Send us a message
+                    <ChevronRight aria-hidden />
+                  </Link>
+                )}
               </Button>
             </div>
           </nav>

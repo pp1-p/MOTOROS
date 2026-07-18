@@ -9,15 +9,18 @@ import {
 
 import { ContactForm } from "@/components/forms/contact-form";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
+import { getPublicContactDetails } from "@/lib/public-contact";
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Speak to the DealerOS dealership team about a car, personal sourcing, repairs or any general question.",
+    "Speak to the dealership team about a car, personal sourcing, repairs or any general question.",
 };
 
 export default async function ContactPage() {
   const publicSiteConfig = await getPublicSiteConfig();
+  const contact = getPublicContactDetails(publicSiteConfig);
+  const hasPublishedPhoneOrEmail = Boolean(contact.phone || contact.email);
   return (
     <>
       <section className="border-b bg-[#15221d] py-14 text-white sm:py-20">
@@ -45,51 +48,64 @@ export default async function ContactPage() {
               We’re here to help.
             </h2>
             <div className="mt-8 grid gap-4">
-              <a
-                href={publicSiteConfig.phoneHref}
-                className="group flex items-center gap-4 rounded-2xl border bg-white p-5 transition hover:border-brand"
-              >
-                <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
-                  <Phone className="size-5" aria-hidden />
-                </span>
-                <span>
-                  <span className="block text-xs font-bold text-foreground/45">
-                    Telephone
+              {contact.phone && contact.phoneHref ? (
+                <a
+                  href={contact.phoneHref}
+                  className="group flex items-center gap-4 rounded-2xl border bg-white p-5 transition hover:border-brand"
+                >
+                  <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
+                    <Phone className="size-5" aria-hidden />
                   </span>
-                  <span className="mt-1 block font-extrabold group-hover:text-brand">
-                    {publicSiteConfig.phone}
+                  <span>
+                    <span className="block text-xs font-bold text-foreground/45">
+                      Telephone
+                    </span>
+                    <span className="mt-1 block font-extrabold group-hover:text-brand">
+                      {contact.phone}
+                    </span>
                   </span>
-                </span>
-              </a>
-              <a
-                href={`mailto:${publicSiteConfig.email}`}
-                className="group flex items-center gap-4 rounded-2xl border bg-white p-5 transition hover:border-brand"
-              >
-                <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
-                  <Mail className="size-5" aria-hidden />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-xs font-bold text-foreground/45">
-                    Email
+                </a>
+              ) : null}
+              {contact.email && contact.emailHref ? (
+                <a
+                  href={contact.emailHref}
+                  className="group flex items-center gap-4 rounded-2xl border bg-white p-5 transition hover:border-brand"
+                >
+                  <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
+                    <Mail className="size-5" aria-hidden />
                   </span>
-                  <span className="mt-1 block truncate font-extrabold group-hover:text-brand">
-                    {publicSiteConfig.email}
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-foreground/45">
+                      Email
+                    </span>
+                    <span className="mt-1 block truncate font-extrabold group-hover:text-brand">
+                      {contact.email}
+                    </span>
                   </span>
-                </span>
-              </a>
-              <div className="flex items-center gap-4 rounded-2xl border bg-white p-5">
-                <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
-                  <MapPin className="size-5" aria-hidden />
-                </span>
-                <span>
-                  <span className="block text-xs font-bold text-foreground/45">
-                    Location
+                </a>
+              ) : null}
+              {contact.address ? (
+                <div className="flex items-center gap-4 rounded-2xl border bg-white p-5">
+                  <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
+                    <MapPin className="size-5" aria-hidden />
                   </span>
-                  <span className="mt-1 block font-extrabold">
-                    {publicSiteConfig.address}
+                  <span>
+                    <span className="block text-xs font-bold text-foreground/45">
+                      Location
+                    </span>
+                    <span className="mt-1 block font-extrabold">
+                      {contact.address}
+                    </span>
                   </span>
-                </span>
-              </div>
+                </div>
+              ) : null}
+              {!hasPublishedPhoneOrEmail ? (
+                <div className="rounded-2xl border bg-white p-5 text-sm leading-6 text-foreground/65">
+                  Direct telephone and email details have not been published
+                  yet. Please use the message form and the team will reply using
+                  the contact details you provide.
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-8 rounded-2xl bg-white p-6">
@@ -97,25 +113,37 @@ export default async function ContactPage() {
                 <Clock3 className="size-5 text-brand" aria-hidden />
                 Opening hours
               </h3>
-              <dl className="mt-5 grid gap-3 text-sm">
-                {publicSiteConfig.hours.map((row) => (
-                  <div
-                    key={row.days}
-                    className="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0"
-                  >
-                    <dt className="text-foreground/55">{row.days}</dt>
-                    <dd className="font-bold">{row.times}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="mt-5 text-xs leading-5 text-foreground/45">
-                Opening hours and contact details are managed in DealerOS
-                settings and may vary on bank holidays.
-              </p>
+              {contact.hours.length > 0 ? (
+                <>
+                  <dl className="mt-5 grid gap-3 text-sm">
+                    {contact.hours.map((row) => (
+                      <div
+                        key={row.days}
+                        className="flex items-center justify-between gap-4 border-b pb-3 last:border-0 last:pb-0"
+                      >
+                        <dt className="text-foreground/55">{row.days}</dt>
+                        <dd className="font-bold">{row.times}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-5 text-xs leading-5 text-foreground/45">
+                    Opening hours may vary on bank holidays. Send us a message
+                    if you need to arrange a specific time.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-5 text-sm leading-6 text-foreground/55">
+                  Opening hours have not been published yet. Send us a message
+                  to arrange a suitable time.
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="rounded-3xl border bg-white p-5 shadow-sm sm:p-8 lg:p-10">
+          <div
+            id="contact-form"
+            className="rounded-3xl border bg-white p-5 shadow-sm sm:p-8 lg:p-10"
+          >
             <div className="mb-8 flex items-center gap-4 border-b pb-6">
               <span className="grid size-11 place-items-center rounded-2xl bg-brand text-white">
                 <MessageSquareText className="size-5" aria-hidden />
