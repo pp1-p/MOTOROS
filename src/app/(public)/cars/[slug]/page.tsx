@@ -212,7 +212,7 @@ export default async function VehicleDetailPage({
               <p className="text-xs font-extrabold tracking-[0.12em] text-brand uppercase">
                 Retail price
               </p>
-              <p className="mt-1 text-3xl font-extrabold sm:text-4xl">
+              <p className="mt-1 font-display text-4xl tracking-tight sm:text-5xl">
                 {formatCurrency(vehicle.price)}
               </p>
             </div>
@@ -509,6 +509,30 @@ export default async function VehicleDetailPage({
           </p>
         </div>
       </section>
+
+      <div aria-hidden className="h-20 lg:hidden" />
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#121814]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+        <div className="container-shell flex items-center justify-between gap-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold tracking-[0.12em] text-[#d7ad69] uppercase">
+              {presentation.label}
+            </p>
+            <p className="truncate font-display text-2xl text-white">
+              {formatCurrency(vehicle.price)}
+            </p>
+          </div>
+          <Button
+            asChild
+            className="shrink-0 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
+          >
+            <a href="#enquire">
+              {vehicle.status === "sold"
+                ? "Ask about this car"
+                : "Arrange a viewing"}
+            </a>
+          </Button>
+        </div>
+      </div>
     </>
   );
 }

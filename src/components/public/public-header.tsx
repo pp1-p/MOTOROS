@@ -45,7 +45,12 @@ export function PublicHeader({
   }, [open]);
 
   return (
-    <header className="relative z-50 border-b border-white/10 bg-[#121814] text-white">
+    <header
+      className={cn(
+        "sticky -top-[37px] z-50 border-b border-white/10 bg-[#121814] text-white",
+        open && "z-[90]",
+      )}
+    >
       <div className="border-b border-white/10 bg-[#0c100e]">
         <div className="container-shell flex min-h-9 items-center justify-between gap-4 py-1 text-[11px] font-bold tracking-[0.08em] text-white/65 uppercase sm:text-xs">
           <span className="inline-flex items-center gap-2">
@@ -159,7 +164,7 @@ export function PublicHeader({
       {open ? (
         <div
           id="mobile-navigation"
-          className="fixed inset-x-0 top-[117px] bottom-0 overflow-y-auto bg-[#121814] px-4 pb-8 lg:hidden"
+          className="absolute inset-x-0 top-full h-[calc(100dvh-5rem)] overflow-y-auto bg-[#121814] px-4 pb-8 lg:hidden"
         >
           <nav
             aria-label="Mobile navigation"
