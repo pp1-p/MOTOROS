@@ -60,7 +60,9 @@ Point authorised Auto Trader webhooks to:
 Configure its secret only after confirming the provider’s signing convention.
 Do not expose a webhook endpoint without a replay test and duplicate event test.
 
-`vercel.json` schedules `/api/cron/storage-cleanup` hourly. Set a strong
+`vercel.json` schedules `/api/cron/storage-cleanup` daily at 03:17 (Vercel
+Hobby rejects sub-daily schedules; increase the cadence on paid plans if
+image-deletion volume warrants it). Set a strong
 `CRON_SECRET`; the endpoint returns 503 without it. In staging, delete a vehicle
 image, confirm a `storage_cleanup_jobs` row is queued, invoke the cron with the
 secret, and verify completion/retry behaviour. Monitor failed or repeatedly
