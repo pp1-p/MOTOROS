@@ -58,18 +58,24 @@ function FormField({
   );
 }
 
+const tabIds: Tab[] = ["overview", "advert", "media", "costs", "history"];
+
 export function VehicleWorkspace({
   vehicle,
   initialPhotos,
   initialHistory,
   canViewCommercial,
+  initialTab,
 }: {
   vehicle: AdminVehicle;
   initialPhotos: AdminVehiclePhoto[];
   initialHistory: AdminVehicleHistory[];
   canViewCommercial: boolean;
+  initialTab?: string;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(
+    tabIds.includes(initialTab as Tab) ? (initialTab as Tab) : "overview",
+  );
   const [status, setStatus] = useState(vehicle.status);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");

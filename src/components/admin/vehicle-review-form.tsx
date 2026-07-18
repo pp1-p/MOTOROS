@@ -1,14 +1,17 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   CircleAlert,
+  ImageIcon,
   LoaderCircle,
   ShieldCheck,
+  Star,
+  Trash2,
 } from "lucide-react";
 
 import { Notice } from "@/components/admin/page-kit";
@@ -73,6 +76,16 @@ function Field({
   );
 }
 
+type StagedPhoto = {
+  id: string;
+  file: File;
+  preview: string;
+};
+
+const stagedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const stagedPhotoMaxBytes = 12 * 1024 * 1024;
+const stagedPhotoMaxCount = 40;
+
 export function VehicleReviewForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -80,6 +93,106 @@ export function VehicleReviewForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([]);
+  const [photoNotice, setPhotoNotice] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
+  const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+
+  function addPhotoFiles(fileList: FileList | null) {
+    if (!fileList) return;
+    const rejected: string[] = [];
+    const accepted: StagedPhoto[] = [];
+    for (const file of Array.from(fileList)) {
+      if (!stagedPhotoTypes.has(file.type)) {
+        rejected.push(`${file.name} is not a JPG, PNG or WebP image.`);
+      } else if (file.size > stagedPhotoMaxBytes) {
+        rejected.push(`${file.name} is larger than 12 MB.`);
+      } else {
+        accepted.push({
+          id: crypto.randomUUID(),
+          file,
+          preview: URL.createObjectURL(file),
+        });
+      }
+    }
+    setStagedPhotos((current) => {
+      const room = stagedPhotoMaxCount - current.length;
+      if (accepted.length > room) {
+        accepted.slice(room).forEach((photo) => URL.revokeObjectURL(photo.preview));
+        rejected.push(`Only the first ${stagedPhotoMaxCount} photos were kept.`);
+      }
+      return [...current, ...accepted.slice(0, Math.max(0, room))];
+    });
+    setPhotoNotice(rejected.join(" "));
+  }
+
+  function removeStagedPhoto(id: string) {
+    setStagedPhotos((current) => {
+      const target = current.find((photo) => photo.id === id);
+      if (target) URL.revokeObjectURL(target.preview);
+      return current.filter((photo) => photo.id !== id);
+    });
+  }
+
+  function makeCoverPhoto(id: string) {
+    setStagedPhotos((current) => {
+      const target = current.find((photo) => photo.id === id);
+      if (!target) return current;
+      return [target, ...current.filter((photo) => photo.id !== id)];
+    });
+  }
+
+  async function uploadStagedPhotos(vehicleId: string, title: string) {
+    const failed: StagedPhoto[] = [];
+    setUploadProgress({ done: 0, total: stagedPhotos.length });
+    for (const [index, photo] of stagedPhotos.entries()) {
+      const formData = new FormData();
+      formData.set("file", photo.file);
+      formData.set("vehicleId", vehicleId);
+      formData.set("altText", `${title} photograph ${index + 1}`.trim());
+      try {
+        const response = await fetch("/api/uploads/vehicle-images", {
+          method: "POST",
+          body: formData,
+        });
+        if (!response.ok) failed.push(photo);
+      } catch {
+        failed.push(photo);
+      }
+      setUploadProgress({ done: index + 1, total: stagedPhotos.length });
+    }
+    setUploadProgress(null);
+    stagedPhotos
+      .filter((photo) => !failed.includes(photo))
+      .forEach((photo) => URL.revokeObjectURL(photo.preview));
+    return failed;
+  }
+
+  function finishCreation(vehicleId: string) {
+    stagedPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
+    sessionStorage.removeItem("dealeros:vehicle-review");
+    router.push(`/admin/stock/${vehicleId}?created=1&tab=media`);
+    router.refresh();
+  }
+
+  async function retryPhotoUploads() {
+    if (!createdVehicleId) return;
+    setSaving(true);
+    setError("");
+    const failed = await uploadStagedPhotos(createdVehicleId, "Vehicle");
+    setSaving(false);
+    if (failed.length) {
+      setStagedPhotos(failed);
+      setError(
+        `${failed.length} photo${failed.length === 1 ? "" : "s"} still could not be uploaded. Retry, or continue and add them from the vehicle's Photos tab.`,
+      );
+      return;
+    }
+    finishCreation(createdVehicleId);
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -100,6 +213,10 @@ export function VehicleReviewForm() {
 
   async function createVehicle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (createdVehicleId) {
+      void retryPhotoUploads();
+      return;
+    }
     setSaving(true);
     setError("");
     const data = new FormData(event.currentTarget);
@@ -177,10 +294,19 @@ export function VehicleReviewForm() {
         setError(result?.message ?? "The vehicle could not be created. Your review details remain here.");
         return;
       }
-      sessionStorage.removeItem("dealeros:vehicle-review");
       const id = result?.vehicle?.id ?? result?.data?.id ?? result?.id ?? "new";
-      router.push(`/admin/stock/${id}?created=1`);
-      router.refresh();
+      if (stagedPhotos.length && id !== "new") {
+        setCreatedVehicleId(id);
+        const failed = await uploadStagedPhotos(id, payload.publicTitle);
+        if (failed.length) {
+          setStagedPhotos(failed);
+          setError(
+            `The vehicle was created, but ${failed.length} photo${failed.length === 1 ? "" : "s"} could not be uploaded. Retry, or continue and add them from the vehicle's Photos tab.`,
+          );
+          return;
+        }
+      }
+      finishCreation(id);
     } catch {
       setError("DealerOS could not reach the server. Nothing was saved; please try again.");
     } finally {
@@ -327,11 +453,103 @@ export function VehicleReviewForm() {
         </div>
       </section>
 
+      <section className="overflow-hidden rounded-2xl border bg-white">
+        <div className="border-b p-5">
+          <p className="text-xs font-extrabold uppercase tracking-[0.15em] text-brand">
+            Photography
+          </p>
+          <h2 className="mt-1 font-extrabold">Add photos now (optional)</h2>
+          <p className="mt-1 text-xs text-foreground/45">
+            Drop photos here and they are attached automatically when the vehicle is created.
+            The first photo becomes the public cover; you can reorder or add more at any time
+            from the vehicle&apos;s Photos tab.
+          </p>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-3 lg:grid-cols-4">
+          {stagedPhotos.map((photo, index) => (
+            <figure key={photo.id} className="overflow-hidden rounded-xl border">
+              <div
+                className="relative aspect-[4/3] bg-surface-muted bg-cover bg-center"
+                style={{ backgroundImage: `url("${photo.preview}")` }}
+              >
+                {index === 0 ? (
+                  <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-lg bg-[#10231f] px-2 py-1 text-[9px] font-extrabold text-white">
+                    <Star className="size-3 fill-[#d6a852] text-[#d6a852]" />
+                    COVER
+                  </span>
+                ) : null}
+              </div>
+              <figcaption className="flex items-center justify-between gap-2 p-2">
+                <span className="truncate text-[10px] font-semibold text-foreground/55">
+                  {photo.file.name}
+                </span>
+                <span className="flex shrink-0 items-center">
+                  {index !== 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => makeCoverPhoto(photo.id)}
+                      className="grid size-7 place-items-center rounded-md hover:bg-surface-muted"
+                      aria-label={`Make ${photo.file.name} the cover photo`}
+                    >
+                      <Star className="size-3.5" />
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => removeStagedPhoto(photo.id)}
+                    className="grid size-7 place-items-center rounded-md text-danger hover:bg-red-50"
+                    aria-label={`Remove ${photo.file.name}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </span>
+              </figcaption>
+            </figure>
+          ))}
+          <button
+            type="button"
+            onClick={() => photoInput.current?.click()}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              addPhotoFiles(event.dataTransfer.files);
+            }}
+            className="grid aspect-[4/3] min-h-40 place-items-center rounded-xl border-2 border-dashed text-center transition hover:border-brand/50 hover:bg-brand-soft/25"
+          >
+            <span>
+              <ImageIcon className="mx-auto size-6 text-brand" />
+              <span className="mt-2 block text-xs font-extrabold">
+                Drop photos here or click to browse
+              </span>
+              <span className="mt-1 block text-[10px] text-foreground/40">
+                JPG, PNG or WebP · 12 MB max each
+              </span>
+            </span>
+          </button>
+          <input
+            ref={photoInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="sr-only"
+            onChange={(event) => {
+              addPhotoFiles(event.target.files);
+              event.target.value = "";
+            }}
+          />
+        </div>
+        {photoNotice ? (
+          <p className="border-t px-5 py-3 text-xs font-semibold text-amber-700">{photoNotice}</p>
+        ) : null}
+      </section>
+
       {error ? (
         <div role="alert" className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
           <div>
-            <p className="text-xs font-extrabold">Vehicle not created</p>
+            <p className="text-xs font-extrabold">
+              {createdVehicleId ? "Photos not uploaded" : "Vehicle not created"}
+            </p>
             <p className="mt-1 text-xs leading-5 opacity-75">{error}</p>
           </div>
         </div>
@@ -344,11 +562,28 @@ export function VehicleReviewForm() {
         </Button>
         <div className="flex items-center gap-3">
           <p className="hidden max-w-xs text-right text-[10px] leading-4 text-foreground/40 md:block">
-            Creating the record starts in Appraisal. You can add photos and publish it next.
+            {uploadProgress
+              ? `Vehicle created. Uploading photo ${Math.min(uploadProgress.done + 1, uploadProgress.total)} of ${uploadProgress.total}…`
+              : createdVehicleId
+                ? "The vehicle record exists. Only the listed photos still need uploading."
+                : "Creating the record starts in Appraisal. Staged photos upload automatically."}
           </p>
+          {createdVehicleId && !saving ? (
+            <Button type="button" variant="ghost" onClick={() => finishCreation(createdVehicleId)}>
+              Continue without them
+            </Button>
+          ) : null}
           <Button type="submit" disabled={saving}>
             {saving ? <LoaderCircle className="animate-spin" /> : null}
-            {saving ? "Creating vehicle…" : "Confirm and create"}
+            {saving
+              ? uploadProgress
+                ? "Uploading photos…"
+                : "Creating vehicle…"
+              : createdVehicleId
+                ? "Retry photo uploads"
+                : stagedPhotos.length
+                  ? `Create and upload ${stagedPhotos.length} photo${stagedPhotos.length === 1 ? "" : "s"}`
+                  : "Confirm and create"}
             {!saving ? <ArrowRight /> : null}
           </Button>
         </div>
