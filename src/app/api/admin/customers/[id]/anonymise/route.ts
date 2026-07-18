@@ -43,7 +43,7 @@ export async function POST(
   const supabase = createAdminSupabaseClient();
   const existing = await supabase
     .from("customers")
-    .select("id,full_name,email,phone,marketing_consent")
+    .select("id,marketing_consent")
     .eq("id", id)
     .eq("organisation_id", staff.organisationId)
     .single();
@@ -78,7 +78,10 @@ export async function POST(
     entity_type: "customer",
     entity_id: id,
     change_reason: `${parsed.data.requestReference}: ${parsed.data.reason}`,
-    old_values: existing.data,
+    old_values: {
+      anonymised_fields: ["full_name", "email", "phone", "address", "notes"],
+      marketing_consent: existing.data.marketing_consent,
+    },
     new_values: { anonymised: true },
   });
   return NextResponse.json({
