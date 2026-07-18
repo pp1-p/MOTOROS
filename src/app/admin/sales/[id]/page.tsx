@@ -1,0 +1,153 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, CarFront, UserRound } from "lucide-react";
+
+import { PageHeader, StatusPill } from "@/components/admin/page-kit";
+import { Button } from "@/components/ui/button";
+import { hasPermission, requireStaff } from "@/lib/auth/permissions";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { formatCurrency } from "@/lib/utils";
+
+export default async function SaleDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const staff = await requireStaff("leads:view");
+  const canViewCommercial = hasPermission(staff.role, "commercial:view");
+  const { id } = await params;
+  const supabase = createAdminSupabaseClient();
+  let saleQuery = supabase
+    .from("sales")
+    .select(
+      "*,vehicles(id,stock_number,registration,make,model,derivative),customers(id,full_name,email,phone)",
+    )
+    .eq("id", id)
+    .eq("organisation_id", staff.organisationId)
+    .is("deleted_at", null);
+  if (staff.role === "salesperson") {
+    saleQuery = saleQuery.eq("salesperson_id", staff.userId);
+  }
+  const sale = await saleQuery.single();
+  if (sale.error || !sale.data) notFound();
+  const vehicle = Array.isArray(sale.data.vehicles)
+    ? sale.data.vehicles[0]
+    : sale.data.vehicles;
+  const customer = Array.isArray(sale.data.customers)
+    ? sale.data.customers[0]
+    : sale.data.customers;
+  const salesperson = sale.data.salesperson_id
+    ? await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", sale.data.salesperson_id)
+        .maybeSingle()
+    : null;
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader
+        eyebrow={sale.data.reference}
+        title={`${vehicle?.make ?? "Vehicle"} ${vehicle?.model ?? "sale"}`}
+        description={`Recorded ${new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(sale.data.sale_date ?? sale.data.created_at))}`}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/sales">
+              <ArrowLeft />
+              Sales pipeline
+            </Link>
+          </Button>
+        }
+      />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["Status", <StatusPill key="status" status={sale.data.status} />],
+          ["Sale price", formatCurrency(Number(sale.data.sale_price ?? 0))],
+          ...(canViewCommercial
+            ? [["Gross profit", formatCurrency(Number(sale.data.gross_profit ?? 0))]]
+            : []),
+          [
+            "Handover",
+            sale.data.handover_date
+              ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+                  new Date(sale.data.handover_date),
+                )
+              : "Not scheduled",
+          ],
+        ].map(([label, value]) => (
+          <section key={String(label)} className="rounded-xl border bg-white p-4">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-foreground/38">
+              {label}
+            </p>
+            <div className="mt-2 text-sm font-extrabold">{value}</div>
+          </section>
+        ))}
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section className="rounded-2xl border bg-white p-5">
+          <h2 className="flex items-center gap-2 font-extrabold">
+            <CarFront className="size-4 text-brand" />
+            Vehicle
+          </h2>
+          <p className="mt-4 text-sm font-extrabold">
+            {vehicle?.make} {vehicle?.model} {vehicle?.derivative}
+          </p>
+          <p className="mt-1 text-xs text-foreground/45">
+            {vehicle?.registration} · {vehicle?.stock_number}
+          </p>
+          {vehicle?.id ? (
+            <Link
+              href={`/admin/stock/${vehicle.id}`}
+              className="mt-4 inline-block text-xs font-extrabold text-brand hover:underline"
+            >
+              Open stock record
+            </Link>
+          ) : null}
+        </section>
+        <section className="rounded-2xl border bg-white p-5">
+          <h2 className="flex items-center gap-2 font-extrabold">
+            <UserRound className="size-4 text-brand" />
+            Customer & salesperson
+          </h2>
+          <p className="mt-4 text-sm font-extrabold">{customer?.full_name}</p>
+          <p className="mt-1 text-xs text-foreground/45">
+            {customer?.email ?? customer?.phone ?? "No contact detail"}
+          </p>
+          <p className="mt-4 text-xs">
+            Salesperson:{" "}
+            <strong>
+              {salesperson?.data?.display_name ??
+                "Unassigned"}
+            </strong>
+          </p>
+        </section>
+      </div>
+      <section className="rounded-2xl border bg-white p-5">
+        <h2 className="font-extrabold">Commercial summary</h2>
+        <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt className="text-foreground/45">Deposit</dt>
+            <dd className="mt-1 font-extrabold">{formatCurrency(Number(sale.data.deposit ?? 0))}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground/45">Part exchange</dt>
+            <dd className="mt-1 font-extrabold">{formatCurrency(Number(sale.data.part_exchange_allowance ?? 0))}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground/45">Discount</dt>
+            <dd className="mt-1 font-extrabold">{formatCurrency(Number(sale.data.discount ?? 0))}</dd>
+          </div>
+          <div>
+            <dt className="text-foreground/45">Payment</dt>
+            <dd className="mt-1 font-extrabold">{sale.data.payment_method ?? "Not recorded"}</dd>
+          </div>
+        </dl>
+        {sale.data.internal_notes ? (
+          <p className="mt-5 rounded-xl bg-surface-muted p-4 text-xs leading-5">
+            {sale.data.internal_notes}
+          </p>
+        ) : null}
+      </section>
+    </div>
+  );
+}

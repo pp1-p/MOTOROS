@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f7f4;
+  --foreground: #171814;
+  --surface: #ffffff;
+  --surface-muted: #f0f0ec;
+  --border: #deded8;
+  --brand: #1b5c4f;
+  --brand-strong: #10453b;
+  --brand-soft: #dcece7;
+  --accent: #c38d39;
+  --danger: #b42318;
+  --radius: 0.875rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --font-sans: "Aptos", "Segoe UI", Arial, sans-serif;
+  --font-display: "Iowan Old Style", "Baskerville", Georgia, serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--brand);
+  color: white;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 75%, white);
+  outline-offset: 3px;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.container-shell {
+  width: min(100% - 2rem, 1280px);
+  margin-inline: auto;
+}
+
+.font-display {
+  font-family: "Iowan Old Style", "Baskerville", Georgia, serif;
+}
+
+.surface-shadow {
+  box-shadow:
+    0 1px 2px rgba(20, 24, 18, 0.04),
+    0 12px 36px rgba(20, 24, 18, 0.06);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
