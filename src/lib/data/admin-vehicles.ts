@@ -92,10 +92,10 @@ export async function getAdminVehicleInventory(): Promise<AdminVehicleInventory>
     canViewHistory
       ? supabase
           .from("audit_logs")
-          .select("id,entity_id,action,change_reason,created_at,actor_user_id")
+          .select("id,entity_id,action,change_reason,occurred_at,actor_user_id")
           .eq("organisation_id", staff.organisationId)
           .eq("entity_type", "vehicle")
-          .order("created_at", { ascending: false })
+          .order("occurred_at", { ascending: false })
           .limit(250)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -163,7 +163,7 @@ export async function getAdminVehicleInventory(): Promise<AdminVehicleInventory>
         dateStyle: "medium",
         timeStyle: "short",
         timeZone: "Europe/London",
-      }).format(new Date(event.created_at)),
+      }).format(new Date(event.occurred_at)),
       actor: event.actor_user_id
         ? actorNames.get(event.actor_user_id) ?? "Team member"
         : "System",

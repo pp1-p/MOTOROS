@@ -672,7 +672,7 @@ export async function getPublicVehicles(): Promise<PublicVehicleRecord[]> {
     if (!organisationId) {
       const dealerships = await supabase
         .from("public_dealerships")
-        .select("organisation_id")
+        .select("id")
         .limit(2);
       if (dealerships.error) throw dealerships.error;
       if ((dealerships.data ?? []).length !== 1) {
@@ -682,7 +682,7 @@ export async function getPublicVehicles(): Promise<PublicVehicleRecord[]> {
             : "No public dealership is configured.",
         );
       }
-      organisationId = dealerships.data![0]!.organisation_id as string;
+      organisationId = dealerships.data![0]!.id as string;
     }
 
     const vehicles = await supabase

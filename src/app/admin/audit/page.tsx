@@ -29,10 +29,10 @@ async function loadAuditEvents(): Promise<AuditEvent[]> {
   const events = await supabase
     .from("audit_logs")
     .select(
-      "id,created_at,actor_user_id,action,entity_type,entity_id,change_reason,source",
+      "id,occurred_at,actor_user_id,action,entity_type,entity_id,change_reason,source",
     )
     .eq("organisation_id", staff.organisationId)
-    .order("created_at", { ascending: false })
+    .order("occurred_at", { ascending: false })
     .limit(500);
   if (events.error) {
     throw new Error(`Audit events could not be loaded: ${events.error.message}`);
@@ -58,7 +58,7 @@ async function loadAuditEvents(): Promise<AuditEvent[]> {
   );
   return (events.data ?? []).map((event) => ({
     id: event.id,
-    time: event.created_at,
+    time: event.occurred_at,
     actor: event.actor_user_id
       ? names.get(event.actor_user_id) ?? "Team member"
       : "System",

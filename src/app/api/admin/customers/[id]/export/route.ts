@@ -37,7 +37,7 @@ export async function GET(
     await Promise.all([
       supabase
         .from("customer_vehicles")
-        .select("id,registration,make,model,year,mileage,created_at")
+        .select("id,registration,make,model,year,current_mileage,created_at")
         .eq("customer_id", id)
         .eq("organisation_id", staff.organisationId),
       supabase

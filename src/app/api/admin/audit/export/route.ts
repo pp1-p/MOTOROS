@@ -23,10 +23,10 @@ export async function GET() {
   const result = await createAdminSupabaseClient()
     .from("audit_logs")
     .select(
-      "created_at,actor_user_id,action,entity_type,entity_id,change_reason,source",
+      "occurred_at,actor_user_id,action,entity_type,entity_id,change_reason,source",
     )
     .eq("organisation_id", staff.organisationId)
-    .order("created_at", { ascending: false })
+    .order("occurred_at", { ascending: false })
     .limit(10_000);
   if (result.error) {
     return NextResponse.json(
@@ -45,7 +45,7 @@ export async function GET() {
       "Source",
     ],
     ...(result.data ?? []).map((event) => [
-      event.created_at,
+      event.occurred_at,
       event.actor_user_id,
       event.action,
       event.entity_type,

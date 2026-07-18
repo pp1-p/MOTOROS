@@ -127,10 +127,7 @@ export const getPublicSiteConfig = cache(
         .select("*")
         .limit(env.DEALEROS_PUBLIC_ORGANISATION_ID ? 1 : 2);
       if (env.DEALEROS_PUBLIC_ORGANISATION_ID) {
-        query = query.eq(
-          "organisation_id",
-          env.DEALEROS_PUBLIC_ORGANISATION_ID,
-        );
+        query = query.eq("id", env.DEALEROS_PUBLIC_ORGANISATION_ID);
       }
       const result = await query;
       if (result.error) throw result.error;
