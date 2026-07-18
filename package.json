@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "verify:supabase-security": "node scripts/verify-supabase-security.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

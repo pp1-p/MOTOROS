@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { buildCustomerUpdateAuditEntry } from "@/lib/audit/customer";
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -116,7 +117,7 @@ export async function PATCH(
   const session = await createServerSupabaseClient();
   const existing = await session
     .from("customers")
-    .select("*")
+    .select("id")
     .eq("id", id)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)
@@ -143,15 +144,14 @@ export async function PATCH(
       { status: duplicate ? 409 : 500 },
     );
   }
-  await admin.from("audit_logs").insert({
-    organisation_id: staff.organisationId,
-    actor_user_id: staff.userId,
-    action: "customer.updated",
-    entity_type: "customer",
-    entity_id: id,
-    old_values: existing.data,
-    new_values: customer.data,
-  });
+  await admin.from("audit_logs").insert(
+    buildCustomerUpdateAuditEntry({
+      organisationId: staff.organisationId,
+      actorUserId: staff.userId,
+      customerId: id,
+      updates,
+    }),
+  );
   return NextResponse.json({
     ok: true,
     message: "Customer updated.",

@@ -1,23 +1,22 @@
 import type { Metadata } from "next";
 
+import {
+  defaultPublicSiteName,
+  isSiteIndexable,
+} from "@/lib/site-metadata";
+
 import "./globals.css";
+
+const siteIndexable = isSiteIndexable();
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
-  title: {
-    default: "DealerOS | Independent motoring, properly handled",
-    template: "%s | DealerOS",
-  },
+  title: defaultPublicSiteName,
   description:
     "Quality used vehicles, personal car sourcing and trusted repairs from one independent UK dealership.",
-  openGraph: {
-    type: "website",
-    locale: "en_GB",
-    siteName: "DealerOS",
-  },
   robots: {
-    index: true,
-    follow: true,
+    index: siteIndexable,
+    follow: siteIndexable,
   },
 };
 

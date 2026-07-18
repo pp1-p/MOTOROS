@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
+import {
+  buildTechnicianRepairRpcArguments,
+  technicianRepairResponse,
+  validateTechnicianRepairUpdate,
+} from "@/lib/auth/repair-access";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const repairStatuses = [
   "awaiting_inspection",
@@ -92,14 +98,77 @@ export async function PATCH(
       { status: 400 },
     );
   }
-  if (
-    !canManage &&
-    (parsed.data.estimateNet !== undefined ||
-      parsed.data.vatAmount !== undefined ||
-      parsed.data.approvalStatus !== undefined ||
-      parsed.data.assignedTechnicianId !== undefined)
-  ) {
-    return NextResponse.json({ message: "A service advisor must change commercial or assignment fields." }, { status: 403 });
+  if (!canManage) {
+    const technicianUpdate = validateTechnicianRepairUpdate(parsed.data);
+    if (!technicianUpdate.allowed) {
+      return NextResponse.json(
+        { message: technicianUpdate.message },
+        { status: 403 },
+      );
+    }
+
+    // Use the signed-in user's JWT here, not the service-role client. The RPC
+    // locks the repair row, re-checks the assignment and updates only the
+    // fields submitted in this request.
+    const authenticatedSupabase = await createServerSupabaseClient();
+    const result = await authenticatedSupabase.rpc(
+      "update_assigned_repair_job",
+      buildTechnicianRepairRpcArguments(id, parsed.data),
+    );
+    if (result.error) {
+      if (result.error.code === "42501") {
+        return NextResponse.json(
+          { message: "Technicians can update only their assigned jobs." },
+          { status: 403 },
+        );
+      }
+      if (result.error.code === "22023") {
+        return NextResponse.json(
+          { message: "Technicians cannot set that repair status." },
+          { status: 400 },
+        );
+      }
+      if (result.error.code === "P0002") {
+        return NextResponse.json(
+          { message: "Repair job not found." },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json(
+        { message: "The repair job could not be updated." },
+        { status: 500 },
+      );
+    }
+
+    const resultRow = Array.isArray(result.data) ? result.data[0] : result.data;
+    if (!resultRow || typeof resultRow !== "object") {
+      return NextResponse.json(
+        { message: "The repair job could not be updated." },
+        { status: 500 },
+      );
+    }
+    const safeRepairJob = technicianRepairResponse(
+      resultRow as Record<string, unknown>,
+    );
+
+    // Keep the application audit reason without exposing the full repair row
+    // in either the audit event or the API response.
+    const auditClient = createAdminSupabaseClient();
+    await auditClient.from("audit_logs").insert({
+      organisation_id: staff.organisationId,
+      actor_user_id: staff.userId,
+      action: "repair_job.updated",
+      entity_type: "repair_job",
+      entity_id: id,
+      change_reason: parsed.data.changeReason,
+      new_values: safeRepairJob,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: "Repair job updated.",
+      repairJob: safeRepairJob,
+    });
   }
 
   const supabase = createAdminSupabaseClient();
@@ -112,9 +181,6 @@ export async function PATCH(
     .eq("organisation_id", staff.organisationId)
     .single();
   if (!existing.data) return NextResponse.json({ message: "Repair job not found." }, { status: 404 });
-  if (!canManage && existing.data.assigned_technician_id !== staff.userId) {
-    return NextResponse.json({ message: "Technicians can update only their assigned jobs." }, { status: 403 });
-  }
   if (
     parsed.data.assignedTechnicianId &&
     parsed.data.assignedTechnicianId !== existing.data.assigned_technician_id

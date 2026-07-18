@@ -5,8 +5,57 @@ import { ArrowLeft, CarFront, UserRound } from "lucide-react";
 import { PageHeader, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { hasPermission, requireStaff } from "@/lib/auth/permissions";
+import { getSaleDetailSelect } from "@/lib/auth/sales-access";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { formatCurrency } from "@/lib/utils";
+
+type SaleDetailRow = {
+  reference: string;
+  salesperson_id: string | null;
+  status: string;
+  sale_price: number | null;
+  deposit: number | null;
+  part_exchange_allowance: number | null;
+  discount: number | null;
+  payment_method: string | null;
+  sale_date: string | null;
+  handover_date: string | null;
+  created_at: string;
+  gross_profit?: number | null;
+  internal_notes?: string | null;
+  vehicles:
+    | {
+        id: string;
+        stock_number: string;
+        registration: string | null;
+        make: string;
+        model: string;
+        derivative: string | null;
+      }
+    | Array<{
+        id: string;
+        stock_number: string;
+        registration: string | null;
+        make: string;
+        model: string;
+        derivative: string | null;
+      }>
+    | null;
+  customers:
+    | {
+        id: string;
+        full_name: string | null;
+        email: string | null;
+        phone: string | null;
+      }
+    | Array<{
+        id: string;
+        full_name: string | null;
+        email: string | null;
+        phone: string | null;
+      }>
+    | null;
+};
 
 export default async function SaleDetailPage({
   params,
@@ -19,9 +68,7 @@ export default async function SaleDetailPage({
   const supabase = createAdminSupabaseClient();
   let saleQuery = supabase
     .from("sales")
-    .select(
-      "*,vehicles(id,stock_number,registration,make,model,derivative),customers(id,full_name,email,phone)",
-    )
+    .select(getSaleDetailSelect(canViewCommercial))
     .eq("id", id)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null);
@@ -30,26 +77,36 @@ export default async function SaleDetailPage({
   }
   const sale = await saleQuery.single();
   if (sale.error || !sale.data) notFound();
-  const vehicle = Array.isArray(sale.data.vehicles)
-    ? sale.data.vehicles[0]
-    : sale.data.vehicles;
-  const customer = Array.isArray(sale.data.customers)
-    ? sale.data.customers[0]
-    : sale.data.customers;
-  const salesperson = sale.data.salesperson_id
+  const saleData = sale.data as unknown as SaleDetailRow;
+  const vehicle = Array.isArray(saleData.vehicles)
+    ? saleData.vehicles[0]
+    : saleData.vehicles;
+  const customer = Array.isArray(saleData.customers)
+    ? saleData.customers[0]
+    : saleData.customers;
+  const grossProfit =
+    canViewCommercial
+      ? Number(saleData.gross_profit ?? 0)
+      : null;
+  const internalNotes =
+    canViewCommercial &&
+    typeof saleData.internal_notes === "string"
+      ? saleData.internal_notes
+      : null;
+  const salesperson = saleData.salesperson_id
     ? await supabase
         .from("profiles")
         .select("display_name")
-        .eq("id", sale.data.salesperson_id)
+        .eq("id", saleData.salesperson_id)
         .maybeSingle()
     : null;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
-        eyebrow={sale.data.reference}
+        eyebrow={saleData.reference}
         title={`${vehicle?.make ?? "Vehicle"} ${vehicle?.model ?? "sale"}`}
-        description={`Recorded ${new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(sale.data.sale_date ?? sale.data.created_at))}`}
+        description={`Recorded ${new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(saleData.sale_date ?? saleData.created_at))}`}
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/sales">
@@ -61,16 +118,16 @@ export default async function SaleDetailPage({
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          ["Status", <StatusPill key="status" status={sale.data.status} />],
-          ["Sale price", formatCurrency(Number(sale.data.sale_price ?? 0))],
+          ["Status", <StatusPill key="status" status={saleData.status} />],
+          ["Sale price", formatCurrency(Number(saleData.sale_price ?? 0))],
           ...(canViewCommercial
-            ? [["Gross profit", formatCurrency(Number(sale.data.gross_profit ?? 0))]]
+            ? [["Gross profit", formatCurrency(grossProfit ?? 0)]]
             : []),
           [
             "Handover",
-            sale.data.handover_date
+            saleData.handover_date
               ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
-                  new Date(sale.data.handover_date),
+                  new Date(saleData.handover_date),
                 )
               : "Not scheduled",
           ],
@@ -127,24 +184,24 @@ export default async function SaleDetailPage({
         <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className="text-foreground/45">Deposit</dt>
-            <dd className="mt-1 font-extrabold">{formatCurrency(Number(sale.data.deposit ?? 0))}</dd>
+            <dd className="mt-1 font-extrabold">{formatCurrency(Number(saleData.deposit ?? 0))}</dd>
           </div>
           <div>
             <dt className="text-foreground/45">Part exchange</dt>
-            <dd className="mt-1 font-extrabold">{formatCurrency(Number(sale.data.part_exchange_allowance ?? 0))}</dd>
+            <dd className="mt-1 font-extrabold">{formatCurrency(Number(saleData.part_exchange_allowance ?? 0))}</dd>
           </div>
           <div>
             <dt className="text-foreground/45">Discount</dt>
-            <dd className="mt-1 font-extrabold">{formatCurrency(Number(sale.data.discount ?? 0))}</dd>
+            <dd className="mt-1 font-extrabold">{formatCurrency(Number(saleData.discount ?? 0))}</dd>
           </div>
           <div>
             <dt className="text-foreground/45">Payment</dt>
-            <dd className="mt-1 font-extrabold">{sale.data.payment_method ?? "Not recorded"}</dd>
+            <dd className="mt-1 font-extrabold">{saleData.payment_method ?? "Not recorded"}</dd>
           </div>
         </dl>
-        {sale.data.internal_notes ? (
+        {internalNotes ? (
           <p className="mt-5 rounded-xl bg-surface-muted p-4 text-xs leading-5">
-            {sale.data.internal_notes}
+            {internalNotes}
           </p>
         ) : null}
       </section>

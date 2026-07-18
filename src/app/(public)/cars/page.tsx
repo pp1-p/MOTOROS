@@ -305,20 +305,6 @@ export default async function CarsPage({
                       <option value="2023">2023</option>
                     </select>
                   </label>
-                  <fieldset
-                    disabled
-                    className="grid gap-1.5 text-xs font-bold opacity-60 sm:col-span-2 lg:col-span-3"
-                  >
-                    <legend>Monthly budget (placeholder)</legend>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Input placeholder="Minimum monthly amount" />
-                      <Input placeholder="Maximum monthly amount" />
-                    </div>
-                    <span className="font-normal text-foreground/55">
-                      Monthly filtering will only be enabled with an authorised
-                      finance provider and approved representative examples.
-                    </span>
-                  </fieldset>
                 </div>
                 <div className="mt-5 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end">
                   <Button asChild type="button" variant="ghost">

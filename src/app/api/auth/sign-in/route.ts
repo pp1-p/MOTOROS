@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isSupabaseConfigured } from "@/lib/env";
-import { assertSameOrigin, checkRateLimit, getClientFingerprint } from "@/lib/security/request";
+import {
+  assertSameOrigin,
+  checkSharedRateLimit,
+  getClientFingerprint,
+} from "@/lib/security/request";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -17,10 +21,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
-  const rate = checkRateLimit(`sign-in:${getClientFingerprint(request)}`, {
-    limit: 10,
-    windowMs: 15 * 60_000,
-  });
+  const rate = await checkSharedRateLimit(
+    `sign-in:${getClientFingerprint(request)}`,
+    {
+      action: "auth_sign_in",
+      limit: 10,
+      windowMs: 15 * 60_000,
+    },
+  );
   if (!rate.allowed) {
     return NextResponse.json(
       { message: "Too many sign-in attempts. Please wait and try again." },

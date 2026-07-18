@@ -47,7 +47,7 @@ export function StockTable({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       <div className="flex flex-col gap-3 rounded-2xl border bg-white p-3 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/30" />
@@ -141,8 +141,8 @@ export function StockTable({
       </div>
 
       {view === "table" ? (
-        <div className="overflow-hidden rounded-2xl border bg-white">
-          <div className="overflow-x-auto">
+        <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border bg-white">
+          <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
             <table className="w-full min-w-[980px] border-collapse text-left text-sm">
               <thead className="border-b bg-[#fafaf8] text-[10px] font-extrabold uppercase tracking-[0.11em] text-foreground/38">
                 <tr>

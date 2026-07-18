@@ -9,6 +9,7 @@
 - [ ] Add company and VAT numbers where applicable
 - [ ] Obtain review of privacy, cookie, terms and consent wording
 - [ ] Confirm cookie preferences and necessary-cookie mode
+- [ ] Set `SITE_INDEXABLE=true` only after the identity and legal checks pass
 
 ## Stock and sales
 

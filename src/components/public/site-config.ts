@@ -1,5 +1,7 @@
+import { defaultPublicSiteName } from "@/lib/site-metadata";
+
 export const publicSiteConfig = {
-  name: process.env.NEXT_PUBLIC_DEALERSHIP_NAME ?? "DealerOS",
+  name: process.env.NEXT_PUBLIC_DEALERSHIP_NAME ?? defaultPublicSiteName,
   strapline: "Independent motoring, properly handled.",
   heroEyebrow: "Independent motor specialists",
   heroHeadline: "The right car. Properly handled.",

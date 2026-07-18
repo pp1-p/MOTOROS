@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getServerEnv } from "@/lib/env";
 import {
   assertSameOrigin,
-  checkRateLimit,
+  checkSharedRateLimit,
   getClientFingerprint,
 } from "@/lib/security/request";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -17,10 +17,14 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
   }
-  const rate = checkRateLimit(`password-reset:${getClientFingerprint(request)}`, {
-    limit: 5,
-    windowMs: 30 * 60_000,
-  });
+  const rate = await checkSharedRateLimit(
+    `password-reset:${getClientFingerprint(request)}`,
+    {
+      action: "auth_password_reset",
+      limit: 5,
+      windowMs: 30 * 60_000,
+    },
+  );
   if (!rate.allowed) {
     return NextResponse.json(
       { message: "Please wait before requesting another reset email." },

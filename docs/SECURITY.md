@@ -49,6 +49,33 @@ Before launch:
 - penetration-test public forms, storage policies, RLS and webhook endpoints;
 - review CSP after adding analytics or a finance-referral provider.
 
+## Deferred view hardening
+
+Twelve API-facing views currently rely on PostgreSQL's owner-rights view
+behaviour. They have been reviewed as narrow projections, but they must not be
+changed mechanically to `security_invoker = true`: `anon` and `authenticated`
+do not have the required base-table privileges, and granting those privileges
+would expose the base tables through the Data API.
+
+The public group is `public_dealerships`, `public_safe_vehicles`,
+`public_vehicle_images`, `public_vehicle_features`, `public_repair_services`,
+`public_website_pages`, `public_vehicle_inventory` and
+`public_appointment_types`. Move their consumers behind a server-only safe-data
+layer first; then revoke direct `anon`/`authenticated` view access and either
+set the views to security-invoker mode for the trusted server role or replace
+them with tightly scoped public RPCs.
+
+The staff group is `vehicle_presentation_records`,
+`technician_repair_jobs`, `staff_vehicle_records` and `staff_sales_records`.
+Replace these with authenticated, role-checking set-returning RPCs (or a tested
+RLS/column-privilege design) before enabling security-invoker mode. Preserve the
+existing columns and organisation/role predicates during a staged cutover, and
+cover every staff role plus cross-organisation denial in integration tests.
+
+This redesign is intentionally deferred from migration 0007 because changing
+the view option alone would cause a production read outage. Treat it as a
+multi-tenant launch gate, not as permission to broaden base-table grants.
+
 ## Privacy preparation
 
 The schema records consent source/time, marketing preference, audit history and

@@ -67,7 +67,15 @@ export default async function RepairsPage({
           [String(workspace.metrics.inProgress), "Jobs in progress"],
           [String(workspace.metrics.awaitingApproval), "Awaiting approval"],
           [String(workspace.metrics.readyForCollection), "Ready for collection"],
-          [formatCurrency(workspace.metrics.openEstimateTotal), "Open estimates"],
+          ...(workspace.canViewCommercial &&
+          workspace.metrics.openEstimateTotal !== null
+            ? [
+                [
+                  formatCurrency(workspace.metrics.openEstimateTotal),
+                  "Open estimates",
+                ],
+              ]
+            : []),
         ].map(([value, label]) => (
           <div key={label} className="rounded-xl border bg-white p-4">
             <p className="text-lg font-extrabold">{value}</p>
@@ -90,7 +98,11 @@ export default async function RepairsPage({
             name="q"
             defaultValue={search}
             aria-label="Search repair jobs"
-            placeholder="Search job, registration or customer…"
+            placeholder={
+              workspace.canViewCustomerDetails
+                ? "Search job, registration or customer…"
+                : "Search job, registration or vehicle…"
+            }
             className="h-10 border-0 bg-surface-muted pl-9 shadow-none"
           />
         </div>
@@ -118,7 +130,9 @@ export default async function RepairsPage({
           title={search ? "No matching repair jobs" : "No repair jobs yet"}
           description={
             search
-              ? "Try a reference, registration, customer, vehicle or technician."
+              ? workspace.canViewCustomerDetails
+                ? "Try a reference, registration, customer, vehicle or technician."
+                : "Try a reference, registration, vehicle or status."
               : "Book a repair discussion call, then convert the completed appointment into a repair job."
           }
           actionHref={search ? "/admin/repairs" : "/admin/diary?create=1"}
@@ -127,7 +141,7 @@ export default async function RepairsPage({
       ) : (
         <div className="overflow-hidden rounded-2xl border bg-white">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
+            <table className="w-full min-w-[860px] text-left">
               <thead className="border-b bg-[#fafaf8] text-[10px] font-extrabold uppercase tracking-[0.1em] text-foreground/38">
                 <tr>
                   <th className="px-4 py-3">Job</th>
@@ -136,7 +150,9 @@ export default async function RepairsPage({
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Technician</th>
                   <th className="px-4 py-3">Due</th>
-                  <th className="px-4 py-3">Estimate</th>
+                  {workspace.canViewCommercial ? (
+                    <th className="px-4 py-3">Estimate</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -149,9 +165,11 @@ export default async function RepairsPage({
                         </span>
                         <span>
                           <span className="block text-xs font-extrabold">{job.reference}</span>
-                          <span className="block text-[10px] text-foreground/40">
-                            {job.customerName}
-                          </span>
+                          {job.customerName ? (
+                            <span className="block text-[10px] text-foreground/40">
+                              {job.customerName}
+                            </span>
+                          ) : null}
                         </span>
                       </Link>
                     </td>
@@ -171,9 +189,13 @@ export default async function RepairsPage({
                       {job.technicianName}
                     </td>
                     <td className="px-4 py-3 text-xs font-bold">{dueLabel(job.dueDate)}</td>
-                    <td className="px-4 py-3 text-xs font-extrabold">
-                      {job.estimateTotal > 0 ? formatCurrency(job.estimateTotal) : "Pending"}
-                    </td>
+                    {workspace.canViewCommercial ? (
+                      <td className="px-4 py-3 text-xs font-extrabold">
+                        {(job.estimateTotal ?? 0) > 0
+                          ? formatCurrency(job.estimateTotal ?? 0)
+                          : "Pending"}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

@@ -19,11 +19,14 @@ import { VehicleCard } from "@/components/public/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
 import { getFeaturedVehicles } from "@/lib/data/vehicles";
+import { buildPublicSeoTitle } from "@/lib/site-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteConfig = await getPublicSiteConfig();
   return {
-    title: siteConfig.seoTitle,
+    title: {
+      absolute: buildPublicSeoTitle(siteConfig.seoTitle, siteConfig.name),
+    },
     description: siteConfig.seoDescription,
   };
 }

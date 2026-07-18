@@ -4,6 +4,7 @@ import { addDays, formatISO } from "date-fns";
 
 import { repairJobs as demoRepairJobs } from "@/components/admin/admin-data";
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
+import { getRepairReadPolicy } from "@/lib/auth/repair-access";
 import { isDevelopmentDemoMode } from "@/lib/demo/store";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -33,7 +34,7 @@ export type RepairTechnician = {
 export type AdminRepairListItem = {
   id: string;
   reference: string;
-  customerName: string;
+  customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
   vehicle: string;
@@ -42,9 +43,9 @@ export type AdminRepairListItem = {
   status: RepairStatus;
   technicianName: string;
   dueDate: string | null;
-  estimateTotal: number;
-  approvalStatus: string;
-  paymentStatus: string;
+  estimateTotal: number | null;
+  approvalStatus: string | null;
+  paymentStatus: string | null;
 };
 
 export type RepairJobItem = {
@@ -52,9 +53,9 @@ export type RepairJobItem = {
   description: string;
   itemType: string;
   quantity: number;
-  unitPrice: number;
-  vatRate: number;
-  lineTotal: number;
+  unitPrice: number | null;
+  vatRate: number | null;
+  lineTotal: number | null;
   status: string;
 };
 
@@ -80,8 +81,8 @@ export type AdminRepairDetail = AdminRepairListItem & {
   customerFacingNotes: string | null;
   workCompleted: string | null;
   assignedTechnicianId: string | null;
-  estimateNet: number;
-  estimateVat: number;
+  estimateNet: number | null;
+  estimateVat: number | null;
   startDate: string | null;
   collectionDate: string | null;
   items: RepairJobItem[];
@@ -93,12 +94,52 @@ export type AdminRepairDetail = AdminRepairListItem & {
 export type RepairWorkspace = {
   jobs: AdminRepairListItem[];
   isDemo: boolean;
+  canViewCustomerDetails: boolean;
+  canViewCommercial: boolean;
   metrics: {
     inProgress: number;
     awaitingApproval: number;
     readyForCollection: number;
-    openEstimateTotal: number;
+    openEstimateTotal: number | null;
   };
+};
+
+type RepairListRow = {
+  id: string;
+  reference: string;
+  customer_id?: string;
+  assigned_technician_id: string | null;
+  status: string;
+  registration: string | null;
+  vehicle_make_model: string | null;
+  reported_fault: string;
+  due_date: string | null;
+  estimate_total?: number | null;
+  approval_status?: string | null;
+  payment_status?: string | null;
+};
+
+type RepairDetailRow = RepairListRow & {
+  mileage: number | null;
+  diagnosis: string | null;
+  work_completed: string | null;
+  technician_notes: string | null;
+  customer_facing_notes: string | null;
+  estimate_net?: number | null;
+  estimate_vat?: number | null;
+  start_date: string | null;
+  collection_date: string | null;
+};
+
+type RepairItemRow = {
+  id: string;
+  description: string;
+  item_type: string;
+  quantity: number;
+  unit_price?: number | null;
+  vat_rate?: number | null;
+  line_total?: number | null;
+  status: string;
 };
 
 const demoIds = [
@@ -153,7 +194,10 @@ function getDemoJobs(): AdminRepairListItem[] {
   }));
 }
 
-function getMetrics(jobs: AdminRepairListItem[]) {
+function getMetrics(
+  jobs: AdminRepairListItem[],
+  canViewCommercial = true,
+) {
   const openJobs = jobs.filter(
     (job) => !["collected", "cancelled"].includes(job.status),
   );
@@ -167,10 +211,12 @@ function getMetrics(jobs: AdminRepairListItem[]) {
     readyForCollection: jobs.filter(
       (job) => job.status === "ready_for_collection",
     ).length,
-    openEstimateTotal: openJobs.reduce(
-      (total, job) => total + job.estimateTotal,
-      0,
-    ),
+    openEstimateTotal: canViewCommercial
+      ? openJobs.reduce(
+          (total, job) => total + (job.estimateTotal ?? 0),
+          0,
+        )
+      : null,
   };
 }
 
@@ -252,6 +298,8 @@ export async function getRepairWorkspace(search = ""): Promise<RepairWorkspace> 
     return {
       jobs: allJobs.filter((job) => searchable(job, search)),
       isDemo: true,
+      canViewCustomerDetails: true,
+      canViewCommercial: true,
       metrics: getMetrics(allJobs),
     };
   }
@@ -264,17 +312,16 @@ export async function getRepairWorkspace(search = ""): Promise<RepairWorkspace> 
   if (!hasPermission(staff.role, "repairs:view")) {
     throw new Error("Repair access is required.");
   }
+  const access = getRepairReadPolicy(staff.role);
   const supabase = createAdminSupabaseClient();
   let query = supabase
     .from("repair_jobs")
-    .select(
-      "id,reference,customer_id,assigned_technician_id,status,registration,vehicle_make_model,reported_fault,due_date,estimate_total,approval_status,payment_status,created_at",
-    )
+    .select(access.listColumns)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(500);
-  if (staff.role === "technician") {
+  if (access.isTechnician) {
     query = query.eq("assigned_technician_id", staff.userId);
   }
   const jobsResult = await query;
@@ -282,11 +329,18 @@ export async function getRepairWorkspace(search = ""): Promise<RepairWorkspace> 
     throw new Error(`Repairs could not be loaded: ${jobsResult.error.message}`);
   }
 
-  const customerIds = [
-    ...new Set((jobsResult.data ?? []).map((job) => job.customer_id)),
-  ];
+  const jobRows = (jobsResult.data ?? []) as unknown as RepairListRow[];
+  const customerIds = access.canViewCustomerDetails
+    ? [
+        ...new Set(
+          jobRows
+            .map((job) => job.customer_id)
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ]
+    : [];
   const [customersResult, members] = await Promise.all([
-    customerIds.length
+    access.canViewCustomerDetails && customerIds.length
       ? supabase
           .from("customers")
           .select("id,full_name,first_name,last_name,email,phone")
@@ -294,7 +348,12 @@ export async function getRepairWorkspace(search = ""): Promise<RepairWorkspace> 
           .in("id", customerIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [], error: null }),
-    getOrganisationMembers(staff.organisationId),
+    access.isTechnician
+      ? Promise.resolve({
+          names: new Map([[staff.userId, staff.displayName]]),
+          technicians: [{ id: staff.userId, name: staff.displayName }],
+        })
+      : getOrganisationMembers(staff.organisationId),
   ]);
   if (customersResult.error) {
     throw new Error(`Repair customers could not be loaded: ${customersResult.error.message}`);
@@ -303,14 +362,24 @@ export async function getRepairWorkspace(search = ""): Promise<RepairWorkspace> 
   const customers = new Map(
     (customersResult.data ?? []).map((customer) => [customer.id, customer]),
   );
-  const allJobs = (jobsResult.data ?? []).map((job): AdminRepairListItem => {
-    const customer = customers.get(job.customer_id);
+  const allJobs = jobRows.map((job): AdminRepairListItem => {
+    const customer = job.customer_id
+      ? customers.get(job.customer_id)
+      : undefined;
     return {
       id: job.id,
       reference: job.reference,
-      customerName: customer ? customerName(customer) : "Unknown customer",
-      customerEmail: customer?.email ?? null,
-      customerPhone: customer?.phone ?? null,
+      customerName: access.canViewCustomerDetails
+        ? customer
+          ? customerName(customer)
+          : "Unknown customer"
+        : null,
+      customerEmail: access.canViewCustomerDetails
+        ? (customer?.email ?? null)
+        : null,
+      customerPhone: access.canViewCustomerDetails
+        ? (customer?.phone ?? null)
+        : null,
       vehicle: job.vehicle_make_model ?? "Vehicle details pending",
       registration: job.registration ?? "Not recorded",
       reportedFault: job.reported_fault,
@@ -319,16 +388,24 @@ export async function getRepairWorkspace(search = ""): Promise<RepairWorkspace> 
         ? (members.names.get(job.assigned_technician_id) ?? "Team member")
         : "Unassigned",
       dueDate: job.due_date,
-      estimateTotal: numberValue(job.estimate_total),
-      approvalStatus: job.approval_status,
-      paymentStatus: job.payment_status,
+      estimateTotal: access.canViewCommercial
+        ? numberValue(job.estimate_total)
+        : null,
+      approvalStatus: access.canViewCommercial
+        ? (job.approval_status ?? null)
+        : null,
+      paymentStatus: access.canViewCommercial
+        ? (job.payment_status ?? null)
+        : null,
     };
   });
 
   return {
     jobs: allJobs.filter((job) => searchable(job, search)),
     isDemo: false,
-    metrics: getMetrics(allJobs),
+    canViewCustomerDetails: access.canViewCustomerDetails,
+    canViewCommercial: access.canViewCommercial,
+    metrics: getMetrics(allJobs, access.canViewCommercial),
   };
 }
 
@@ -341,7 +418,8 @@ function getDemoDetail(idOrReference: string): AdminRepairDetail | null {
   );
   if (!job) return null;
   const index = jobs.indexOf(job);
-  const estimateNet = Math.round((job.estimateTotal / 1.2) * 100) / 100;
+  const estimateTotal = job.estimateTotal ?? 0;
+  const estimateNet = Math.round((estimateTotal / 1.2) * 100) / 100;
   return {
     ...job,
     mileage: 68_421 + index * 1_307,
@@ -359,10 +437,10 @@ function getDemoDetail(idOrReference: string): AdminRepairDetail | null {
         ? "00000000-0000-4000-8000-000000000101"
         : "00000000-0000-4000-8000-000000000102",
     estimateNet,
-    estimateVat: Math.round((job.estimateTotal - estimateNet) * 100) / 100,
+    estimateVat: Math.round((estimateTotal - estimateNet) * 100) / 100,
     startDate: formatISO(addDays(new Date(), -1), { representation: "date" }),
     collectionDate: null,
-    items: job.estimateTotal
+    items: estimateTotal
       ? [
           {
             id: "00000000-0000-4000-8000-000000000201",
@@ -416,14 +494,26 @@ function getDemoDetail(idOrReference: string): AdminRepairDetail | null {
 
 export async function getRepairDetail(
   idOrReference: string,
-): Promise<{ job: AdminRepairDetail | null; isDemo: boolean; canManage: boolean }> {
+): Promise<{
+  job: AdminRepairDetail | null;
+  isDemo: boolean;
+  canManage: boolean;
+  canViewCustomerDetails: boolean;
+  canViewCommercial: boolean;
+}> {
   if (!isSupabaseConfigured()) {
     if (!isDevelopmentDemoMode()) {
       throw new Error(
         "Supabase is not configured. Repair fixtures are available only in explicit development demo mode.",
       );
     }
-    return { job: getDemoDetail(idOrReference), isDemo: true, canManage: false };
+    return {
+      job: getDemoDetail(idOrReference),
+      isDemo: true,
+      canManage: false,
+      canViewCustomerDetails: true,
+      canViewCommercial: true,
+    };
   }
   if (!getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Supabase service access is required to load this repair.");
@@ -434,12 +524,12 @@ export async function getRepairDetail(
   if (!hasPermission(staff.role, "repairs:view")) {
     throw new Error("Repair access is required.");
   }
+  const access = getRepairReadPolicy(staff.role);
+  const canManage = hasPermission(staff.role, "repairs:manage");
   const supabase = createAdminSupabaseClient();
   let query = supabase
     .from("repair_jobs")
-    .select(
-      "id,reference,customer_id,assigned_technician_id,status,registration,vehicle_make_model,mileage,reported_fault,diagnosis,work_completed,technician_notes,customer_facing_notes,estimate_net,estimate_vat,estimate_total,approval_status,payment_status,start_date,due_date,collection_date",
-    )
+    .select(access.detailColumns)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null);
   query = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -447,7 +537,7 @@ export async function getRepairDetail(
   )
     ? query.eq("id", idOrReference)
     : query.eq("reference", idOrReference.toUpperCase());
-  if (staff.role === "technician") {
+  if (access.isTechnician) {
     query = query.eq("assigned_technician_id", staff.userId);
   }
   const jobResult = await query.maybeSingle();
@@ -458,25 +548,27 @@ export async function getRepairDetail(
     return {
       job: null,
       isDemo: false,
-      canManage: hasPermission(staff.role, "repairs:manage"),
+      canManage,
+      canViewCustomerDetails: access.canViewCustomerDetails,
+      canViewCommercial: access.canViewCommercial,
     };
   }
-  const row = jobResult.data;
+  const row = jobResult.data as unknown as RepairDetailRow;
 
   const [customerResult, itemsResult, documentsResult, auditResult, members] =
     await Promise.all([
-      supabase
-        .from("customers")
-        .select("id,full_name,first_name,last_name,email,phone")
-        .eq("id", row.customer_id)
-        .eq("organisation_id", staff.organisationId)
-        .is("deleted_at", null)
-        .maybeSingle(),
+      access.canViewCustomerDetails && row.customer_id
+        ? supabase
+            .from("customers")
+            .select("id,full_name,first_name,last_name,email,phone")
+            .eq("id", row.customer_id)
+            .eq("organisation_id", staff.organisationId)
+            .is("deleted_at", null)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
       supabase
         .from("repair_job_items")
-        .select(
-          "id,description,item_type,quantity,unit_price,vat_rate,line_total,status,sort_order",
-        )
+        .select(access.itemColumns)
         .eq("repair_job_id", row.id)
         .eq("organisation_id", staff.organisationId)
         .is("deleted_at", null)
@@ -488,14 +580,21 @@ export async function getRepairDetail(
         .eq("organisation_id", staff.organisationId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("audit_logs")
-        .select("id,action,change_reason,actor_user_id,occurred_at")
-        .eq("organisation_id", staff.organisationId)
-        .or(`entity_id.eq.${row.id},record_id.eq.${row.id}`)
-        .order("occurred_at", { ascending: false })
-        .limit(30),
-      getOrganisationMembers(staff.organisationId),
+      access.canViewAuditTimeline
+        ? supabase
+            .from("audit_logs")
+            .select("id,action,change_reason,actor_user_id,occurred_at")
+            .eq("organisation_id", staff.organisationId)
+            .or(`entity_id.eq.${row.id},record_id.eq.${row.id}`)
+            .order("occurred_at", { ascending: false })
+            .limit(30)
+        : Promise.resolve({ data: [], error: null }),
+      access.isTechnician
+        ? Promise.resolve({
+            names: new Map([[staff.userId, staff.displayName]]),
+            technicians: [{ id: staff.userId, name: staff.displayName }],
+          })
+        : getOrganisationMembers(staff.organisationId),
     ]);
   if (customerResult.error) {
     throw new Error(`Repair customer could not be loaded: ${customerResult.error.message}`);
@@ -511,15 +610,19 @@ export async function getRepairDetail(
   }
 
   const customer = customerResult.data;
-  const items = (itemsResult.data ?? []).map(
+  const items = ((itemsResult.data ?? []) as unknown as RepairItemRow[]).map(
     (item): RepairJobItem => ({
       id: item.id,
       description: item.description,
       itemType: item.item_type,
       quantity: numberValue(item.quantity),
-      unitPrice: numberValue(item.unit_price),
-      vatRate: numberValue(item.vat_rate),
-      lineTotal: numberValue(item.line_total),
+      unitPrice: access.canViewCommercial
+        ? numberValue(item.unit_price)
+        : null,
+      vatRate: access.canViewCommercial ? numberValue(item.vat_rate) : null,
+      lineTotal: access.canViewCommercial
+        ? numberValue(item.line_total)
+        : null,
       status: item.status,
     }),
   );
@@ -535,7 +638,7 @@ export async function getRepairDetail(
       occurredAt: entry.occurred_at,
     }),
   );
-  if (timeline.length === 0) {
+  if (access.canViewAuditTimeline && timeline.length === 0) {
     timeline.push({
       id: `created-${row.id}`,
       title: "Repair job loaded",
@@ -558,13 +661,23 @@ export async function getRepairDetail(
 
   return {
     isDemo: false,
-    canManage: hasPermission(staff.role, "repairs:manage"),
+    canManage,
+    canViewCustomerDetails: access.canViewCustomerDetails,
+    canViewCommercial: access.canViewCommercial,
     job: {
       id: row.id,
       reference: row.reference,
-      customerName: customer ? customerName(customer) : "Unknown customer",
-      customerEmail: customer?.email ?? null,
-      customerPhone: customer?.phone ?? null,
+      customerName: access.canViewCustomerDetails
+        ? customer
+          ? customerName(customer)
+          : "Unknown customer"
+        : null,
+      customerEmail: access.canViewCustomerDetails
+        ? (customer?.email ?? null)
+        : null,
+      customerPhone: access.canViewCustomerDetails
+        ? (customer?.phone ?? null)
+        : null,
       vehicle: row.vehicle_make_model ?? "Vehicle details pending",
       registration: row.registration ?? "Not recorded",
       reportedFault: row.reported_fault,
@@ -573,17 +686,27 @@ export async function getRepairDetail(
         ? (members.names.get(row.assigned_technician_id) ?? "Team member")
         : "Unassigned",
       dueDate: row.due_date,
-      estimateTotal: numberValue(row.estimate_total),
-      approvalStatus: row.approval_status,
-      paymentStatus: row.payment_status,
+      estimateTotal: access.canViewCommercial
+        ? numberValue(row.estimate_total)
+        : null,
+      approvalStatus: access.canViewCommercial
+        ? (row.approval_status ?? null)
+        : null,
+      paymentStatus: access.canViewCommercial
+        ? (row.payment_status ?? null)
+        : null,
       mileage: row.mileage,
       diagnosis: row.diagnosis,
       technicianNotes: row.technician_notes,
       customerFacingNotes: row.customer_facing_notes,
       workCompleted: row.work_completed,
       assignedTechnicianId: row.assigned_technician_id,
-      estimateNet: numberValue(row.estimate_net),
-      estimateVat: numberValue(row.estimate_vat),
+      estimateNet: access.canViewCommercial
+        ? numberValue(row.estimate_net)
+        : null,
+      estimateVat: access.canViewCommercial
+        ? numberValue(row.estimate_vat)
+        : null,
       startDate: row.start_date,
       collectionDate: row.collection_date,
       items,

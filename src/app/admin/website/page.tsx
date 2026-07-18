@@ -25,7 +25,7 @@ const defaults = {
   primaryLabel: "Browse our cars",
   primaryHref: "/cars",
   heroImageAlt: "Premium used vehicles inside the dealership showroom",
-  seoTitle: "Used Cars, Car Sourcing & Repairs | DealerOS",
+  seoTitle: "Used Cars, Car Sourcing & Repairs",
   seoDescription:
     "Quality used vehicles, personal car sourcing and trusted repairs.",
   status: "published",

@@ -7,7 +7,7 @@ remains the recommended path for teams that use it.
 Run in the Supabase SQL Editor, in this order:
 
 1. `combined_migrations.sql` — all migrations from `supabase/migrations/`
-   (0001–0006) concatenated in order. Run once on an empty project. If new
+   (0001–0007) concatenated in order. Run once on an empty project. If new
    migration files are added to the repository later, apply those individually;
    do not re-run this file.
 2. `first_owner_setup.sql` — after creating your first user in
@@ -17,3 +17,14 @@ Run in the Supabase SQL Editor, in this order:
    `DEALEROS_PUBLIC_ORGANISATION_ID` environment variable.
 
 Never run `supabase/seed.sql` against a production project.
+
+Running the combined file in the SQL Editor does not populate the Supabase CLI
+migration-history table. Before adopting `supabase db push` for a project set up
+this way, compare the live schema with every listed migration and then mark only
+the confirmed versions as applied with `supabase migration repair`. Never repair
+history by assumption: an incorrect applied marker can hide a partially applied
+schema.
+
+For a project that already ran the older 0001–0006 combined file, apply
+`../migrations/202607180001_security_hardening.sql` once as a separate forward
+migration. Do not re-run the combined file.

@@ -32,7 +32,7 @@ export default async function StockPage() {
     notation: "compact",
   });
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-[calc(100dvw-2rem)] space-y-6 sm:max-w-full">
       <PageHeader
         eyebrow="Vehicle operations"
         title="Stock"

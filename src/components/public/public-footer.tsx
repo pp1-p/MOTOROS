@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { getSiteLogoInitial } from "@/lib/site-metadata";
+
 import {
   publicSiteConfig,
   type PublicSiteConfig,
@@ -36,7 +38,7 @@ export function PublicFooter({
             aria-label={`${config.name} home`}
           >
             <span className="grid size-11 place-items-center rounded-full border border-[#d7ad69]/50 bg-[#d7ad69]/10 font-display text-2xl text-[#e7c387]">
-              D
+              {getSiteLogoInitial(config.name)}
             </span>
             <span className="text-xl font-extrabold">
               {config.name}

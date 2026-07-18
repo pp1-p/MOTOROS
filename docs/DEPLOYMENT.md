@@ -18,6 +18,28 @@ supabase db push
 Verify every migration in staging first. RLS must remain enabled on all
 organisation-owned tables.
 
+If the project was originally created by pasting
+`supabase/deploy/combined_migrations.sql` into the SQL Editor, stop before
+`supabase db push`: the database objects may exist while the CLI migration
+history is empty. First compare the live schema with migrations
+`202607160001` through `202607160006`, then mark each confirmed version as
+applied, for example:
+
+```powershell
+supabase migration repair 202607160001 --status applied
+supabase migration repair 202607160002 --status applied
+supabase migration repair 202607160003 --status applied
+supabase migration repair 202607160004 --status applied
+supabase migration repair 202607160005 --status applied
+supabase migration repair 202607160006 --status applied
+supabase migration list
+```
+
+Only after that history matches should `supabase db push` apply
+`202607180001_security_hardening.sql`. If the hardening migration was already
+run manually, verify its ACL, audit-scrub and function changes too, then repair
+that version as applied instead of running it twice.
+
 ## 3. Create the first owner
 
 Create the user through Supabase Authentication, then follow the bootstrap
@@ -50,6 +72,10 @@ server-only—never prefix them with `NEXT_PUBLIC_`.
 
 Set `NEXT_PUBLIC_APP_URL` to the canonical HTTPS URL and add that URL to
 Supabase Auth redirect allow-lists.
+
+Keep `SITE_INDEXABLE=false` until the contact details and professionally reviewed
+legal wording are complete. Set it to `true` only at launch; this enables search
+indexing and publishes the sitemap while continuing to block admin and API routes.
 
 ## 6. Webhooks and scheduled work
 
@@ -100,6 +126,8 @@ Then manually verify:
 8. Two concurrent requests cannot take a capacity-one booking slot.
 9. Private documents require signed URLs.
 10. Audit records exist for price, status, booking, repair and role changes.
+11. Anonymous and authenticated roles cannot execute server-only RPCs.
+12. Customer audit JSON contains only the approved metadata allow-list.
 
 ## Rollback
 

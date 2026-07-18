@@ -114,6 +114,9 @@ async function loadSettings() {
 export default async function SettingsPage() {
   const settings = await loadSettings();
   const firstRule = settings.rules[0];
+  const publicContactDetailsComplete = Boolean(
+    settings.telephone && settings.email && settings.address,
+  );
   const days = [
     ["Monday", 1],
     ["Tuesday", 2],
@@ -129,6 +132,13 @@ export default async function SettingsPage() {
         title="Settings"
         description="Dealership identity, contact details, availability, branding and privacy defaults."
       />
+
+      {!publicContactDetailsComplete ? (
+        <Notice title="Public contact details incomplete">
+          Add a telephone number, public email address and dealership address before launch.
+          The website currently has no reliable contact information to display.
+        </Notice>
+      ) : null}
 
       <AsyncForm
         endpoint="/api/admin/settings"
@@ -266,6 +276,13 @@ export default async function SettingsPage() {
           </p>
         </div>
         <div className="p-5">
+          {settings.rules.length === 0 ? (
+            <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-950">
+              No live repair availability is saved yet. The times below are suggested
+              starting values only; select the days you actually offer and save them before
+              accepting online bookings.
+            </div>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {days.map(([day, weekday]) => {
               const rule = settings.rules.find((item) => item.weekday === weekday);
@@ -276,7 +293,7 @@ export default async function SettingsPage() {
                       type="checkbox"
                       name="availableDays"
                       value={day.toLowerCase()}
-                      defaultChecked={rule?.active ?? true}
+                      defaultChecked={rule?.active ?? false}
                       className="accent-brand"
                     />
                     {day}

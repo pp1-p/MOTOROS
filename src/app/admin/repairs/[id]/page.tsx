@@ -20,6 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  isTechnicianRepairStatus,
+  technicianRepairStatusValues,
+} from "@/lib/auth/repair-access";
+import {
   displayRepairStatus,
   getRepairDetail,
   repairStatusValues,
@@ -50,8 +54,21 @@ export default async function RepairJobPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { job, isDemo, canManage } = await getRepairDetail(id);
+  const {
+    job,
+    isDemo,
+    canManage,
+    canViewCustomerDetails,
+    canViewCommercial,
+  } = await getRepairDetail(id);
   if (!job) notFound();
+  const technicianCanChangeStatus = isTechnicianRepairStatus(job.status);
+  const allowedStatusValues =
+    isDemo || canManage
+      ? repairStatusValues
+      : technicianCanChangeStatus
+        ? technicianRepairStatusValues
+        : [job.status];
 
   const jobFields = (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -61,7 +78,7 @@ export default async function RepairJobPage({
           name="reportedFault"
           defaultValue={job.reportedFault}
           className="mt-1.5"
-          disabled={isDemo}
+          disabled={isDemo || !canManage}
           required
         />
       </label>
@@ -105,14 +122,19 @@ export default async function RepairJobPage({
           name="status"
           defaultValue={job.status}
           className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:bg-surface-muted disabled:text-foreground/50"
-          disabled={isDemo}
+          disabled={isDemo || (!canManage && !technicianCanChangeStatus)}
         >
-          {repairStatusValues.map((status) => (
+          {allowedStatusValues.map((status) => (
             <option key={status} value={status}>
               {displayRepairStatus(status)}
             </option>
           ))}
         </select>
+        {!isDemo && !canManage && !technicianCanChangeStatus ? (
+          <span className="mt-1.5 block text-[10px] font-medium text-foreground/45">
+            A manager must change this status.
+          </span>
+        ) : null}
       </label>
       <label className="text-[11px] font-extrabold">
         Current mileage
@@ -123,7 +145,7 @@ export default async function RepairJobPage({
           max={2_000_000}
           defaultValue={job.mileage ?? ""}
           className="mt-1.5"
-          disabled={isDemo}
+          disabled={isDemo || !canManage}
         />
       </label>
       <label className="text-[11px] font-extrabold">
@@ -133,14 +155,14 @@ export default async function RepairJobPage({
           type="date"
           defaultValue={job.dueDate ?? ""}
           className="mt-1.5"
-          disabled={isDemo}
+          disabled={isDemo || !canManage}
         />
       </label>
       <label className="text-[11px] font-extrabold">
         Customer approval
         <select
           name="approvalStatus"
-          defaultValue={job.approvalStatus}
+          defaultValue={job.approvalStatus ?? "not_requested"}
           className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:bg-surface-muted disabled:text-foreground/50"
           disabled={isDemo || !canManage}
         >
@@ -159,7 +181,7 @@ export default async function RepairJobPage({
           min={0}
           max={2_000_000}
           step="0.01"
-          defaultValue={job.estimateNet}
+          defaultValue={job.estimateNet ?? ""}
           className="mt-1.5"
           disabled={isDemo || !canManage}
         />
@@ -172,7 +194,7 @@ export default async function RepairJobPage({
           min={0}
           max={2_000_000}
           step="0.01"
-          defaultValue={job.estimateVat}
+          defaultValue={job.estimateVat ?? ""}
           className="mt-1.5"
           disabled={isDemo || !canManage}
         />
@@ -209,7 +231,11 @@ export default async function RepairJobPage({
             <StatusPill status={displayRepairStatus(job.status)} />
           </div>
           <p className="mt-1 text-xs text-foreground/45">
-            {job.registration} · {job.customerName} · Due {dateLabel(job.dueDate)}
+            {job.registration}
+            {canViewCustomerDetails && job.customerName
+              ? ` · ${job.customerName}`
+              : ""}
+            {` · Due ${dateLabel(job.dueDate)}`}
           </p>
         </div>
         {job.customerPhone ? (
@@ -239,14 +265,22 @@ export default async function RepairJobPage({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          [UserRound, "Customer", job.customerName],
+          ...(canViewCustomerDetails && job.customerName
+            ? [[UserRound, "Customer", job.customerName]]
+            : []),
           [Wrench, "Technician", job.technicianName],
           [CalendarDays, "Target completion", dateLabel(job.dueDate)],
-          [
-            CircleDollarSign,
-            "Estimate",
-            job.estimateTotal > 0 ? formatCurrency(job.estimateTotal) : "Pending",
-          ],
+          ...(canViewCommercial
+            ? [
+                [
+                  CircleDollarSign,
+                  "Estimate",
+                  (job.estimateTotal ?? 0) > 0
+                    ? formatCurrency(job.estimateTotal ?? 0)
+                    : "Pending",
+                ],
+              ]
+            : []),
         ].map(([Icon, label, value]) => {
           const Component = Icon as typeof UserRound;
           return (
@@ -285,7 +319,9 @@ export default async function RepairJobPage({
             <div className="border-b p-5">
               <h2 className="font-extrabold">Labour &amp; parts</h2>
               <p className="mt-1 text-xs text-foreground/42">
-                Live job items. Prices shown excluding VAT.
+                {canViewCommercial
+                  ? "Live job items. Prices shown excluding VAT."
+                  : "Live labour and parts recorded for this job."}
               </p>
             </div>
             {job.items.length > 0 ? (
@@ -296,8 +332,12 @@ export default async function RepairJobPage({
                       <th className="px-5 py-3">Description</th>
                       <th className="px-4 py-3">Type</th>
                       <th className="px-4 py-3">Qty / hours</th>
-                      <th className="px-4 py-3">Rate</th>
-                      <th className="px-5 py-3 text-right">Total</th>
+                      {canViewCommercial ? (
+                        <>
+                          <th className="px-4 py-3">Rate</th>
+                          <th className="px-5 py-3 text-right">Total</th>
+                        </>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody className="divide-y text-xs">
@@ -308,10 +348,16 @@ export default async function RepairJobPage({
                           {item.itemType}
                         </td>
                         <td className="px-4 py-3">{item.quantity}</td>
-                        <td className="px-4 py-3">{formatCurrency(item.unitPrice)}</td>
-                        <td className="px-5 py-3 text-right font-extrabold">
-                          {formatCurrency(item.lineTotal)}
-                        </td>
+                        {canViewCommercial ? (
+                          <>
+                            <td className="px-4 py-3">
+                              {formatCurrency(item.unitPrice ?? 0)}
+                            </td>
+                            <td className="px-5 py-3 text-right font-extrabold">
+                              {formatCurrency(item.lineTotal ?? 0)}
+                            </td>
+                          </>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
@@ -322,30 +368,32 @@ export default async function RepairJobPage({
                 No labour or parts have been recorded for this job.
               </p>
             )}
-            <div className="ml-auto w-full max-w-xs space-y-2 border-t p-5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-foreground/45">Subtotal</span>
-                <strong>{formatCurrency(job.estimateNet)}</strong>
+            {canViewCommercial ? (
+              <div className="ml-auto w-full max-w-xs space-y-2 border-t p-5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-foreground/45">Subtotal</span>
+                  <strong>{formatCurrency(job.estimateNet ?? 0)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-foreground/45">VAT</span>
+                  <strong>{formatCurrency(job.estimateVat ?? 0)}</strong>
+                </div>
+                <div className="flex justify-between border-t pt-2 text-base">
+                  <span className="font-extrabold">Estimate total</span>
+                  <strong>{formatCurrency(job.estimateTotal ?? 0)}</strong>
+                </div>
+                {job.customerEmail && (job.estimateTotal ?? 0) > 0 ? (
+                  <Button asChild size="sm" className="mt-3 w-full">
+                    <a
+                      href={`mailto:${encodeURIComponent(job.customerEmail)}?subject=${encodeURIComponent(`Repair estimate ${job.reference}`)}`}
+                    >
+                      <Mail />
+                      Send estimate for approval
+                    </a>
+                  </Button>
+                ) : null}
               </div>
-              <div className="flex justify-between">
-                <span className="text-foreground/45">VAT</span>
-                <strong>{formatCurrency(job.estimateVat)}</strong>
-              </div>
-              <div className="flex justify-between border-t pt-2 text-base">
-                <span className="font-extrabold">Estimate total</span>
-                <strong>{formatCurrency(job.estimateTotal)}</strong>
-              </div>
-              {job.customerEmail && job.estimateTotal > 0 ? (
-                <Button asChild size="sm" className="mt-3 w-full">
-                  <a
-                    href={`mailto:${encodeURIComponent(job.customerEmail)}?subject=${encodeURIComponent(`Repair estimate ${job.reference}`)}`}
-                  >
-                    <Mail />
-                    Send estimate for approval
-                  </a>
-                </Button>
-              ) : null}
-            </div>
+            ) : null}
           </section>
 
           <section className="grid gap-5 md:grid-cols-2">
@@ -386,7 +434,7 @@ export default async function RepairJobPage({
               <p className="mt-1 text-[10px] text-foreground/45">
                 Included in approved communications and job summary.
               </p>
-              {isDemo ? (
+              {isDemo || !canManage ? (
                 <Textarea
                   className="mt-3"
                   defaultValue={job.customerFacingNotes ?? ""}
@@ -415,33 +463,37 @@ export default async function RepairJobPage({
         </div>
 
         <aside className="space-y-5">
-          <section className="rounded-2xl border bg-white">
-            <div className="border-b p-5">
-              <h2 className="font-extrabold">Repair timeline</h2>
-              <p className="mt-1 text-xs text-foreground/42">Latest activity first</p>
-            </div>
-            <div className="p-5">
-              {job.timeline.map((entry, index) => (
-                <div key={entry.id} className="relative flex gap-3 pb-6 last:pb-0">
-                  {index < job.timeline.length - 1 ? (
-                    <span className="absolute left-[13px] top-7 h-[calc(100%-8px)] w-px bg-border" />
-                  ) : null}
-                  <span className="relative z-10 grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft">
-                    <Check className="size-3.5 text-brand" />
-                  </span>
-                  <div className="pt-0.5">
-                    <p className="text-xs font-extrabold">{entry.title}</p>
-                    <p className="mt-1 text-[10px] leading-4 text-foreground/45">
-                      {entry.detail}
-                    </p>
-                    <p className="mt-1 text-[9px] font-bold text-foreground/30">
-                      {timestampLabel(entry.occurredAt)}
-                    </p>
+          {job.timeline.length > 0 ? (
+            <section className="rounded-2xl border bg-white">
+              <div className="border-b p-5">
+                <h2 className="font-extrabold">Repair timeline</h2>
+                <p className="mt-1 text-xs text-foreground/42">
+                  Latest activity first
+                </p>
+              </div>
+              <div className="p-5">
+                {job.timeline.map((entry, index) => (
+                  <div key={entry.id} className="relative flex gap-3 pb-6 last:pb-0">
+                    {index < job.timeline.length - 1 ? (
+                      <span className="absolute left-[13px] top-7 h-[calc(100%-8px)] w-px bg-border" />
+                    ) : null}
+                    <span className="relative z-10 grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft">
+                      <Check className="size-3.5 text-brand" />
+                    </span>
+                    <div className="pt-0.5">
+                      <p className="text-xs font-extrabold">{entry.title}</p>
+                      <p className="mt-1 text-[10px] leading-4 text-foreground/45">
+                        {entry.detail}
+                      </p>
+                      <p className="mt-1 text-[9px] font-bold text-foreground/30">
+                        {timestampLabel(entry.occurredAt)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section className="rounded-2xl border bg-white p-5">
             <h2 className="font-extrabold">Documents &amp; images</h2>

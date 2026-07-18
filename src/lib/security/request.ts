@@ -3,8 +3,15 @@ import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 
 import { getServerEnv } from "@/lib/env";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 type Bucket = { count: number; resetAt: number };
+
+export type RateLimitResult = {
+  allowed: boolean;
+  remaining: number;
+  retryAfterSeconds: number;
+};
 
 const globalBuckets = globalThis as typeof globalThis & {
   dealerOsRateLimitBuckets?: Map<string, Bucket>;
@@ -43,7 +50,7 @@ export function getClientFingerprint(request: Request) {
 export function checkRateLimit(
   key: string,
   { limit, windowMs }: { limit: number; windowMs: number },
-) {
+): RateLimitResult {
   const now = Date.now();
   const existing = buckets.get(key);
 
@@ -66,6 +73,65 @@ export function checkRateLimit(
     remaining: Math.max(0, limit - existing.count),
     retryAfterSeconds: 0,
   };
+}
+
+/**
+ * Enforces a rate limit in Supabase so it is shared across Vercel instances.
+ * The in-memory limiter remains as a fail-safe for local development and
+ * temporary database outages.
+ */
+export async function checkSharedRateLimit(
+  key: string,
+  {
+    action,
+    limit,
+    windowMs,
+  }: { action: string; limit: number; windowMs: number },
+): Promise<RateLimitResult> {
+  const env = getServerEnv();
+  const windowMinutes = Math.max(1, Math.ceil(windowMs / 60_000));
+
+  if (
+    env.NEXT_PUBLIC_SUPABASE_URL &&
+    env.SUPABASE_SERVICE_ROLE_KEY &&
+    env.DEALEROS_PUBLIC_ORGANISATION_ID
+  ) {
+    try {
+      const { error } = await createAdminSupabaseClient().rpc(
+        "consume_public_rate_limit",
+        {
+          target_organisation_id: env.DEALEROS_PUBLIC_ORGANISATION_ID,
+          target_action: action,
+          client_token: key,
+          maximum_attempts: limit,
+          window_minutes: windowMinutes,
+        },
+      );
+
+      if (!error) {
+        return {
+          allowed: true,
+          remaining: Math.max(0, limit - 1),
+          retryAfterSeconds: 0,
+        };
+      }
+
+      if (
+        error.code === "P0001" &&
+        error.message.toLowerCase().includes("too many submissions")
+      ) {
+        return {
+          allowed: false,
+          remaining: 0,
+          retryAfterSeconds: windowMinutes * 60,
+        };
+      }
+    } catch {
+      // Fall through to the local fail-safe below.
+    }
+  }
+
+  return checkRateLimit(key, { limit, windowMs });
 }
 
 export function secureCompare(left: string, right: string) {

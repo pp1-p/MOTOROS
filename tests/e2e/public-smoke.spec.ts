@@ -8,6 +8,7 @@ test("public home and inventory are usable", async ({ page }) => {
   await page.goto("/cars");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator("main")).not.toContainText(/purchase price|minimum acceptable|gross profit/i);
+  await expect(page.getByText("Monthly budget (placeholder)")).toHaveCount(0);
 });
 
 test("legal and service routes render on mobile", async ({ page }) => {
