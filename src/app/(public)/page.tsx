@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { SectionHeading } from "@/components/public/section-heading";
+import { SpotlightCard } from "@/components/public/spotlight-card";
 import { VehicleCard } from "@/components/public/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
@@ -64,27 +65,39 @@ export default async function HomePage() {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center"
+          className="hero-zoom object-cover object-center"
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,15,12,0.94)_0%,rgba(10,15,12,0.76)_42%,rgba(10,15,12,0.22)_75%,rgba(10,15,12,0.36)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(10,15,12,0.78)_0%,transparent_42%)]" />
         <div className="container-shell relative flex min-h-[680px] items-center py-20 sm:min-h-[720px]">
           <div className="max-w-3xl">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-4 py-2 text-xs font-extrabold tracking-[0.13em] text-white/85 uppercase backdrop-blur">
+            <p
+              className="enter mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-4 py-2 text-xs font-extrabold tracking-[0.13em] text-white/85 uppercase backdrop-blur"
+              style={{ "--enter-delay": "0.05s" } as React.CSSProperties}
+            >
               <Sparkles className="size-4 text-[#e3bd7e]" aria-hidden />
               {siteConfig.heroEyebrow}
             </p>
-            <h1 className="font-display text-6xl leading-[0.92] font-medium tracking-[-0.04em] text-balance sm:text-7xl lg:text-[6.5rem]">
+            <h1
+              className="enter font-display text-6xl leading-[0.92] font-medium tracking-[-0.04em] text-balance sm:text-7xl lg:text-[6.5rem]"
+              style={{ "--enter-delay": "0.18s" } as React.CSSProperties}
+            >
               {siteConfig.heroHeadline}
             </h1>
-            <p className="mt-7 max-w-xl text-base leading-8 text-white/72 sm:text-lg">
+            <p
+              className="enter mt-7 max-w-xl text-base leading-8 text-white/72 sm:text-lg"
+              style={{ "--enter-delay": "0.34s" } as React.CSSProperties}
+            >
               {siteConfig.heroSummary}
             </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div
+              className="enter mt-9 flex flex-col gap-3 sm:flex-row"
+              style={{ "--enter-delay": "0.48s" } as React.CSSProperties}
+            >
               <Button
                 asChild
                 size="lg"
-                className="bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
+                className="cta-sheen bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
               >
                 <Link href={siteConfig.primaryHref}>
                   {siteConfig.primaryLabel}
@@ -204,7 +217,7 @@ export default async function HomePage() {
               <Button
                 asChild
                 size="lg"
-                className="mt-9 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
+                className="cta-sheen mt-9 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
               >
                 <Link href="/source-a-car">
                   Build your brief
@@ -226,9 +239,9 @@ export default async function HomePage() {
           />
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {promises.map((item) => (
-              <article
+              <SpotlightCard
                 key={item.title}
-                className="rounded-3xl border bg-white p-7 sm:p-8"
+                className="reveal rounded-3xl border bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_18px_50px_rgba(15,24,18,0.1)] sm:p-8"
               >
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
                   <item.icon className="size-6" aria-hidden />
@@ -237,7 +250,7 @@ export default async function HomePage() {
                 <p className="mt-3 text-sm leading-7 text-foreground/60">
                   {item.copy}
                 </p>
-              </article>
+              </SpotlightCard>
             ))}
           </div>
         </div>
@@ -276,17 +289,17 @@ export default async function HomePage() {
               { value: "03", label: "Speak with the right person" },
               { value: "04", label: "Agree the practical next step" },
             ].map((item) => (
-              <div
+              <SpotlightCard
                 key={item.value}
-                className="flex min-h-36 flex-col justify-between bg-background p-6"
+                className="group flex min-h-36 flex-col justify-between bg-background p-6 transition-colors duration-300 hover:bg-brand-soft/40"
               >
-                <span className="font-display text-3xl text-brand">
+                <span className="font-display text-3xl text-brand transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:text-brand-strong">
                   {item.value}
                 </span>
                 <span className="max-w-40 text-sm font-extrabold">
                   {item.label}
                 </span>
-              </div>
+              </SpotlightCard>
             ))}
           </div>
         </div>
@@ -311,7 +324,7 @@ export default async function HomePage() {
               <Button
                 asChild
                 size="lg"
-                className="shrink-0 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
+                className="cta-sheen shrink-0 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
               >
                 <Link href="/contact">
                   Start a conversation
