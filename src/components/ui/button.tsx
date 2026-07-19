@@ -5,11 +5,12 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-bold transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 rounded-xl text-sm font-bold transition-[color,background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.985] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-brand text-white hover:bg-brand-strong",
+        default:
+          "bg-brand text-white shadow-[0_10px_24px_rgba(27,92,79,0.28)] hover:bg-brand-strong hover:shadow-[0_6px_16px_rgba(27,92,79,0.32)]",
         secondary: "bg-surface-muted text-foreground hover:bg-border",
         outline: "border bg-transparent text-foreground hover:bg-surface-muted",
         ghost: "text-foreground/70 hover:bg-surface-muted hover:text-foreground",

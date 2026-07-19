@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fraunces, Manrope } from "next/font/google";
 
 import {
   defaultPublicSiteName,
@@ -6,6 +7,17 @@ import {
 } from "@/lib/site-metadata";
 
 import "./globals.css";
+
+const displayFont = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display-web",
+  axes: ["opsz"],
+});
+
+const sansFont = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans-web",
+});
 
 const siteIndexable = isSiteIndexable();
 
@@ -26,7 +38,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-GB">
+    <html
+      lang="en-GB"
+      className={`${displayFont.variable} ${sansFont.variable}`}
+    >
       <body>
         <a
           href="#main-content"

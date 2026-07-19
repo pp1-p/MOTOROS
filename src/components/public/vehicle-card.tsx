@@ -18,7 +18,7 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
   const presentation = getVehiclePresentation(vehicle);
 
   return (
-    <article className="group overflow-hidden rounded-3xl border bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(15,24,18,0.12)]">
+    <article className="group reveal overflow-hidden rounded-3xl border bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_22px_60px_rgba(15,24,18,0.12)]">
       <Link
         href={`/cars/${vehicle.slug}`}
         className="relative block aspect-[4/3] overflow-hidden bg-surface-muted"
@@ -38,6 +38,10 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
             Photography coming soon
           </div>
         )}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-b from-[#171814]/25 via-transparent to-transparent"
+        />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           <Badge variant={presentation.tone} className="shadow-sm">
             {presentation.label}
@@ -65,7 +69,7 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
               </Link>
             </h3>
           </div>
-          <p className="shrink-0 text-xl font-extrabold">
+          <p className="shrink-0 font-display text-2xl tracking-tight">
             {formatCurrency(vehicle.price)}
           </p>
         </div>
@@ -93,7 +97,10 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
           className="mt-5 inline-flex items-center gap-2 text-sm font-extrabold text-brand transition hover:text-brand-strong"
         >
           View this car
-          <ArrowUpRight className="size-4" aria-hidden />
+          <ArrowUpRight
+            className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+            aria-hidden
+          />
         </Link>
       </div>
     </article>
