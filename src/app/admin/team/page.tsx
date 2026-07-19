@@ -128,7 +128,7 @@ export default async function TeamPage() {
                 ].map((row) => (
                   <tr key={row[0]}>
                     {row.map((cell, index) => (
-                      <td key={cell} className={`py-2.5 pr-3 ${index ? "text-foreground/48" : ""}`}>
+                      <td key={index} className={`py-2.5 pr-3 ${index ? "text-foreground/48" : ""}`}>
                         {cell}
                       </td>
                     ))}
