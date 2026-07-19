@@ -53,8 +53,10 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 75%, white);
+  outline: 2px solid color-mix(in srgb, var(--accent) 80%, white);
   outline-offset: 3px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: inherit;
 }
 
 button,
@@ -74,6 +76,38 @@ select {
   font-family: var(--font-display-web, "Iowan Old Style"), "Baskerville",
     Georgia, serif;
   font-optical-sizing: auto;
+}
+
+/* Apple-style size-specific tracking: negative for display, near-zero for body.
+   Applied to the top of the type ladder; small UI still uses default tracking. */
+.tracking-display {
+  letter-spacing: -0.022em;
+  line-height: 1.02;
+}
+.tracking-display-lg {
+  letter-spacing: -0.032em;
+  line-height: 0.95;
+}
+.tracking-caps {
+  letter-spacing: 0.14em;
+}
+
+/* Translucent chrome material — used on the public header, mobile buy-bar,
+   and any floating panel that sits over content. */
+.material-dark {
+  background: color-mix(in srgb, #101614 74%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+}
+.material-light {
+  background: color-mix(in srgb, #ffffff 78%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+}
+/* Scroll-edge fade for floating chrome — a soft mask instead of a hard border. */
+.scroll-edge-mask {
+  -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  mask-image: linear-gradient(to bottom, #000 65%, transparent);
 }
 
 .surface-shadow {
@@ -195,6 +229,33 @@ select {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .material-dark {
+    background: #101614;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .material-light {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :focus-visible {
+    outline-width: 3px;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .material-dark {
+    background: #0b100e;
+  }
+  .material-light {
+    background: #ffffff;
+    border-color: color-mix(in srgb, var(--foreground) 40%, transparent);
   }
 }
 

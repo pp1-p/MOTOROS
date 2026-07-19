@@ -28,7 +28,7 @@ export default async function ContactPage() {
           <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
             Contact the team
           </p>
-          <h1 className="mt-4 max-w-4xl font-display text-6xl leading-[0.92] tracking-tight text-balance sm:text-8xl">
+          <h1 className="mt-4 max-w-4xl tracking-display-lg font-display text-6xl text-balance sm:text-8xl">
             A straightforward way to start.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-white/65">
@@ -44,7 +44,7 @@ export default async function ContactPage() {
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
               Speak, write or visit
             </p>
-            <h2 className="mt-4 font-display text-5xl leading-none tracking-tight">
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl">
               We’re here to help.
             </h2>
             <div className="mt-8 grid gap-4">

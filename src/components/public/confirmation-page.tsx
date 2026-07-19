@@ -40,7 +40,7 @@ export async function ConfirmationPage({
           <p className="mt-8 text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
             {eyebrow}
           </p>
-          <h1 className="mt-4 max-w-3xl font-display text-5xl leading-[0.96] tracking-tight text-balance sm:text-7xl">
+          <h1 className="mt-4 max-w-3xl tracking-display-lg font-display text-5xl text-balance sm:text-7xl">
             {title}
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-white/65">

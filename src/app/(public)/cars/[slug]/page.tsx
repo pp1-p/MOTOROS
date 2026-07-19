@@ -201,7 +201,7 @@ export default async function VehicleDetailPage({
                   Stock {vehicle.stockNumber}
                 </span>
               </div>
-              <h1 className="max-w-4xl font-display text-5xl leading-[0.96] tracking-tight text-balance sm:text-6xl">
+              <h1 className="max-w-4xl tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
                 {vehicle.publicTitle}
               </h1>
               <p className="mt-4 text-sm font-semibold text-foreground/60 sm:text-base">
@@ -212,7 +212,7 @@ export default async function VehicleDetailPage({
               <p className="text-xs font-extrabold tracking-[0.12em] text-brand uppercase">
                 Retail price
               </p>
-              <p className="mt-1 font-display text-4xl tracking-tight sm:text-5xl">
+              <p className="mt-1 tracking-display font-display text-4xl sm:text-5xl">
                 {formatCurrency(vehicle.price)}
               </p>
             </div>
@@ -327,7 +327,7 @@ export default async function VehicleDetailPage({
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
               About this car
             </p>
-            <h2 className="mt-4 font-display text-5xl leading-none tracking-tight">
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl">
               A closer look
             </h2>
             <p className="mt-6 text-base leading-8 text-foreground/68">
@@ -380,7 +380,7 @@ export default async function VehicleDetailPage({
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
               Notable equipment
             </p>
-            <h2 className="mt-4 font-display text-5xl leading-none tracking-tight">
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl">
               The useful details
             </h2>
             <ul className="mt-7 grid gap-3 sm:grid-cols-2">
@@ -433,7 +433,7 @@ export default async function VehicleDetailPage({
             <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
               Speak to the team
             </p>
-            <h2 className="mt-4 font-display text-5xl leading-[0.96] tracking-tight text-balance sm:text-6xl">
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
               Let’s make the next step useful.
             </h2>
             <p className="mt-6 max-w-lg text-base leading-8 text-white/65">
@@ -511,7 +511,7 @@ export default async function VehicleDetailPage({
       </section>
 
       <div aria-hidden className="h-20 lg:hidden" />
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#121814]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <div className="material-dark fixed inset-x-0 bottom-0 z-40 border-t border-white/10 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_28px_rgba(6,10,8,0.35)] lg:hidden">
         <div className="container-shell flex items-center justify-between gap-4 py-3">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold tracking-[0.12em] text-[#d7ad69] uppercase">

@@ -24,7 +24,7 @@ export default function BookRepairCallPage() {
             <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
               Live repair-call diary
             </p>
-            <h1 className="mt-4 max-w-4xl font-display text-6xl leading-[0.92] tracking-tight text-balance sm:text-8xl">
+            <h1 className="mt-4 max-w-4xl tracking-display-lg font-display text-6xl text-balance sm:text-8xl">
               Book a useful first conversation.
             </h1>
           </div>
@@ -39,7 +39,7 @@ export default function BookRepairCallPage() {
       <section className="py-14 sm:py-20">
         <div className="container-shell grid gap-10 lg:grid-cols-[0.62fr_1fr] lg:items-start lg:gap-16">
           <aside className="lg:sticky lg:top-8">
-            <h2 className="font-display text-4xl leading-none tracking-tight">
+            <h2 className="tracking-display font-display text-4xl">
               Before you book
             </h2>
             <ul className="mt-7 grid gap-5">

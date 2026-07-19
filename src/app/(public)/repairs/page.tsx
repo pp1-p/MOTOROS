@@ -87,7 +87,7 @@ export default function RepairsPage() {
               <Sparkles className="size-4" aria-hidden />
               Repairs & servicing
             </p>
-            <h1 className="mt-5 font-display text-6xl leading-[0.92] tracking-tight text-balance sm:text-8xl">
+            <h1 className="mt-5 tracking-display-lg font-display text-6xl text-balance sm:text-8xl">
               Understand the issue.
               <span className="block text-[#e3bd7e]">Agree the next step.</span>
             </h1>
@@ -151,7 +151,7 @@ export default function RepairsPage() {
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
               What happens next
             </p>
-            <h2 className="mt-4 font-display text-5xl leading-none tracking-tight text-balance sm:text-6xl">
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
               A call first. Workshop time when it makes sense.
             </h2>
             <p className="mt-6 text-base leading-8 text-foreground/65">
@@ -191,7 +191,7 @@ export default function RepairsPage() {
             <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-end">
               <div>
                 <CarFront className="size-7 text-[#d7ad69]" aria-hidden />
-                <h2 className="mt-5 font-display text-5xl leading-none tracking-tight">
+                <h2 className="mt-5 tracking-display-lg font-display text-5xl">
                   Is it safe to keep driving?
                 </h2>
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65">

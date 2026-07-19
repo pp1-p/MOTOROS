@@ -79,7 +79,7 @@ export default async function HomePage() {
               {siteConfig.heroEyebrow}
             </p>
             <h1
-              className="enter font-display text-6xl leading-[0.92] font-medium tracking-[-0.04em] text-balance sm:text-7xl lg:text-[6.5rem]"
+              className="enter tracking-display-lg font-display text-6xl font-medium text-balance sm:text-7xl lg:text-[6.5rem]"
               style={{ "--enter-delay": "0.12s" } as React.CSSProperties}
             >
               {siteConfig.heroHeadline}
@@ -192,7 +192,7 @@ export default async function HomePage() {
               <p className="mb-4 text-xs font-extrabold tracking-[0.18em] text-[#e3bd7e] uppercase">
                 Personal car sourcing
               </p>
-              <h2 className="font-display text-5xl leading-[0.98] tracking-tight text-balance sm:text-6xl">
+              <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
                 Can’t see the right one? Let us go and find it.
               </h2>
               <p className="mt-6 text-base leading-8 text-white/65">
@@ -262,7 +262,7 @@ export default async function HomePage() {
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
               Workshop support
             </p>
-            <h2 className="mt-4 max-w-2xl font-display text-5xl leading-none tracking-tight text-balance">
+            <h2 className="mt-4 max-w-2xl tracking-display-lg font-display text-5xl text-balance">
               A calm first step when your car needs attention.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-foreground/65">
@@ -312,7 +312,7 @@ export default async function HomePage() {
             <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <CircleGauge className="mb-5 size-7 text-[#d7ad69]" aria-hidden />
-                <h2 className="font-display text-5xl leading-[0.98] tracking-tight text-balance sm:text-6xl">
+                <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
                   Ready when you are. No pressure before then.
                 </h2>
                 <p className="mt-5 max-w-2xl leading-7 text-white/65">

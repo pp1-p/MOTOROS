@@ -44,7 +44,7 @@ export default function SourceACarPage() {
               <Sparkles className="size-4" aria-hidden />
               Personal car sourcing
             </p>
-            <h1 className="mt-5 max-w-4xl font-display text-6xl leading-[0.92] tracking-tight text-balance sm:text-8xl">
+            <h1 className="mt-5 max-w-4xl tracking-display-lg font-display text-6xl text-balance sm:text-8xl">
               Your brief.
               <span className="block text-[#e3bd7e]">Our search.</span>
             </h1>
@@ -99,7 +99,7 @@ export default function SourceACarPage() {
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
               Start the search
             </p>
-            <h2 className="mt-4 font-display text-5xl leading-[0.96] tracking-tight text-balance sm:text-6xl">
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
               Tell us enough to be useful.
             </h2>
             <p className="mt-6 text-base leading-8 text-foreground/65">

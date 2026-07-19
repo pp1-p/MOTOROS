@@ -35,6 +35,7 @@ export function PublicHeader({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const contact = getPublicContactDetails(config);
 
   useEffect(() => {
@@ -44,14 +45,24 @@ export function PublicHeader({
     };
   }, [open]);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <header
       className={cn(
-        "sticky -top-[37px] z-50 border-b border-white/10 bg-[#121814] text-white",
+        "material-dark sticky -top-[37px] z-50 text-white transition-[border-color,box-shadow] duration-300 ease-out",
+        scrolled
+          ? "border-b border-white/10 shadow-[0_10px_30px_rgba(6,10,8,0.28)]"
+          : "border-b border-transparent",
         open && "z-[90]",
       )}
     >
-      <div className="border-b border-white/10 bg-[#0c100e]">
+      <div className="border-b border-white/10 bg-black/25">
         <div className="container-shell flex min-h-9 items-center justify-between gap-4 py-1 text-[11px] font-bold tracking-[0.08em] text-white/65 uppercase sm:text-xs">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="size-3.5 text-[#d7ad69]" aria-hidden />
@@ -164,7 +175,7 @@ export function PublicHeader({
       {open ? (
         <div
           id="mobile-navigation"
-          className="absolute inset-x-0 top-full h-[calc(100dvh-5rem)] overflow-y-auto bg-[#121814] px-4 pb-8 lg:hidden"
+          className="material-dark absolute inset-x-0 top-full h-[calc(100dvh-5rem)] overflow-y-auto px-4 pb-8 lg:hidden"
         >
           <nav
             aria-label="Mobile navigation"

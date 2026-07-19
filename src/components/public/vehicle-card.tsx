@@ -71,7 +71,7 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
               </Link>
             </h3>
           </div>
-          <p className="shrink-0 font-display text-2xl tracking-tight">
+          <p className="shrink-0 tracking-display font-display text-2xl">
             {formatCurrency(vehicle.price)}
           </p>
         </div>

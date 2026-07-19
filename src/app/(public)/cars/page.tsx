@@ -93,7 +93,7 @@ export default async function CarsPage({
           <p className="mb-4 text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
             Current stock
           </p>
-          <h1 className="max-w-4xl font-display text-5xl leading-[0.96] tracking-tight text-balance sm:text-7xl">
+          <h1 className="max-w-4xl tracking-display-lg font-display text-5xl text-balance sm:text-7xl">
             Find the car that fits your life.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-white/65">

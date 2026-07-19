@@ -26,7 +26,7 @@ export function LegalPage({
           <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
             {eyebrow}
           </p>
-          <h1 className="mt-4 font-display text-5xl leading-[0.96] tracking-tight sm:text-7xl">
+          <h1 className="mt-4 tracking-display-lg font-display text-5xl sm:text-7xl">
             {title}
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-white/65">
@@ -54,7 +54,7 @@ export function LegalPage({
           <div className="grid gap-10">
             {sections.map((section) => (
               <section key={section.title} className="border-b pb-10 last:border-0">
-                <h2 className="font-display text-3xl tracking-tight">
+                <h2 className="tracking-display font-display text-3xl">
                   {section.title}
                 </h2>
                 <div className="mt-4 space-y-4 text-sm leading-7 text-foreground/68 [&_a]:font-bold [&_a]:text-brand [&_a]:underline [&_li]:pl-1 [&_strong]:text-foreground [&_ul]:grid [&_ul]:list-disc [&_ul]:gap-2 [&_ul]:pl-5">
