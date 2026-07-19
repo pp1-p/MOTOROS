@@ -155,14 +155,28 @@ export default async function TeamPage() {
           </label>
           <label className="mt-4 block text-[11px] font-extrabold">
             Role
-            <select name="role" className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm">
-              <option>Manager</option>
-              <option>Salesperson</option>
-              <option>Service advisor</option>
-              <option>Technician</option>
-              <option>Website editor</option>
+            <select
+              name="role"
+              defaultValue="Manager"
+              className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm"
+            >
+              <optgroup label="Admin access">
+                <option value="Owner">Owner — full admin (co-owner)</option>
+                <option value="Manager">Manager — day-to-day admin</option>
+              </optgroup>
+              <optgroup label="Staff access">
+                <option value="Salesperson">Salesperson</option>
+                <option value="Service advisor">Service advisor</option>
+                <option value="Technician">Technician</option>
+                <option value="Website editor">Website editor</option>
+              </optgroup>
             </select>
           </label>
+          <p className="mt-2 text-[10px] leading-4 text-foreground/45">
+            Owner has every permission, including inviting others.
+            Manager runs the dealership day-to-day (no team, integrations
+            or audit).
+          </p>
         </AsyncForm>
       </div>
     </div>

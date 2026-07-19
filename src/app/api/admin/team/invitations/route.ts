@@ -7,6 +7,7 @@ import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 const roleMap = {
+  Owner: "owner",
   Manager: "manager",
   Salesperson: "salesperson",
   "Service advisor": "service_advisor",

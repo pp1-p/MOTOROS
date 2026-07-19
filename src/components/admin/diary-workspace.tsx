@@ -81,9 +81,35 @@ export function DiaryWorkspace({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(data),
       });
-      const result = (await response.json().catch(() => null)) as { message?: string } | null;
+      const result = (await response.json().catch(() => null)) as {
+        message?: string;
+        fieldErrors?: Record<string, string[] | undefined>;
+      } | null;
       if (!response.ok) {
-        setMessage(result?.message ?? "The appointment could not be booked. The slot has not been held.");
+        const fieldLabels: Record<string, string> = {
+          type: "Appointment type",
+          date: "Date",
+          startTime: "Start time",
+          durationMinutes: "Duration",
+          customerName: "Customer name",
+          phone: "Phone number",
+          registration: "Registration",
+          internalNote: "Internal note",
+        };
+        const firstBad = Object.entries(result?.fieldErrors ?? {}).find(
+          ([, issues]) => (issues?.length ?? 0) > 0,
+        );
+        if (firstBad) {
+          const [name, issues] = firstBad;
+          setMessage(
+            `${fieldLabels[name] ?? name}: ${issues?.[0] ?? "please review"}.`,
+          );
+        } else {
+          setMessage(
+            result?.message ??
+              "The appointment could not be booked. The slot has not been held.",
+          );
+        }
         return;
       }
       setMessage("Appointment created and availability updated.");
