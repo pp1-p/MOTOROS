@@ -14,7 +14,7 @@ describe("UK registration validation", () => {
 
   it.each(["", "HELLO!", "123456789", "A"])("rejects %s", (input) => {
     expect(() => validateAndNormaliseRegistration(input)).toThrow(
-      "valid UK registration",
+      "UK registration in a recognised format",
     );
   });
 });

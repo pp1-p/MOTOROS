@@ -416,7 +416,13 @@ export function VehicleReviewForm() {
           </span>
         </div>
         <div className="grid gap-5 p-5 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Registration" name="registration" defaultValue={lookup.registration} required />
+          <Field
+            label="Registration"
+            name="registration"
+            defaultValue={lookup.registration}
+            required
+            hint="UK plate, e.g. AB12 CDE. Spaces and hyphens are optional."
+          />
           <Field label="Make" name="make" defaultValue={lookup.make} required />
           <Field
             label="Year of manufacture"

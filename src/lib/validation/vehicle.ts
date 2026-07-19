@@ -12,7 +12,11 @@ const nullableText = (max: number) =>
     .transform((value) => value || null);
 
 export const vehicleCreateSchema = z.object({
-  registration: z.string().trim().min(2).max(12),
+  registration: z
+    .string({ error: "Enter the vehicle registration." })
+    .trim()
+    .min(2, "Enter the vehicle registration.")
+    .max(12, "Registration is too long — check for typos."),
   vin: nullableText(32),
   make: z.string().trim().min(1).max(80),
   model: z.string().trim().min(1).max(100),

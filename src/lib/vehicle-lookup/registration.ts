@@ -20,7 +20,7 @@ export function validateAndNormaliseRegistration(value: string) {
   if (!valid) {
     throw new VehicleLookupError(
       "invalid_registration",
-      "Enter a valid UK registration number.",
+      "Enter a UK registration in a recognised format — for example AB12 CDE (current style), A123 BCD (prefix), ABC 123 D (suffix), 1234 AB (dateless) or ABC 1234 (Northern Ireland). Spaces and hyphens are optional.",
     );
   }
 
