@@ -29,3 +29,8 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Skills pack (Emil Kowalski) — installed per session, not shipped
+.agents/
+.claude/skills/
+skills-lock.json
