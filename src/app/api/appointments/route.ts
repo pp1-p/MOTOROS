@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { normaliseRegistration } from "@/lib/utils";
+import { normaliseRegistration, splitCustomerName } from "@/lib/utils";
 
 const schema = z.object({
   type: z.enum([
@@ -132,11 +132,14 @@ export async function POST(request: Request) {
     .maybeSingle();
   let customerId = existingCustomer.data?.id as string | undefined;
   if (!customerId) {
+    const name = splitCustomerName(parsed.data.customerName);
     const customer = await supabase
       .from("customers")
       .insert({
         organisation_id: staff.organisationId,
         full_name: parsed.data.customerName,
+        first_name: name.firstName,
+        last_name: name.lastName,
         phone: parsed.data.phone,
         preferred_contact_method: "phone",
         marketing_consent: false,

@@ -885,10 +885,11 @@ export async function getAdminDiaryList(
   const appointments = rows.map((row) => {
     const type = types.get(row.appointment_type_id);
     const customer = row.customer_id ? customers.get(row.customer_id) : null;
+    const joinedName = [customer?.first_name, customer?.last_name]
+      .filter(Boolean)
+      .join(" ");
     const customerName =
-      customer?.full_name ??
-      [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") ??
-      "Internal appointment";
+      customer?.full_name ?? (joinedName || "Internal appointment");
     const vehicleDetail = row.registration ?? row.vehicle_make_model;
     const durationMinutes = Math.max(
       1,

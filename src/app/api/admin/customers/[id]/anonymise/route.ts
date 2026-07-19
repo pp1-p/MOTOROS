@@ -54,6 +54,8 @@ export async function POST(
     .from("customers")
     .update({
       full_name: `Anonymised customer ${suffix.slice(0, 6)}`,
+      first_name: "Anonymised",
+      last_name: `Customer ${suffix.slice(0, 6)}`,
       email: `anonymised+${suffix}@invalid.local`,
       phone: null,
       address: {},

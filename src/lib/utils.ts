@@ -25,6 +25,16 @@ export function initials(name: string) {
     .join("");
 }
 
+export function splitCustomerName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "Customer", lastName: "Customer" };
+  if (parts.length === 1) return { firstName: parts[0]!, lastName: "Customer" };
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts.at(-1)!,
+  };
+}
+
 export function normaliseRegistration(value: string) {
   return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }

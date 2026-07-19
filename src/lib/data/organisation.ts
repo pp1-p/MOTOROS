@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServerEnv } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { splitCustomerName } from "@/lib/utils";
 
 export async function getDefaultOrganisationId() {
   const supabase = createAdminSupabaseClient();
@@ -90,11 +91,14 @@ export async function findOrCreateCustomer(input: {
 
   if (customer) return customer.id;
 
+  const name = splitCustomerName(input.name);
   const { data, error } = await supabase
     .from("customers")
     .insert({
       organisation_id: input.organisationId,
       full_name: input.name,
+      first_name: name.firstName,
+      last_name: name.lastName,
       email,
       phone,
       preferred_contact_method: input.preferredContact,

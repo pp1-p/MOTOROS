@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { splitCustomerName } from "@/lib/utils";
 
 const optionalEmail = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -34,14 +35,6 @@ const schema = z
     path: ["email"],
   });
 
-function splitName(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return { firstName: parts[0]!, lastName: "Customer" };
-  return {
-    firstName: parts.slice(0, -1).join(" "),
-    lastName: parts.at(-1)!,
-  };
-}
 
 export async function POST(request: Request) {
   try {
@@ -70,7 +63,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const name = splitName(parsed.data.name);
+  const name = splitCustomerName(parsed.data.name);
   const customer = await createAdminSupabaseClient()
     .from("customers")
     .insert({
