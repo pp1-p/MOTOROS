@@ -285,13 +285,59 @@ export function VehicleReviewForm() {
         | {
             ok?: boolean;
             message?: string;
+            fieldErrors?: Record<string, string[] | undefined>;
             id?: string;
             data?: { id?: string };
             vehicle?: { id?: string };
           }
         | null;
       if (!response.ok || result?.ok === false) {
-        setError(result?.message ?? "The vehicle could not be created. Your review details remain here.");
+        const fieldLabels: Record<string, string> = {
+          registration: "Registration",
+          vin: "VIN",
+          make: "Make",
+          model: "Model",
+          derivative: "Derivative",
+          trim: "Trim",
+          bodyType: "Body type",
+          fuelType: "Fuel type",
+          transmission: "Transmission",
+          colour: "Colour",
+          doors: "Doors",
+          seats: "Seats",
+          engineSizeCc: "Engine capacity",
+          powerBhp: "Power (BHP)",
+          co2EmissionsGKm: "CO2 emissions",
+          euroStatus: "Euro status",
+          year: "Year",
+          firstRegistrationDate: "First registration date",
+          motExpiry: "MOT expiry",
+          mileage: "Current mileage",
+          retailPrice: "Proposed retail price",
+          purchasePrice: "Purchase price",
+          publicTitle: "Public title",
+          description: "Description",
+          videoUrl: "Video URL",
+          reviewed: "Review confirmation",
+        };
+        const bad = Object.entries(result?.fieldErrors ?? {}).filter(
+          ([, issues]) => (issues?.length ?? 0) > 0,
+        );
+        if (bad.length) {
+          const parts = bad.slice(0, 3).map(([name, issues]) => {
+            const label = fieldLabels[name] ?? name;
+            const first = issues?.[0] ?? "please review";
+            return `${label}: ${first}`;
+          });
+          const more =
+            bad.length > 3 ? ` (+${bad.length - 3} more)` : "";
+          setError(`${parts.join(" · ")}${more}`);
+        } else {
+          setError(
+            result?.message ??
+              "The vehicle could not be created. Your review details remain here.",
+          );
+        }
         return;
       }
       const id = result?.vehicle?.id ?? result?.data?.id ?? result?.id ?? "new";
