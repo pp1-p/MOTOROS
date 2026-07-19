@@ -33,7 +33,7 @@ export function PageHeader({
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-balance text-2xl font-extrabold tracking-[-0.035em] text-foreground sm:text-3xl">
+        <h1 className="text-balance text-2xl font-extrabold tracking-[-0.032em] leading-[1.05] text-foreground sm:text-3xl">
           {title}
         </h1>
         {description ? (
@@ -90,7 +90,7 @@ export function MetricCard({
           aria-hidden="true"
         />
       </div>
-      <p className="mt-5 text-2xl font-extrabold tracking-[-0.04em]">{value}</p>
+      <p className="mt-5 text-2xl font-extrabold tracking-[-0.032em] tabular-nums">{value}</p>
       <p className="mt-0.5 text-sm font-bold">{label}</p>
       <p className="mt-2 flex items-center gap-1 text-xs opacity-55">
         {trend === "up" ? <ArrowUpRight className="size-3.5" /> : null}

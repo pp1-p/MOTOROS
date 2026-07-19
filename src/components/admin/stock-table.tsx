@@ -192,21 +192,21 @@ export function StockTable({
                     <td className="px-4 py-3">
                       <StatusPill status={vehicle.status} />
                     </td>
-                    <td className="px-4 py-3 text-xs font-semibold text-foreground/58">
+                    <td className="px-4 py-3 text-xs font-semibold tabular-nums text-foreground/58">
                       {formatMileage(vehicle.mileage)}
                     </td>
-                    <td className="px-4 py-3 text-xs font-extrabold">
+                    <td className="px-4 py-3 text-xs font-extrabold tabular-nums">
                       {formatCurrency(vehicle.price)}
                     </td>
                     {canViewCommercial ? (
-                      <td className="px-4 py-3 text-xs font-extrabold text-emerald-700">
+                      <td className="px-4 py-3 text-xs font-extrabold tabular-nums text-emerald-700">
                         {formatCurrency(vehicle.price - vehicle.cost)}
                       </td>
                     ) : null}
                     <td className="px-4 py-3">
                       <span
                         className={cn(
-                          "text-xs font-bold",
+                          "text-xs font-bold tabular-nums",
                           vehicle.age > 20 ? "text-amber-700" : "text-foreground/55",
                         )}
                       >

@@ -368,7 +368,7 @@ export function AdminShell({
     <div className="min-h-screen bg-[#f5f6f3]">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col bg-[#10231f] text-white transition-transform duration-200 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col bg-[#10231f] text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)] transition-transform duration-200 lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
         aria-label="DealerOS navigation"
@@ -414,10 +414,10 @@ export function AdminShell({
                   onClick={() => setMobileOpen(false)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition",
+                    "group flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition-colors duration-150 ease-out active:scale-[0.985]",
                     active
-                      ? "bg-white text-[#10231f] shadow-sm"
-                      : "text-white/62 hover:bg-white/[0.07] hover:text-white",
+                      ? "bg-white text-[#10231f] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                      : "text-white/62 hover:bg-white/[0.08] hover:text-white",
                   )}
                 >
                   <Icon
@@ -446,14 +446,17 @@ export function AdminShell({
                   onClick={() => setMobileOpen(false)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition",
+                    "group flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition-colors duration-150 ease-out active:scale-[0.985]",
                     active
-                      ? "bg-white text-[#10231f]"
-                      : "text-white/62 hover:bg-white/[0.07] hover:text-white",
+                      ? "bg-white text-[#10231f] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                      : "text-white/62 hover:bg-white/[0.08] hover:text-white",
                   )}
                 >
                   <Icon
-                    className={cn("size-[17px]", active ? "text-brand" : "text-white/45")}
+                    className={cn(
+                      "size-[17px] transition-colors duration-150",
+                      active ? "text-brand" : "text-white/45 group-hover:text-white/80",
+                    )}
                     aria-hidden="true"
                   />
                   {item.label}

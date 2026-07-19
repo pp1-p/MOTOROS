@@ -253,19 +253,19 @@ export function Dashboard({
               <div className="mb-5 flex flex-wrap gap-x-8 gap-y-2">
                 <div>
                   <p className="text-xs font-bold text-foreground/40">Sales this month</p>
-                  <p className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">
+                  <p className="mt-1 text-2xl font-extrabold tracking-[-0.032em] tabular-nums">
                     {snapshot.vehiclesSoldThisMonth} vehicles
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-foreground/40">Revenue</p>
-                  <p className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">
+                  <p className="mt-1 text-2xl font-extrabold tracking-[-0.032em] tabular-nums">
                     {formatCurrency(snapshot.salesRevenueThisMonth)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-foreground/40">Average margin</p>
-                  <p className="mt-1 text-2xl font-extrabold tracking-[-0.04em]">
+                  <p className="mt-1 text-2xl font-extrabold tracking-[-0.032em] tabular-nums">
                     {formatCurrency(
                       snapshot.vehiclesSoldThisMonth
                         ? snapshot.realisedGrossProfitThisMonth / snapshot.vehiclesSoldThisMonth
