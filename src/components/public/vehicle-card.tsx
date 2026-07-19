@@ -18,7 +18,9 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
   const presentation = getVehiclePresentation(vehicle);
 
   return (
-    <article className="group reveal overflow-hidden rounded-3xl border bg-white transition duration-300 hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_22px_60px_rgba(15,24,18,0.12)]">
+    <article
+      className={`group overflow-hidden rounded-3xl border bg-white transition-[transform,box-shadow,border-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_22px_60px_rgba(15,24,18,0.12)] ${priority ? "" : "reveal"}`}
+    >
       <Link
         href={`/cars/${vehicle.slug}`}
         className="relative block aspect-[4/3] overflow-hidden bg-surface-muted"
@@ -31,7 +33,7 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
             fill
             priority={priority}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover transition duration-700 group-hover:scale-[1.04]"
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
           <div className="grid size-full place-items-center text-sm font-bold text-foreground/45">

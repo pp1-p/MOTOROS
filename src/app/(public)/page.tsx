@@ -73,26 +73,26 @@ export default async function HomePage() {
           <div className="max-w-3xl">
             <p
               className="enter mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-4 py-2 text-xs font-extrabold tracking-[0.13em] text-white/85 uppercase backdrop-blur"
-              style={{ "--enter-delay": "0.05s" } as React.CSSProperties}
+              style={{ "--enter-delay": "0.04s" } as React.CSSProperties}
             >
               <Sparkles className="size-4 text-[#e3bd7e]" aria-hidden />
               {siteConfig.heroEyebrow}
             </p>
             <h1
               className="enter font-display text-6xl leading-[0.92] font-medium tracking-[-0.04em] text-balance sm:text-7xl lg:text-[6.5rem]"
-              style={{ "--enter-delay": "0.18s" } as React.CSSProperties}
+              style={{ "--enter-delay": "0.12s" } as React.CSSProperties}
             >
               {siteConfig.heroHeadline}
             </h1>
             <p
               className="enter mt-7 max-w-xl text-base leading-8 text-white/72 sm:text-lg"
-              style={{ "--enter-delay": "0.34s" } as React.CSSProperties}
+              style={{ "--enter-delay": "0.2s" } as React.CSSProperties}
             >
               {siteConfig.heroSummary}
             </p>
             <div
               className="enter mt-9 flex flex-col gap-3 sm:flex-row"
-              style={{ "--enter-delay": "0.48s" } as React.CSSProperties}
+              style={{ "--enter-delay": "0.28s" } as React.CSSProperties}
             >
               <Button
                 asChild
