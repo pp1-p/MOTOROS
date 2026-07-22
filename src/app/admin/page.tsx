@@ -1,8 +1,10 @@
 import { formatInTimeZone } from "date-fns-tz";
 
 import { Dashboard } from "@/components/admin/dashboard";
-import { getAdminDiaryList, getAdminLeadList } from "@/lib/data/admin-operational";
-import { getAdminReportsSnapshot } from "@/lib/data/admin-reports";
+import {
+  getAdminDiaryList,
+  getAdminLeadList,
+} from "@/lib/data/admin-operational";
 import { getDashboardSnapshot } from "@/lib/data/dashboard";
 
 export default async function AdminOverviewPage() {
@@ -11,11 +13,8 @@ export default async function AdminOverviewPage() {
     ? await Promise.all([
         snapshot.canViewLeads ? getAdminLeadList() : Promise.resolve(null),
         getAdminDiaryList(),
-        snapshot.canViewCommercial
-          ? getAdminReportsSnapshot()
-          : Promise.resolve(null),
       ])
-        .then(([leadList, diary, reports]) => ({
+        .then(([leadList, diary]) => ({
           leads: leadList?.leads.slice(0, 4) ?? [],
           averageLeadResponseMinutes:
             leadList?.metrics.averageResponseMinutes ?? null,
@@ -24,9 +23,9 @@ export default async function AdminOverviewPage() {
               appointment.date ===
               formatInTimeZone(new Date(), diary.timezone, "yyyy-MM-dd"),
           ),
-          salesTrend: reports?.monthlySales ?? [],
         }))
         .catch(() => null)
     : null;
+
   return <Dashboard snapshot={snapshot} details={details} />;
 }
