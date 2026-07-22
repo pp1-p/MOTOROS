@@ -26,6 +26,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const hourRows = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
+const bookingSlots = hourRows.flatMap((hour) => [hour, hour.replace(":00", ":30")]);
 
 export function DiaryWorkspace({
   appointments,
@@ -63,12 +64,25 @@ export function DiaryWorkspace({
   const weekEndDate = addDays(weekStartDate, 6);
   const [view, setView] = useState<"day" | "week" | "agenda">("week");
   const [createOpen, setCreateOpen] = useState(searchParams.get("create") === "1");
+  const [createSlot, setCreateSlot] = useState(() => ({
+    date: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+    time: "10:00",
+  }));
   const [selected, setSelected] = useState<AdminDiaryAppointment | null>(
     appointments.find((item) => item.id === searchParams.get("appointment")) ?? null,
   );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const noteRef = useRef<HTMLTextAreaElement>(null);
+
+  function openCreate(
+    date = format(addDays(new Date(), 1), "yyyy-MM-dd"),
+    time = "10:00",
+  ) {
+    setCreateSlot({ date, time });
+    setMessage("");
+    setCreateOpen(true);
+  }
 
   async function createAppointment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -262,7 +276,7 @@ export function DiaryWorkspace({
               </button>
             ))}
           </div>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" onClick={() => openCreate()}>
             <Plus />
             New appointment
           </Button>
@@ -271,6 +285,12 @@ export function DiaryWorkspace({
         {message ? (
           <p role="status" className="rounded-xl bg-brand-soft px-4 py-3 text-xs font-bold text-brand-strong">
             {message}
+          </p>
+        ) : null}
+
+        {view === "week" ? (
+          <p className="text-[10px] font-semibold text-foreground/45">
+            Click or tap an empty time to start a booking.
           </p>
         ) : null}
 
@@ -317,8 +337,19 @@ export function DiaryWorkspace({
                       day.iso === today && "bg-brand-soft/15",
                     )}
                   >
-                    {hourRows.map((hour) => (
-                      <div key={hour} className="h-16 border-b" />
+                    {bookingSlots.map((time) => (
+                      <button
+                        key={time}
+                        type="button"
+                        onClick={() => openCreate(day.iso, time)}
+                        aria-label={"Book " + day.label + " at " + time}
+                        title={"Book " + day.label + " at " + time}
+                        className="group flex h-8 w-full items-center justify-center border-b transition-colors hover:bg-brand-soft/40 focus-visible:bg-brand-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+                      >
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[8px] font-extrabold text-brand opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                          + Book
+                        </span>
+                      </button>
                     ))}
                     {appointments
                       .filter((appointment) => appointment.date === day.iso)
@@ -343,7 +374,7 @@ export function DiaryWorkspace({
                             type="button"
                             onClick={() => setSelected(appointment)}
                             className={cn(
-                              "absolute left-1 right-1 rounded-lg border-l-2 p-2 text-left shadow-sm transition hover:z-10 hover:shadow-md",
+                              "absolute left-1 right-1 z-10 rounded-lg border-l-2 p-2 text-left shadow-sm transition hover:z-20 hover:shadow-md",
                               tones[appointment.tone],
                             )}
                             style={{
@@ -626,14 +657,20 @@ export function DiaryWorkspace({
                 <Input
                   name="date"
                   type="date"
-                  defaultValue={format(addDays(new Date(), 1), "yyyy-MM-dd")}
+                  defaultValue={createSlot.date}
                   className="mt-1.5"
                   required
                 />
               </label>
               <label className="text-xs font-extrabold">
                 Start time
-                <Input name="startTime" type="time" defaultValue="10:00" className="mt-1.5" required />
+                <Input
+                  name="startTime"
+                  type="time"
+                  defaultValue={createSlot.time}
+                  className="mt-1.5"
+                  required
+                />
               </label>
               <label className="text-xs font-extrabold">
                 Duration
