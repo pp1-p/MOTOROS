@@ -9,6 +9,7 @@ import {
   CalendarDays,
   CarFront,
   CheckSquare2,
+  ChevronDown,
   Command,
   FileText,
   Globe2,
@@ -33,25 +34,41 @@ import type { StaffRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const navigation = [
-  { label: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
-  { label: "Stock", href: "/admin/stock", icon: CarFront },
-  { label: "Leads", href: "/admin/leads", icon: HeartHandshake },
-  { label: "Sales pipeline", href: "/admin/sales", icon: WalletCards },
-  { label: "Invoices", href: "/admin/invoices", icon: Receipt },
-  { label: "Car sourcing", href: "/admin/sourcing", icon: Search },
-  { label: "Repairs", href: "/admin/repairs", icon: Wrench },
-  { label: "Diary", href: "/admin/diary", icon: CalendarDays },
-  { label: "Customers", href: "/admin/customers", icon: UsersRound },
-  { label: "Tasks", href: "/admin/tasks", icon: CheckSquare2 },
-  { label: "Documents", href: "/admin/documents", icon: FileText },
-  { label: "Reports", href: "/admin/reports", icon: Activity },
+  { label: "Today", href: "/admin", icon: LayoutDashboard, matches: ["/admin"] },
+  { label: "Stock", href: "/admin/stock", icon: CarFront, matches: ["/admin/stock"] },
+  {
+    label: "Enquiries",
+    href: "/admin/leads",
+    icon: HeartHandshake,
+    matches: ["/admin/leads", "/admin/customers", "/admin/sourcing"],
+  },
+  {
+    label: "Sales",
+    href: "/admin/sales",
+    icon: WalletCards,
+    matches: ["/admin/sales", "/admin/invoices"],
+  },
+  {
+    label: "Workshop",
+    href: "/admin/repairs",
+    icon: Wrench,
+    matches: ["/admin/repairs", "/admin/diary"],
+  },
 ] as const;
 
 const management = [
+  { label: "Tasks", href: "/admin/tasks", icon: CheckSquare2 },
+  { label: "Customers", href: "/admin/customers", icon: UsersRound },
+  { label: "Car sourcing", href: "/admin/sourcing", icon: Search },
+  { label: "Invoices", href: "/admin/invoices", icon: Receipt },
+  { label: "Diary", href: "/admin/diary", icon: CalendarDays },
+  { label: "Documents", href: "/admin/documents", icon: FileText },
+  { label: "Reports", href: "/admin/reports", icon: Activity },
   { label: "Website", href: "/admin/website", icon: Globe2 },
   { label: "Team", href: "/admin/team", icon: Users },
   { label: "Integrations", href: "/admin/integrations", icon: Zap },
   { label: "Settings", href: "/admin/settings", icon: Settings },
+  { label: "System health", href: "/admin/health", icon: Activity },
 ] as const;
 
 const quickActions = [
@@ -182,6 +199,9 @@ export function AdminShell({
   const [commandOpen, setCommandOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(() =>
+    management.some((item) => pathname.startsWith(item.href)),
+  );
   const [query, setQuery] = useState("");
   const [notifications, setNotifications] = useState<ShellNotification[]>([]);
   const [notificationsState, setNotificationsState] = useState<
@@ -301,8 +321,11 @@ export function AdminShell({
   const visibleNavigation = navigation.filter((item) =>
     canOpen(role, item.href),
   );
-  const visibleManagement = management.filter((item) =>
-    canOpen(role, item.href),
+  const visibleManagement = management.filter(
+    (item) => item.href === "/admin/health" || canOpen(role, item.href),
+  );
+  const moreActive = visibleManagement.some((item) =>
+    pathname.startsWith(item.href),
   );
   const visibleQuickActions = quickActions.filter((item) => {
     const href = item.href.split("?")[0] ?? item.href;
@@ -408,9 +431,11 @@ export function AdminShell({
           </p>
           <div className="space-y-0.5">
             {visibleNavigation.map((item) => {
-              const active = "exact" in item && item.exact
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
+              const active = item.matches.some((match) =>
+                match === "/admin"
+                  ? pathname === match
+                  : pathname.startsWith(match),
+              );
               const Icon = item.icon;
               return (
                 <Link
@@ -437,49 +462,62 @@ export function AdminShell({
               );
             })}
           </div>
-          <p className="px-3 pb-2 pt-6 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/30">
-            Manage
-          </p>
-          <div className="space-y-0.5">
-            {visibleManagement.map((item) => {
-              const active = pathname.startsWith(item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  aria-current={active ? "page" : undefined}
+          {visibleManagement.length ? (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((current) => !current)}
+                aria-expanded={moreOpen}
+                className={cn(
+                  "group flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition-colors duration-150 ease-out",
+                  moreActive
+                    ? "bg-white text-[#10231f] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                    : "text-white/62 hover:bg-white/[0.08] hover:text-white",
+                )}
+              >
+                <Menu
                   className={cn(
-                    "group flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition-colors duration-150 ease-out active:scale-[0.985]",
-                    active
-                      ? "bg-white text-[#10231f] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-                      : "text-white/62 hover:bg-white/[0.08] hover:text-white",
+                    "size-[17px]",
+                    moreActive ? "text-brand" : "text-white/45 group-hover:text-white/80",
                   )}
-                >
-                  <Icon
-                    className={cn(
-                      "size-[17px] transition-colors duration-150",
-                      active ? "text-brand" : "text-white/45 group-hover:text-white/80",
-                    )}
-                    aria-hidden="true"
-                  />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
+                  aria-hidden="true"
+                />
+                <span className="flex-1 text-left">More</span>
+                <ChevronDown
+                  className={cn("size-4 transition-transform", moreOpen && "rotate-180")}
+                  aria-hidden="true"
+                />
+              </button>
+              {moreOpen ? (
+                <div className="ml-5 mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                  {visibleManagement.map((item) => {
+                    const active = pathname.startsWith(item.href);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "group flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[12px] font-bold transition-colors",
+                          active
+                            ? "bg-white/12 text-white"
+                            : "text-white/50 hover:bg-white/[0.07] hover:text-white",
+                        )}
+                      >
+                        <Icon className="size-3.5 text-white/40" aria-hidden="true" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </nav>
 
         <div className="border-t border-white/10 p-3">
-          <Link
-            href="/admin/health"
-            onClick={() => setMobileOpen(false)}
-            className="mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-bold text-white/45 hover:bg-white/[0.06] hover:text-white"
-          >
-            <Activity className="size-3.5" />
-            System health
-          </Link>
           <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.05] p-1">
             <Link
               href="/admin/settings"
