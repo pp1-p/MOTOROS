@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Megaphone, Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/admin/page-kit";
 import { StockTable } from "@/components/admin/stock-table";
@@ -38,12 +38,20 @@ export default async function StockPage() {
         title="Stock"
         description="Manage acquisition, preparation, pricing and presentation across your vehicle inventory."
         actions={
-          <Button asChild size="sm">
-            <Link href="/admin/stock/new">
-              <Plus />
-              Add vehicle
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/stock/advertising">
+                <Megaphone />
+                Advertising
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/admin/stock/new">
+                <Plus />
+                Add vehicle
+              </Link>
+            </Button>
+          </div>
         }
       />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
