@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AsyncForm } from "@/components/admin/async-form";
+import { CreateRepairInvoiceButtons } from "@/components/admin/create-repair-invoice-buttons";
 import { Notice, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,13 @@ import {
   repairStatusValues,
 } from "@/lib/data/admin-repairs";
 import { formatCurrency } from "@/lib/utils";
+import { getInvoicesForRepair } from "@/lib/data/admin-invoices";
+import {
+  formatMoney,
+  invoiceStatusLabel,
+  invoiceStatusTone,
+  invoiceTypeLabel,
+} from "@/lib/invoices/format";
 
 function dateLabel(value: string | null) {
   if (!value) return "Not set";
@@ -62,6 +70,11 @@ export default async function RepairJobPage({
     canViewCommercial,
   } = await getRepairDetail(id);
   if (!job) notFound();
+  const repairInvoices = isDemo ? [] : await getInvoicesForRepair(job.id);
+  const finalInvoice = repairInvoices.find((invoice) => invoice.type === "repair");
+  const estimateInvoices = repairInvoices.filter(
+    (invoice) => invoice.type === "pro_forma",
+  );
   const technicianCanChangeStatus = isTechnicianRepairStatus(job.status);
   const allowedStatusValues =
     isDemo || canManage
@@ -521,6 +534,85 @@ export default async function RepairJobPage({
               </p>
             )}
           </section>
+
+          {!isDemo ? (
+            <section className="rounded-2xl border bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 font-extrabold">
+                  <FileText className="size-4 text-brand" />
+                  Invoicing
+                </h2>
+              </div>
+              {finalInvoice ? (
+                <div className="mt-3 rounded-xl border bg-[#fafaf8] p-3">
+                  <Link
+                    href={`/admin/invoices/${finalInvoice.id}`}
+                    className="text-xs font-extrabold text-brand hover:underline"
+                  >
+                    {finalInvoice.invoiceNumber}
+                  </Link>
+                  <p className="mt-0.5 text-[10px] text-foreground/55">
+                    {formatMoney(finalInvoice.total, finalInvoice.currency)} total ·{" "}
+                    <span className="font-extrabold text-amber-800">
+                      {formatMoney(finalInvoice.balance, finalInvoice.currency)} due
+                    </span>
+                  </p>
+                  <span
+                    className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-extrabold ${invoiceStatusTone(finalInvoice.status)}`}
+                  >
+                    {invoiceStatusLabel(finalInvoice.status)}
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs leading-5 text-foreground/50">
+                  No final invoice yet. Create one when the job&apos;s labour
+                  and parts are complete.
+                </p>
+              )}
+              {estimateInvoices.length > 0 ? (
+                <div className="mt-4 border-t pt-3">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-foreground/45">
+                    Estimates ({estimateInvoices.length})
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {estimateInvoices.map((invoice) => (
+                      <li
+                        key={invoice.id}
+                        className="flex items-center justify-between rounded-lg border p-2"
+                      >
+                        <Link
+                          href={`/admin/invoices/${invoice.id}`}
+                          className="text-[10px] font-extrabold text-brand hover:underline"
+                        >
+                          {invoice.invoiceNumber}
+                        </Link>
+                        <span className="text-[10px] font-semibold text-foreground/60 tabular-nums">
+                          {formatMoney(invoice.total, invoice.currency)}
+                        </span>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-extrabold ${invoiceStatusTone(invoice.status)}`}
+                        >
+                          {invoiceTypeLabel(invoice.type)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {canManage ? (
+                <div className="mt-4 border-t pt-3">
+                  <CreateRepairInvoiceButtons
+                    repairJobId={job.id}
+                    canCreateFinal={!finalInvoice}
+                  />
+                  <p className="mt-2 text-[10px] leading-4 text-foreground/45">
+                    Estimates can be re-issued as you refine the job; only one
+                    final invoice per repair.
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           <Notice title="Customer privacy" tone="info">
             Internal notes and private documents are omitted from customer-facing messages and

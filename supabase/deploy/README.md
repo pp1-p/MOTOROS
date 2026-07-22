@@ -35,3 +35,8 @@ The invoicing foundation lives in
 `../migrations/202607200001_invoicing_foundation.sql`. Projects already on 0008
 should run that file individually next. Fresh installs get it automatically
 via `combined_migrations.sql`.
+
+Phase 2 (repair invoices) adds
+`../migrations/202607200002_repair_invoicing.sql`. It only adds the
+`create_repair_invoice` function; no schema changes. Apply it after
+Phase 1 is in place.

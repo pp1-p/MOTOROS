@@ -228,6 +228,31 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
   };
 }
 
+export async function getInvoicesForRepair(
+  repairJobId: string,
+): Promise<InvoiceSummary[]> {
+  if (!isSupabaseConfigured()) return [];
+  const staff = await getStaffContext();
+  if (!staff) return [];
+
+  const supabase = createAdminSupabaseClient();
+  const result = await supabase
+    .from("invoices")
+    .select(
+      "id,invoice_number,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at",
+    )
+    .eq("repair_job_id", repairJobId)
+    .eq("organisation_id", staff.organisationId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (result.error) return [];
+  return (result.data ?? []).map((row) =>
+    mapSummary(row as Record<string, unknown>),
+  );
+}
+
 export async function getInvoiceForSale(
   saleId: string,
 ): Promise<InvoiceSummary | null> {

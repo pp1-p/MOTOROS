@@ -5,7 +5,7 @@ import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
-const optionsSchema = z
+const saleOptionsSchema = z
   .object({
     issue: z.boolean().optional(),
     due_at: z.iso.datetime({ offset: true }).optional(),
@@ -33,13 +33,35 @@ const optionsSchema = z
   })
   .strict();
 
-const createSchema = z
+const repairOptionsSchema = z
   .object({
-    source: z.enum(["sale"]),
-    saleId: z.uuid(),
-    options: optionsSchema.optional(),
+    type: z.enum(["final", "pro_forma", "estimate"]).optional(),
+    issue: z.boolean().optional(),
+    due_at: z.iso.datetime({ offset: true }).optional(),
+    vat_treatment: z
+      .enum(["standard", "margin", "zero", "exempt", "not_registered"])
+      .optional(),
+    notes: z.string().trim().max(4000).optional(),
+    terms: z.string().trim().max(4000).optional(),
   })
   .strict();
+
+const createSchema = z.discriminatedUnion("source", [
+  z
+    .object({
+      source: z.literal("sale"),
+      saleId: z.uuid(),
+      options: saleOptionsSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      source: z.literal("repair"),
+      repairJobId: z.uuid(),
+      options: repairOptionsSchema.optional(),
+    })
+    .strict(),
+]);
 
 export async function POST(request: Request) {
   try {
@@ -78,29 +100,52 @@ export async function POST(request: Request) {
 
   const supabase = createAdminSupabaseClient();
   const options = parsed.data.options ?? {};
-  const result = await supabase.rpc("create_sale_invoice", {
-    p_actor_user_id: staff.userId,
-    p_sale_id: parsed.data.saleId,
-    p_options: options,
-  });
+  const result =
+    parsed.data.source === "sale"
+      ? await supabase.rpc("create_sale_invoice", {
+          p_actor_user_id: staff.userId,
+          p_sale_id: parsed.data.saleId,
+          p_options: options,
+        })
+      : await supabase.rpc("create_repair_invoice", {
+          p_actor_user_id: staff.userId,
+          p_repair_job_id: parsed.data.repairJobId,
+          p_options: options,
+        });
 
   if (result.error) {
     if (result.error.code === "23505") {
       return NextResponse.json(
-        { message: "This sale already has an active invoice." },
+        {
+          message:
+            parsed.data.source === "sale"
+              ? "This sale already has an active invoice."
+              : "This repair already has an active final invoice.",
+        },
         { status: 409 },
       );
     }
     if (result.error.code === "42501") {
       return NextResponse.json(
-        { message: "You are not authorised to invoice this sale." },
+        { message: "You are not authorised to invoice this record." },
         { status: 403 },
       );
     }
     if (result.error.code === "P0002") {
       return NextResponse.json(
-        { message: "The sale could not be found." },
+        {
+          message:
+            parsed.data.source === "sale"
+              ? "The sale could not be found."
+              : "The repair job could not be found.",
+        },
         { status: 404 },
+      );
+    }
+    if (result.error.code === "22023") {
+      return NextResponse.json(
+        { message: result.error.message },
+        { status: 400 },
       );
     }
     return NextResponse.json(
