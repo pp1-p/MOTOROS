@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   ArrowDown,
@@ -76,6 +77,7 @@ export function VehicleWorkspace({
   const [tab, setTab] = useState<Tab>(
     tabIds.includes(initialTab as Tab) ? (initialTab as Tab) : "overview",
   );
+  const router = useRouter();
   const [status, setStatus] = useState(vehicle.status);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -109,6 +111,7 @@ export function VehicleWorkspace({
         return false;
       }
       setMessage(successMessage);
+      router.refresh();
       return true;
     } catch {
       setMessage("DealerOS could not reach the server. Your changes remain on screen.");
@@ -121,21 +124,31 @@ export function VehicleWorkspace({
   async function saveForm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
-    const features = String(values.features ?? "")
-      .split(/\r?\n/)
-      .map((feature) => feature.trim())
-      .filter(Boolean);
-    await patchVehicle(
-      {
-        ...values,
-        features,
-        featured: values.featured === "on",
-        status: status.toLowerCase().replace(/\s+/g, "_"),
-        isPublic: published,
-        changeReason: `Staff saved the ${tab} section`,
-      },
-      "Vehicle changes saved.",
-    );
+    const payload: Record<string, unknown> = {
+      ...values,
+      changeReason: `Staff saved the ${tab} section`,
+    };
+
+    // The Advert tab owns the publish toggle, feature list and featured
+    // checkbox. Sending them from other tabs would overwrite live values
+    // with defaults that were never edited (e.g. Costs would wipe features
+    // and reset featured to false).
+    if (tab === "advert") {
+      payload.features = String(values.features ?? "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      payload.featured = values.featured === "on";
+      payload.isPublic = published;
+    }
+
+    // Status lives on Overview and Advert; do not resend from Costs/Media/
+    // History since those tabs cannot change it.
+    if (tab === "overview" || tab === "advert") {
+      payload.status = status.toLowerCase().replace(/\s+/g, "_");
+    }
+
+    await patchVehicle(payload, "Vehicle changes saved.");
   }
 
   async function changeStatus(nextStatus: string) {
