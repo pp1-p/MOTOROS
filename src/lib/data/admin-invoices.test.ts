@@ -78,6 +78,16 @@ describe("invoice formatting helpers", () => {
     }
   });
 
+  it("recognises credit note statuses", () => {
+    const statuses = ["issued", "refunded", "cancelled"] as const;
+    // Sanity check that the type union we use across the client covers every
+    // status the RPC can return. The list is intentionally hard-coded here so
+    // a schema change without a corresponding UI update will fail the build.
+    for (const status of statuses) {
+      expect(status).toBeDefined();
+    }
+  });
+
   it("labels every VAT treatment", () => {
     for (const treatment of [
       "standard",

@@ -98,6 +98,24 @@ export type InvoiceSummary = {
   createdAt: string;
 };
 
+export type CreditNoteStatus = "issued" | "refunded" | "cancelled";
+
+export type CreditNote = {
+  id: string;
+  creditNoteNumber: string;
+  invoiceId: string;
+  amount: number;
+  reason: string;
+  notes: string | null;
+  status: CreditNoteStatus;
+  issuedAt: string;
+  refundedAt: string | null;
+  refundedPaymentId: string | null;
+  cancelledAt: string | null;
+  cancelledReason: string | null;
+  currency: string;
+};
+
 export type InvoiceDetail = InvoiceSummary & {
   customerId: string | null;
   customerEmail: string | null;
@@ -110,6 +128,8 @@ export type InvoiceDetail = InvoiceSummary & {
   subtotalNet: number;
   discountTotal: number;
   vatTotal: number;
+  creditedTotal: number;
+  creditNotes: CreditNote[];
   vatTreatment: InvoiceVatTreatment;
   vatRegistration: string | null;
   notes: string | null;

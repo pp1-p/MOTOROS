@@ -150,6 +150,14 @@ export default async function InvoicePrintPage({
                 {formatMoney(invoice.amountPaid, invoice.currency)}
               </dd>
             </div>
+            {invoice.creditedTotal > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-foreground/55">Credit notes</dt>
+                <dd className="tabular-nums">
+                  −{formatMoney(invoice.creditedTotal, invoice.currency)}
+                </dd>
+              </div>
+            ) : null}
             <div className="mt-2 flex justify-between rounded-md bg-[#f6efdc] px-3 py-2">
               <dt className="font-extrabold">Balance due</dt>
               <dd className="font-extrabold tabular-nums">

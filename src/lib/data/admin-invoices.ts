@@ -4,6 +4,7 @@ import { getStaffContext } from "@/lib/auth/permissions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type {
+  CreditNote,
   InvoiceDetail,
   InvoiceLineItem,
   InvoicePayment,
@@ -110,8 +111,13 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
   if (!staff) return null;
 
   const supabase = createAdminSupabaseClient();
-  const [invoiceResult, itemsResult, paymentsResult, activityResult] =
-    await Promise.all([
+  const [
+    invoiceResult,
+    itemsResult,
+    paymentsResult,
+    activityResult,
+    creditNotesResult,
+  ] = await Promise.all([
       supabase
         .from("invoices")
         .select("*")
@@ -144,6 +150,15 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
         .eq("organisation_id", staff.organisationId)
         .order("occurred_at", { ascending: false })
         .limit(50),
+      supabase
+        .from("invoice_credit_notes")
+        .select(
+          "id,credit_note_number,invoice_id,amount,reason,notes,status,issued_at,refunded_at,refunded_payment_id,cancelled_at,cancelled_reason",
+        )
+        .eq("invoice_id", id)
+        .eq("organisation_id", staff.organisationId)
+        .is("deleted_at", null)
+        .order("issued_at", { ascending: false }),
     ]);
 
   if (invoiceResult.error) {
@@ -210,6 +225,24 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
     subtotalNet: numeric(row.subtotal_net),
     discountTotal: numeric(row.discount_total),
     vatTotal: numeric(row.vat_total),
+    creditedTotal: numeric(row.credited_total),
+    creditNotes: ((creditNotesResult.data ?? []) as Record<string, unknown>[]).map(
+      (note): CreditNote => ({
+        id: String(note.id),
+        creditNoteNumber: String(note.credit_note_number),
+        invoiceId: String(note.invoice_id),
+        amount: numeric(note.amount),
+        reason: String(note.reason),
+        notes: (note.notes as string | null) ?? null,
+        status: note.status as CreditNote["status"],
+        issuedAt: String(note.issued_at),
+        refundedAt: (note.refunded_at as string | null) ?? null,
+        refundedPaymentId: (note.refunded_payment_id as string | null) ?? null,
+        cancelledAt: (note.cancelled_at as string | null) ?? null,
+        cancelledReason: (note.cancelled_reason as string | null) ?? null,
+        currency: summary.currency,
+      }),
+    ),
     vatTreatment: row.vat_treatment as InvoiceDetail["vatTreatment"],
     vatRegistration: (row.vat_registration_snapshot as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,

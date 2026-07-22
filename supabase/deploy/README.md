@@ -40,3 +40,11 @@ Phase 2 (repair invoices) adds
 `../migrations/202607200002_repair_invoicing.sql`. It only adds the
 `create_repair_invoice` function; no schema changes. Apply it after
 Phase 1 is in place.
+
+Phase 3 (credit notes, refunds, void) adds
+`../migrations/202607200003_invoice_credit_notes.sql`. It adds one
+column to invoices (`credited_total`), the `invoice_credit_notes`
+table, and RPCs `issue_credit_note`, `refund_credit_note`,
+`cancel_credit_note` and `void_invoice`; also replaces
+`recompute_invoice_totals` to subtract active credit notes from the
+balance. Apply after Phase 2.

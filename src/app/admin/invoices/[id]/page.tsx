@@ -2,6 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Printer } from "lucide-react";
 
+import {
+  IssueCreditNoteForm,
+  RefundCreditNoteButton,
+  VoidInvoiceButton,
+} from "@/components/admin/credit-note-actions";
 import { InvoicePaymentForm } from "@/components/admin/invoice-payment-form";
 import { PageHeader } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
@@ -30,10 +35,21 @@ export default async function InvoiceDetailPage({
   if (!invoice) notFound();
 
   const canRecordPayment = hasPermission(staff.role, "invoices:record_payment");
+  const canIssueCredit = hasPermission(staff.role, "invoices:issue_credit");
   const totalPayments = invoice.payments.reduce(
     (total, payment) => total + payment.amount,
     0,
   );
+  const creditableRemaining = Math.max(
+    invoice.total - invoice.creditedTotal,
+    0,
+  );
+  const canVoid =
+    canIssueCredit &&
+    ["sent", "viewed", "partially_paid"].includes(invoice.status) &&
+    invoice.amountPaid <= 0 &&
+    invoice.creditNotes.filter((note) => note.status !== "cancelled").length ===
+      0;
 
   return (
     <div className="space-y-6">
@@ -152,6 +168,14 @@ export default async function InvoiceDetailPage({
                     {formatMoney(invoice.amountPaid, invoice.currency)}
                   </dd>
                 </div>
+                {invoice.creditedTotal > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-foreground/55">Credited</dt>
+                    <dd className="font-semibold tabular-nums text-purple-700">
+                      −{formatMoney(invoice.creditedTotal, invoice.currency)}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between rounded-lg bg-white px-3 py-2">
                   <dt className="font-extrabold text-amber-800">Balance</dt>
                   <dd className="font-extrabold tabular-nums text-amber-800">
@@ -251,6 +275,63 @@ export default async function InvoiceDetailPage({
                   currency={invoice.currency}
                 />
               </div>
+            </section>
+          ) : null}
+
+          {canIssueCredit &&
+          !["draft", "cancelled", "void"].includes(invoice.status) ? (
+            <section className="rounded-2xl border bg-white p-5">
+              <h2 className="font-extrabold">Credit notes</h2>
+              {invoice.creditNotes.length ? (
+                <ol className="mt-3 space-y-3">
+                  {invoice.creditNotes.map((note) => (
+                    <li
+                      key={note.id}
+                      className="rounded-xl border p-3 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-extrabold">{note.creditNoteNumber}</p>
+                        <span className="font-extrabold tabular-nums text-purple-700">
+                          −{formatMoney(note.amount, note.currency)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-foreground/55">
+                        {formatDateTime(note.issuedAt)}
+                        {note.status !== "issued"
+                          ? ` · ${note.status}`
+                          : ""}
+                      </p>
+                      <p className="mt-1 text-[11px]">{note.reason}</p>
+                      {note.status === "issued" ? (
+                        <div className="mt-2">
+                          <RefundCreditNoteButton creditNoteId={note.id} />
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-3 text-xs text-foreground/50">
+                  No credit notes on this invoice.
+                </p>
+              )}
+              <div className="mt-4 border-t pt-3">
+                <IssueCreditNoteForm
+                  invoiceId={invoice.id}
+                  creditableRemaining={creditableRemaining}
+                  currency={invoice.currency}
+                />
+              </div>
+              {canVoid ? (
+                <div className="mt-4 border-t pt-3">
+                  <VoidInvoiceButton invoiceId={invoice.id} />
+                  <p className="mt-1 text-[10px] leading-4 text-foreground/45">
+                    Void an unpaid invoice issued in error. Once payments or
+                    credit notes exist, credit + refund is the correct flow
+                    instead.
+                  </p>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
