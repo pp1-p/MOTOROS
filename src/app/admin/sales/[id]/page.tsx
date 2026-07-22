@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CarFront, UserRound } from "lucide-react";
+import { ArrowLeft, CarFront, FileText, UserRound } from "lucide-react";
 
+import { CreateSaleInvoiceButton } from "@/components/admin/create-sale-invoice-button";
 import { PageHeader, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { hasPermission, requireStaff } from "@/lib/auth/permissions";
 import { getSaleDetailSelect } from "@/lib/auth/sales-access";
+import { getInvoiceForSale } from "@/lib/data/admin-invoices";
+import {
+  formatMoney,
+  invoiceStatusLabel,
+  invoiceStatusTone,
+} from "@/lib/invoices/format";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { formatCurrency } from "@/lib/utils";
 
@@ -78,6 +85,8 @@ export default async function SaleDetailPage({
   const sale = await saleQuery.single();
   if (sale.error || !sale.data) notFound();
   const saleData = sale.data as unknown as SaleDetailRow;
+  const invoice = await getInvoiceForSale(id);
+  const canManageInvoices = hasPermission(staff.role, "invoices:manage");
   const vehicle = Array.isArray(saleData.vehicles)
     ? saleData.vehicles[0]
     : saleData.vehicles;
@@ -204,6 +213,57 @@ export default async function SaleDetailPage({
             {internalNotes}
           </p>
         ) : null}
+      </section>
+
+      <section className="rounded-2xl border bg-white p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-extrabold">
+              <FileText className="size-4 text-brand" />
+              Invoice
+            </h2>
+            <p className="mt-1 text-xs text-foreground/45">
+              An invoice pulls this sale&apos;s customer, vehicle and payments
+              into one document your customer can pay against.
+            </p>
+          </div>
+          {!invoice && canManageInvoices ? (
+            <CreateSaleInvoiceButton saleId={id} />
+          ) : null}
+        </div>
+        {invoice ? (
+          <div className="mt-4 flex flex-wrap items-center gap-4 rounded-xl border bg-[#fafaf8] p-4">
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/admin/invoices/${invoice.id}`}
+                className="text-sm font-extrabold text-brand hover:underline"
+              >
+                {invoice.invoiceNumber}
+              </Link>
+              <p className="mt-0.5 text-[11px] text-foreground/55">
+                {formatMoney(invoice.total, invoice.currency)} total ·{" "}
+                {formatMoney(invoice.amountPaid, invoice.currency)} paid ·{" "}
+                <span className="font-extrabold text-amber-800">
+                  {formatMoney(invoice.balance, invoice.currency)} outstanding
+                </span>
+              </p>
+            </div>
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-[11px] font-extrabold ${invoiceStatusTone(invoice.status)}`}
+            >
+              {invoiceStatusLabel(invoice.status)}
+            </span>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/invoices/${invoice.id}`}>Open invoice</Link>
+            </Button>
+          </div>
+        ) : (
+          <p className="mt-4 text-xs text-foreground/55">
+            {canManageInvoices
+              ? "No invoice yet — create one to record the sale price, warranty and any extras, and to accept payment."
+              : "No invoice yet. Your role cannot create invoices."}
+          </p>
+        )}
       </section>
     </div>
   );

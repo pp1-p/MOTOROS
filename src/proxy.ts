@@ -106,6 +106,10 @@ export async function proxy(request: NextRequest) {
         roles: ["owner", "manager", "salesperson"],
       },
       {
+        prefix: "/admin/invoices",
+        roles: ["owner", "manager", "salesperson", "service_advisor"],
+      },
+      {
         prefix: "/admin/sourcing",
         roles: ["owner", "manager", "salesperson"],
       },

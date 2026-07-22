@@ -24,6 +24,10 @@ export type Permission =
   | "diary:manage"
   | "documents:view"
   | "documents:manage"
+  | "invoices:view"
+  | "invoices:manage"
+  | "invoices:record_payment"
+  | "invoices:issue_credit"
   | "reports:view"
   | "website:manage"
   | "team:manage"
@@ -49,6 +53,10 @@ const allPermissions: Permission[] = [
   "diary:manage",
   "documents:view",
   "documents:manage",
+  "invoices:view",
+  "invoices:manage",
+  "invoices:record_payment",
+  "invoices:issue_credit",
   "reports:view",
   "website:manage",
   "team:manage",
@@ -75,6 +83,8 @@ export const rolePermissions: Record<StaffRole, readonly Permission[]> = {
     "diary:manage",
     "documents:view",
     "documents:manage",
+    "invoices:view",
+    "invoices:manage",
   ],
   service_advisor: [
     "dashboard:view",
@@ -87,6 +97,7 @@ export const rolePermissions: Record<StaffRole, readonly Permission[]> = {
     "diary:manage",
     "documents:view",
     "documents:manage",
+    "invoices:view",
   ],
   technician: [
     "repairs:view",

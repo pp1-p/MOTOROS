@@ -30,3 +30,8 @@ For a project that already ran the older 0001–0006 combined file, apply
 `../migrations/202607180002_technician_status_guard.sql` as separate forward
 migrations. If 0007 is already applied, run only 0008. Do not re-run the
 combined file.
+
+The invoicing foundation lives in
+`../migrations/202607200001_invoicing_foundation.sql`. Projects already on 0008
+should run that file individually next. Fresh installs get it automatically
+via `combined_migrations.sql`.
