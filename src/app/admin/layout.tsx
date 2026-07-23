@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 
 import { AdminShell } from "@/components/admin/admin-shell";
 import { getStaffContext } from "@/lib/auth/permissions";
@@ -23,6 +24,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       displayName={staff?.displayName ?? "Team member"}
     >
       {children}
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        toastOptions={{
+          className:
+            "!rounded-2xl !border !shadow-[0_18px_50px_rgba(15,24,18,0.14)] !text-sm !font-semibold",
+        }}
+      />
     </AdminShell>
   );
 }

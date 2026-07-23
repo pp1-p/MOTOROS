@@ -6,6 +6,7 @@ import { LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { notify } from "@/lib/notify";
 import type { InvoicePaymentMethod } from "@/lib/types/invoices";
 
 const methods: InvoicePaymentMethod[] = [
@@ -76,18 +77,20 @@ export function InvoicePaymentForm({
         const bad = Object.entries(result?.fieldErrors ?? {}).find(
           ([, issues]) => (issues?.length ?? 0) > 0,
         );
-        setMessage(
-          bad
-            ? `${bad[0]}: ${bad[1]?.[0] ?? "please review"}`
-            : result?.message ?? "The payment could not be recorded.",
-        );
+        const errorMessage = bad
+          ? `${bad[0]}: ${bad[1]?.[0] ?? "please review"}`
+          : result?.message ?? "The payment could not be recorded.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
-      setMessage("Payment recorded.");
+      notify.success("Payment recorded.");
+      setMessage("");
       router.refresh();
-      window.setTimeout(() => setMessage(""), 2500);
     } catch {
-      setMessage("Could not reach the server. Please retry.");
+      const offline = "Could not reach the server. Please retry.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }

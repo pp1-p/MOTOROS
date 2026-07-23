@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CircleAlert, LoaderCircle, Save } from "lucide-react";
+import { CircleAlert, LoaderCircle, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 export function AsyncForm({
@@ -51,14 +52,22 @@ export function AsyncForm({
       });
       const result = (await response.json().catch(() => null)) as { message?: string } | null;
       if (!response.ok) {
+        const errorMessage =
+          result?.message ??
+          "Changes could not be saved. Your entries remain on screen.";
         setFailed(true);
-        setMessage(result?.message ?? "Changes could not be saved. Your entries remain on screen.");
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
-      setMessage(result?.message ?? onSuccessMessage);
+      const successMessage = result?.message ?? onSuccessMessage;
+      notify.success(successMessage);
     } catch {
+      const offlineMessage =
+        "DealerOS could not reach the server. Your entries remain on screen.";
       setFailed(true);
-      setMessage("DealerOS could not reach the server. Your entries remain on screen.");
+      setMessage(offlineMessage);
+      notify.error(offlineMessage);
     } finally {
       setSaving(false);
     }
@@ -68,15 +77,12 @@ export function AsyncForm({
     <form onSubmit={submit} className={className}>
       {children}
       <div className={cn("mt-5 flex flex-wrap items-center justify-end gap-3", buttonClassName)}>
-        {message ? (
+        {failed && message ? (
           <p
             role="status"
-            className={cn(
-              "mr-auto flex items-center gap-1.5 text-xs font-bold",
-              failed ? "text-danger" : "text-emerald-700",
-            )}
+            className="mr-auto flex items-center gap-1.5 text-xs font-bold text-danger"
           >
-            {failed ? <CircleAlert className="size-3.5" /> : <Check className="size-3.5" />}
+            <CircleAlert className="size-3.5" />
             {message}
           </p>
         ) : null}

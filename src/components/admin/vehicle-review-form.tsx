@@ -18,6 +18,7 @@ import { Notice } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { notify } from "@/lib/notify";
 
 type ReviewData = {
   registration?: string;
@@ -174,6 +175,7 @@ export function VehicleReviewForm() {
   function finishCreation(vehicleId: string) {
     stagedPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
     sessionStorage.removeItem("dealeros:vehicle-review");
+    notify.success("Vehicle created.");
     router.push(`/admin/stock/${vehicleId}?created=1&tab=media`);
     router.refresh();
   }
@@ -331,12 +333,15 @@ export function VehicleReviewForm() {
           });
           const more =
             bad.length > 3 ? ` (+${bad.length - 3} more)` : "";
-          setError(`${parts.join(" · ")}${more}`);
+          const errorMessage = `${parts.join(" · ")}${more}`;
+          setError(errorMessage);
+          notify.error("Vehicle not created", errorMessage);
         } else {
-          setError(
+          const errorMessage =
             result?.message ??
-              "The vehicle could not be created. Your review details remain here.",
-          );
+              "The vehicle could not be created. Your review details remain here.";
+          setError(errorMessage);
+          notify.error(errorMessage);
         }
         return;
       }

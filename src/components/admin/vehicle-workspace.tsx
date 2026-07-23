@@ -32,6 +32,7 @@ import { Notice, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { notify } from "@/lib/notify";
 import { cn, formatCurrency, formatMileage } from "@/lib/utils";
 
 type Tab = "overview" | "advert" | "media" | "costs" | "history";
@@ -107,14 +108,22 @@ export function VehicleWorkspace({
       });
       const result = (await response.json().catch(() => null)) as { message?: string } | null;
       if (!response.ok) {
-        setMessage(result?.message ?? "Changes could not be saved. Nothing has been discarded.");
+        const errorMessage =
+          result?.message ??
+          "Changes could not be saved. Nothing has been discarded.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return false;
       }
-      setMessage(successMessage);
+      notify.success(successMessage);
+      setMessage("");
       router.refresh();
       return true;
     } catch {
-      setMessage("DealerOS could not reach the server. Your changes remain on screen.");
+      const offline =
+        "DealerOS could not reach the server. Your changes remain on screen.";
+      setMessage(offline);
+      notify.error(offline);
       return false;
     } finally {
       setSaving(false);

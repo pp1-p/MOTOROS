@@ -7,6 +7,7 @@ import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { notify } from "@/lib/notify";
 import type { InvoicePaymentMethod } from "@/lib/types/invoices";
 
 const refundMethods: InvoicePaymentMethod[] = [
@@ -79,17 +80,20 @@ export function IssueCreditNoteForm({
         const bad = Object.entries(result?.fieldErrors ?? {}).find(
           ([, issues]) => (issues?.length ?? 0) > 0,
         );
-        setMessage(
-          bad
-            ? `${bad[0]}: ${bad[1]?.[0] ?? "please review"}`
-            : result?.message ?? "The credit note could not be issued.",
-        );
+        const errorMessage = bad
+          ? `${bad[0]}: ${bad[1]?.[0] ?? "please review"}`
+          : result?.message ?? "The credit note could not be issued.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
+      notify.success("Credit note issued.");
       setOpen(false);
       router.refresh();
     } catch {
-      setMessage("Could not reach the server. Please retry.");
+      const offline = "Could not reach the server. Please retry.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }
@@ -201,13 +205,19 @@ export function RefundCreditNoteButton({
         | { message?: string }
         | null;
       if (!response.ok) {
-        setMessage(result?.message ?? "The refund could not be recorded.");
+        const errorMessage =
+          result?.message ?? "The refund could not be recorded.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
+      notify.success("Refund recorded.");
       setOpen(false);
       router.refresh();
     } catch {
-      setMessage("Could not reach the server. Please retry.");
+      const offline = "Could not reach the server. Please retry.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }
@@ -289,12 +299,18 @@ export function VoidInvoiceButton({ invoiceId }: { invoiceId: string }) {
         | { message?: string }
         | null;
       if (!response.ok) {
-        setMessage(result?.message ?? "The invoice could not be voided.");
+        const errorMessage =
+          result?.message ?? "The invoice could not be voided.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
+      notify.success("Invoice voided.");
       router.refresh();
     } catch {
-      setMessage("Could not reach the server. Please retry.");
+      const offline = "Could not reach the server. Please retry.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FileText, LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { notify } from "@/lib/notify";
 
 export function CreateSaleInvoiceButton({ saleId }: { saleId: string }) {
   const router = useRouter();
@@ -24,13 +25,18 @@ export function CreateSaleInvoiceButton({ saleId }: { saleId: string }) {
         | { ok?: boolean; invoiceId?: string; message?: string }
         | null;
       if (!response.ok || !result?.ok || !result.invoiceId) {
-        setMessage(result?.message ?? "Could not create the invoice.");
+        const errorMessage = result?.message ?? "Could not create the invoice.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
+      notify.success("Invoice created.");
       router.push(`/admin/invoices/${result.invoiceId}`);
       router.refresh();
     } catch {
-      setMessage("Could not reach the server. Please retry.");
+      const offline = "Could not reach the server. Please retry.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }

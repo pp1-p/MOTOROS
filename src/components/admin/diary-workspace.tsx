@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { notify } from "@/lib/notify";
 import type {
   AdminDiaryAppointment,
   AdminDiaryStaffOption,
@@ -113,24 +114,23 @@ export function DiaryWorkspace({
         const firstBad = Object.entries(result?.fieldErrors ?? {}).find(
           ([, issues]) => (issues?.length ?? 0) > 0,
         );
-        if (firstBad) {
-          const [name, issues] = firstBad;
-          setMessage(
-            `${fieldLabels[name] ?? name}: ${issues?.[0] ?? "please review"}.`,
-          );
-        } else {
-          setMessage(
-            result?.message ??
-              "The appointment could not be booked. The slot has not been held.",
-          );
-        }
+        const errorMessage = firstBad
+          ? `${fieldLabels[firstBad[0]] ?? firstBad[0]}: ${firstBad[1]?.[0] ?? "please review"}.`
+          : result?.message ??
+            "The appointment could not be booked. The slot has not been held.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
-      setMessage("Appointment created and availability updated.");
+      notify.success("Appointment booked.");
+      setMessage("");
       router.refresh();
-      window.setTimeout(() => setCreateOpen(false), 700);
+      setCreateOpen(false);
     } catch {
-      setMessage("DealerOS could not check the slot. No appointment was created.");
+      const offline =
+        "DealerOS could not check the slot. No appointment was created.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }
@@ -154,7 +154,10 @@ export function DiaryWorkspace({
         appointment?: { status?: string };
       } | null;
       if (!response.ok) {
-        setMessage(result?.message ?? "The appointment could not be updated.");
+        const errorMessage =
+          result?.message ?? "The appointment could not be updated.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return false;
       }
       if (result?.appointment?.status) {
@@ -163,11 +166,15 @@ export function DiaryWorkspace({
           .replace(/^\w/, (character) => character.toUpperCase());
         setSelected((current) => (current ? { ...current, status } : current));
       }
-      setMessage(successMessage);
+      notify.success(successMessage);
+      setMessage("");
       router.refresh();
       return true;
     } catch {
-      setMessage("DealerOS could not reach the server. The appointment was unchanged.");
+      const offline =
+        "DealerOS could not reach the server. The appointment was unchanged.";
+      setMessage(offline);
+      notify.error(offline);
       return false;
     } finally {
       setSaving(false);
@@ -194,13 +201,19 @@ export function DiaryWorkspace({
         repairJob?: { id?: string };
       } | null;
       if (!response.ok || !result?.repairJob?.id) {
-        setMessage(result?.message ?? "The repair job could not be created.");
+        const errorMessage =
+          result?.message ?? "The repair job could not be created.";
+        setMessage(errorMessage);
+        notify.error(errorMessage);
         return;
       }
+      notify.success("Repair job created from the appointment.");
       router.push(`/admin/repairs/${result.repairJob.id}`);
       router.refresh();
     } catch {
-      setMessage("DealerOS could not create the repair job.");
+      const offline = "DealerOS could not create the repair job.";
+      setMessage(offline);
+      notify.error(offline);
     } finally {
       setSaving(false);
     }
