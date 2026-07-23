@@ -229,18 +229,39 @@ export function StockTable({
           </div>
           {!filtered.length ? (
             <div className="border-t px-6 py-16 text-center">
-              <p className="font-extrabold">No vehicles match those filters</p>
-              <p className="mt-1 text-sm text-foreground/45">Try another status or clear the search.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setStatus("All active stock");
-                }}
-                className="mt-4 text-xs font-extrabold text-brand hover:underline"
-              >
-                Clear filters
-              </button>
+              {vehicles.length === 0 ? (
+                <>
+                  <p className="text-lg font-extrabold">No cars in stock yet</p>
+                  <p className="mt-2 text-sm text-foreground/50">
+                    Add your first vehicle to get started. Type a UK
+                    registration and MOTOR.OS will fetch the basics.
+                  </p>
+                  <Link
+                    href="/admin/stock/new"
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-xs font-extrabold text-white hover:bg-brand-strong"
+                  >
+                    <Plus className="size-4" />
+                    Add your first vehicle
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="font-extrabold">No vehicles match those filters</p>
+                  <p className="mt-1 text-sm text-foreground/45">
+                    Try another status or clear the search.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setStatus("All active stock");
+                    }}
+                    className="mt-4 text-xs font-extrabold text-brand hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                </>
+              )}
             </div>
           ) : null}
         </div>

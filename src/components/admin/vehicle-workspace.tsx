@@ -151,6 +151,24 @@ export function VehicleWorkspace({
     await patchVehicle(payload, "Vehicle changes saved.");
   }
 
+  async function togglePublished() {
+    const target = !published;
+    // Optimistic UI so the pill flips instantly; roll back if the API refuses.
+    setPublished(target);
+    const ok = await patchVehicle(
+      {
+        isPublic: target,
+        changeReason: target
+          ? "Vehicle published to the public website"
+          : "Vehicle taken off the public website",
+      },
+      target
+        ? "Now live on the website."
+        : "Removed from the public website.",
+    );
+    if (!ok) setPublished(!target);
+  }
+
   async function changeStatus(nextStatus: string) {
     const oldStatus = status;
     setStatus(nextStatus);
@@ -379,6 +397,26 @@ export function VehicleWorkspace({
             Public preview
           </Link>
         </Button>
+        <button
+          type="button"
+          onClick={() => void togglePublished()}
+          disabled={saving}
+          className={cn(
+            "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-extrabold transition-colors",
+            published
+              ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+              : "border-foreground/20 bg-white text-foreground/70 hover:bg-surface-muted",
+          )}
+        >
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              published ? "bg-emerald-600" : "bg-foreground/25",
+            )}
+            aria-hidden
+          />
+          {published ? "Live on website" : "Publish to website"}
+        </button>
         <label className="relative">
           <span className="sr-only">Vehicle status</span>
           <select
@@ -406,6 +444,54 @@ export function VehicleWorkspace({
           <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-foreground/35" />
         </label>
       </div>
+
+      {(() => {
+        const readinessChecks = [
+          {
+            ok: [
+              "Ready for sale",
+              "On forecourt",
+              "Reserved",
+              "Sold",
+            ].includes(status),
+            label: "Status is a sales stage",
+            fix: 'Change status to "On forecourt"',
+          },
+          { ok: photos.length > 0, label: "Has at least one photo", fix: "Add a photo on the Photos tab" },
+          { ok: vehicle.price > 0, label: "Retail price above £0", fix: "Set a retail price on Costs & margin" },
+          {
+            ok: Boolean(vehicle.description && vehicle.description.length >= 20),
+            label: "Description has 20+ characters",
+            fix: "Fill in the description on the Advert tab",
+          },
+        ];
+        const outstanding = readinessChecks.filter((check) => !check.ok);
+        if (published) return null;
+        return (
+          <div className="rounded-2xl border bg-white p-4">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-foreground/50">
+              Website readiness
+            </p>
+            {outstanding.length === 0 ? (
+              <p className="mt-2 text-xs font-semibold text-emerald-800">
+                Ready to publish. Click <em>Publish to website</em> above.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-xs">
+                {outstanding.map((check) => (
+                  <li key={check.label} className="flex items-start gap-2 text-foreground/70">
+                    <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-foreground/25" aria-hidden />
+                    <span>
+                      <span className="font-semibold text-foreground">{check.label}</span>
+                      <span className="ml-1 text-foreground/50">— {check.fix}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
