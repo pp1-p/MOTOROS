@@ -2,12 +2,12 @@ import { defaultPublicSiteName } from "@/lib/site-metadata";
 
 export const publicSiteConfig = {
   name: process.env.NEXT_PUBLIC_DEALERSHIP_NAME ?? defaultPublicSiteName,
-  strapline: "Independent motoring, properly handled.",
-  heroEyebrow: "Independent motor specialists",
-  heroHeadline: "The right car. Properly handled.",
+  strapline: "Quality cars, honest advice, trusted workshop.",
+  heroEyebrow: "Independent · Local · Straightforward",
+  heroHeadline: "The right car, without the runaround.",
   heroSummary:
-    "Thoughtfully selected used cars, considered sourcing and trusted workshop support—brought together by one independent team.",
-  primaryLabel: "Explore cars for sale",
+    "Quality used cars, honest advice on what suits you, and a workshop that looks after you long after you drive away.",
+  primaryLabel: "See our cars",
   primaryHref: "/cars",
   heroImageUrl: "/images/hero-showroom.png",
   heroImageAlt: "Premium independent car showroom at dusk",

@@ -35,18 +35,18 @@ export async function generateMetadata(): Promise<Metadata> {
 const promises = [
   {
     icon: SearchCheck,
-    title: "Selected with judgement",
-    copy: "We look beyond the badge and mileage, choosing cars we would be comfortable recommending.",
+    title: "Cars chosen with care",
+    copy: "We look past the badge and the mileage — every car we take on is one we would happily recommend.",
   },
   {
     icon: ShieldCheck,
-    title: "Prepared with care",
-    copy: "Every retail car follows a documented inspection and preparation path before handover.",
+    title: "Prepared and safety-checked",
+    copy: "Every car is inspected and prepared before it leaves us. You will see exactly what was done and why.",
   },
   {
     icon: BadgeCheck,
-    title: "Explained clearly",
-    copy: "Straight answers, useful context and time to decide—without unnecessary pressure.",
+    title: "Straight answers, no pressure",
+    copy: "Take your time, ask us anything, and decide when you are ready. That is how we would want to be treated.",
   },
 ];
 
@@ -137,9 +137,9 @@ export default async function HomePage() {
       <section className="py-20 sm:py-28">
         <div className="container-shell">
           <SectionHeading
-            eyebrow="Current stock"
-            title="Cars worth making time for"
-            description="A considered selection of used cars, each presented with the useful details up front."
+            eyebrow="In stock now"
+            title="Have a look around"
+            description="A carefully chosen selection of used cars, each with honest photos, the details you actually want, and a clear price."
             action={
               <Button asChild variant="outline">
                 <Link href="/cars">
@@ -193,12 +193,12 @@ export default async function HomePage() {
                 Personal car sourcing
               </p>
               <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
-                Can&apos;t see the right one? Let us go and find it.
+                Can&apos;t see the right one? We&apos;ll find it for you.
               </h2>
               <p className="mt-6 text-base leading-8 text-white/65">
-                Give us the brief—from the essential specification to the
-                details that make a car feel right. We will search, assess and
-                present credible options, while you stay in control.
+                Tell us what you are after — the essentials and the little
+                things that matter — and we will look through our trusted
+                network. You see the shortlist; you decide from there.
               </p>
               <ol className="mt-8 grid gap-4">
                 {[
@@ -232,9 +232,9 @@ export default async function HomePage() {
       <section className="py-20 sm:py-28">
         <div className="container-shell">
           <SectionHeading
-            eyebrow="Our approach"
-            title="Good service is a process, not a promise"
-            description="We keep the important parts visible: what has been checked, what happens next, and who you can speak to."
+            eyebrow="How we work"
+            title="Straightforward from start to finish"
+            description="We keep the important things visible — what has been checked, what happens next, and who you can speak to."
             align="centre"
           />
           <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -260,15 +260,15 @@ export default async function HomePage() {
         <div className="container-shell grid lg:grid-cols-[1fr_0.78fr]">
           <div className="py-16 lg:py-20 lg:pr-16">
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
-              Workshop support
+              Workshop &amp; servicing
             </p>
             <h2 className="mt-4 max-w-2xl tracking-display-lg font-display text-5xl text-balance">
-              A calm first step when your car needs attention.
+              Something up with the car? Have a chat with us first.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-foreground/65">
-              Book a short call with our service team. We will listen to what
-              the vehicle is doing, advise on the safest next step and arrange
-              workshop time where appropriate.
+              Book a quick call with our workshop. We will listen to what the
+              car is doing, give you an honest read on the next step, and book
+              you in only if it makes sense.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
