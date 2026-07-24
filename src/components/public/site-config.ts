@@ -2,18 +2,18 @@ import { defaultPublicSiteName } from "@/lib/site-metadata";
 
 export const publicSiteConfig = {
   name: process.env.NEXT_PUBLIC_DEALERSHIP_NAME ?? defaultPublicSiteName,
-  strapline: "Independent motoring, properly handled.",
-  heroEyebrow: "Independent motor specialists",
-  heroHeadline: "The right car. Properly handled.",
+  strapline: "The friendly car people your family can trust.",
+  heroEyebrow: "Family-run · Local · Honest",
+  heroHeadline: "The right car for your family, without the hassle.",
   heroSummary:
-    "Thoughtfully selected used cars, considered sourcing and trusted workshop support—brought together by one independent team.",
-  primaryLabel: "Explore cars for sale",
+    "Come and see the cars for yourself, take one out on a proper test drive, and ask us anything. Our workshop keeps you on the road long after you drive away.",
+  primaryLabel: "See our cars",
   primaryHref: "/cars",
   heroImageUrl: "/images/hero-showroom.png",
-  heroImageAlt: "Premium independent car showroom at dusk",
-  seoTitle: "Quality used cars, sourcing and repairs",
+  heroImageAlt: "Welcoming family-run dealership showroom",
+  seoTitle: "Family car specialists, sourcing and trusted repairs",
   seoDescription:
-    "Explore carefully selected used cars, ask us to source something specific, or book a repair discussion with an independent UK dealership.",
+    "A friendly family-run dealership. See our cars, ask us to source something specific, or book your car in with our trusted local workshop.",
   phone: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim() ?? "",
   phoneHref: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim()
     ? `tel:${process.env.NEXT_PUBLIC_DEALERSHIP_PHONE.replace(/\s/g, "")}`

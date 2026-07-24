@@ -35,18 +35,18 @@ export async function generateMetadata(): Promise<Metadata> {
 const promises = [
   {
     icon: SearchCheck,
-    title: "Selected with judgement",
-    copy: "We look beyond the badge and mileage, choosing cars we would be comfortable recommending.",
+    title: "Cars we'd put our own family in",
+    copy: "We only take on cars we'd be happy to hand the keys to friends and family. If we wouldn't drive it, we won't sell it.",
   },
   {
     icon: ShieldCheck,
-    title: "Prepared with care",
-    copy: "Every retail car follows a documented inspection and preparation path before handover.",
+    title: "Checked, prepared, ready to drive",
+    copy: "Every car is inspected, MOT'd where needed and safety-checked before you collect it. You'll see the checklist.",
   },
   {
     icon: BadgeCheck,
-    title: "Explained clearly",
-    copy: "Straight answers, useful context and time to decide—without unnecessary pressure.",
+    title: "No pressure, ever",
+    copy: "Take your time. Bring the kids. Ask us anything. Take it out for a proper test drive. We're here when you're ready.",
   },
 ];
 
@@ -118,9 +118,9 @@ export default async function HomePage() {
         <div className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-black/25 backdrop-blur-md">
           <div className="container-shell grid grid-cols-1 divide-y divide-white/10 py-2 text-white/80 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             {[
-              { icon: CarFront, text: "Quality used vehicles" },
-              { icon: SearchCheck, text: "Personal car sourcing" },
-              { icon: Wrench, text: "Repairs and servicing" },
+              { icon: CarFront, text: "Family-friendly used cars" },
+              { icon: SearchCheck, text: "We'll find you the right one" },
+              { icon: Wrench, text: "Trusted local workshop" },
             ].map((item) => (
               <div
                 key={item.text}
@@ -137,9 +137,9 @@ export default async function HomePage() {
       <section className="py-20 sm:py-28">
         <div className="container-shell">
           <SectionHeading
-            eyebrow="Current stock"
-            title="Cars worth making time for"
-            description="A considered selection of used cars, each presented with the useful details up front."
+            eyebrow="This week's cars"
+            title="Have a look around"
+            description="Every car with full details, honest photos and a real price. Click one to see everything, or pop in for a cuppa and a proper look."
             action={
               <Button asChild variant="outline">
                 <Link href="/cars">
@@ -190,21 +190,22 @@ export default async function HomePage() {
           <div className="flex items-center py-16 lg:px-16 lg:py-24">
             <div className="max-w-xl">
               <p className="mb-4 text-xs font-extrabold tracking-[0.18em] text-[#e3bd7e] uppercase">
-                Personal car sourcing
+                Can't see it? We'll find it.
               </p>
               <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
-                Can’t see the right one? Let us go and find it.
+                Tell us what you need. We'll go and find it for you.
               </h2>
               <p className="mt-6 text-base leading-8 text-white/65">
-                Give us the brief—from the essential specification to the
-                details that make a car feel right. We will search, assess and
-                present credible options, while you stay in control.
+                Growing family? First car for the eldest? Something for towing
+                the caravan? Tell us what you're after and we'll look through
+                our trusted network — no pressure, no commitment until you're
+                happy.
               </p>
               <ol className="mt-8 grid gap-4">
                 {[
-                  "Tell us the car, budget and non-negotiables",
-                  "We search a wider trusted supply network",
-                  "You review the best options before any commitment",
+                  "Tell us what you need and your budget",
+                  "We do the searching — no time wasted at your end",
+                  "You look at what we find and decide from there",
                 ].map((step, index) => (
                   <li key={step} className="flex items-center gap-4">
                     <span className="grid size-8 shrink-0 place-items-center rounded-full border border-[#d7ad69]/45 bg-[#d7ad69]/10 text-xs font-extrabold text-[#e3bd7e]">
@@ -232,9 +233,9 @@ export default async function HomePage() {
       <section className="py-20 sm:py-28">
         <div className="container-shell">
           <SectionHeading
-            eyebrow="Our approach"
-            title="Good service is a process, not a promise"
-            description="We keep the important parts visible: what has been checked, what happens next, and who you can speak to."
+            eyebrow="What you can expect"
+            title="Straight talk. Real cars. Proper aftercare."
+            description="We're a family-run dealership. We look after people the way we'd like to be looked after. Here's what that means in practice."
             align="centre"
           />
           <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -260,15 +261,15 @@ export default async function HomePage() {
         <div className="container-shell grid lg:grid-cols-[1fr_0.78fr]">
           <div className="py-16 lg:py-20 lg:pr-16">
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
-              Workshop support
+              Something up with the car?
             </p>
             <h2 className="mt-4 max-w-2xl tracking-display-lg font-display text-5xl text-balance">
-              A calm first step when your car needs attention.
+              Give us a ring. We'll listen and help.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-8 text-foreground/65">
-              Book a short call with our service team. We will listen to what
-              the vehicle is doing, advise on the safest next step and arrange
-              workshop time where appropriate.
+              Warning light on? Odd noise? Just due a service? Book a quick
+              call with our workshop and we'll tell you honestly what needs
+              doing — and what doesn't. No sales patter, no scare tactics.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
@@ -284,10 +285,10 @@ export default async function HomePage() {
           </div>
           <div className="grid gap-px border-t bg-border sm:grid-cols-2 lg:border-t-0 lg:border-l">
             {[
-              { value: "01", label: "Choose a live call time" },
-              { value: "02", label: "Describe the issue clearly" },
-              { value: "03", label: "Speak with the right person" },
-              { value: "04", label: "Agree the practical next step" },
+              { value: "01", label: "Pick a time that suits you" },
+              { value: "02", label: "Tell us what the car's doing" },
+              { value: "03", label: "Chat with the workshop directly" },
+              { value: "04", label: "Sort a plan you're happy with" },
             ].map((item) => (
               <SpotlightCard
                 key={item.value}
@@ -313,12 +314,12 @@ export default async function HomePage() {
               <div className="max-w-3xl">
                 <CircleGauge className="mb-5 size-7 text-[#d7ad69]" aria-hidden />
                 <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
-                  Ready when you are. No pressure before then.
+                  Ready when you are. Kettle's on.
                 </h2>
                 <p className="mt-5 max-w-2xl leading-7 text-white/65">
-                  Browse the current stock, send us a brief, or simply ask a
-                  question. We will give you a useful answer and a clear next
-                  step.
+                  Whether you're set on a car, want us to search for one, or
+                  just have a question — get in touch. You'll get a proper
+                  reply from a real person, usually the same day.
                 </p>
               </div>
               <Button
