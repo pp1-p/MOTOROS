@@ -22,10 +22,10 @@ import {
 } from "./site-config";
 
 const navigation = [
-  { href: "/cars", label: "Our cars" },
-  { href: "/source-a-car", label: "Find me a car" },
-  { href: "/repairs", label: "Workshop" },
-  { href: "/contact", label: "Get in touch" },
+  { href: "/cars", label: "Cars for sale" },
+  { href: "/source-a-car", label: "Source a car" },
+  { href: "/repairs", label: "Repairs & servicing" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function PublicHeader({
@@ -66,7 +66,7 @@ export function PublicHeader({
         <div className="container-shell flex min-h-9 items-center justify-between gap-4 py-1 text-[11px] font-bold tracking-[0.08em] text-white/65 uppercase sm:text-xs">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="size-3.5 text-[#d7ad69]" aria-hidden />
-            Family-run · Local · Honest
+            Carefully selected. Properly prepared.
           </span>
           {contact.phone && contact.phoneHref ? (
             <a
@@ -112,7 +112,7 @@ export function PublicHeader({
               {config.name}
             </span>
             <span className="hidden text-[10px] font-semibold tracking-[0.12em] text-white/50 uppercase sm:block">
-              Your friendly neighbourhood dealership
+              Independent motor specialists
             </span>
           </span>
         </Link>
