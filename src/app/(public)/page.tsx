@@ -256,52 +256,86 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="border-y bg-white">
-        <div className="container-shell grid lg:grid-cols-[1fr_0.78fr]">
-          <div className="py-16 lg:py-20 lg:pr-16">
-            <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
+      <section className="relative isolate overflow-hidden border-y bg-[#10231f] text-white">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.05] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:22px_22px]"
+        />
+        <div className="container-shell relative py-20 sm:py-28 lg:py-32">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#d7ad69]/40 bg-[#d7ad69]/10 px-4 py-2 text-xs font-extrabold tracking-[0.14em] text-[#e3bd7e] uppercase">
+              <Wrench className="size-4" aria-hidden />
               Workshop &amp; servicing
             </p>
-            <h2 className="mt-4 max-w-2xl tracking-display-lg font-display text-5xl text-balance">
-              Something up with the car? Have a chat with us first.
+            <h2 className="tracking-display-lg mt-6 font-display text-5xl text-balance sm:text-6xl lg:text-7xl">
+              Look after your car with a workshop you can trust.
             </h2>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-foreground/65">
-              Book a quick call with our workshop. We will listen to what the
-              car is doing, give you an honest read on the next step, and book
-              you in only if it makes sense.
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-white/70 sm:text-lg">
+              MOT, servicing, diagnostics, repairs — booked with the same honest
+              advice you get on the sales side. Tell us what the car is doing
+              and we&apos;ll book it in only when it makes sense.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg">
-                <Link href="/book-repair-call">
-                  <Clock3 aria-hidden />
-                  Book a repair call
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/repairs">Explore workshop services</Link>
-              </Button>
-            </div>
           </div>
-          <div className="grid gap-px border-t bg-border sm:grid-cols-2 lg:border-t-0 lg:border-l">
+
+          <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              "MOT",
+              "Servicing",
+              "Diagnostics",
+              "Brakes & tyres",
+              "Air-con",
+              "Repairs",
+            ].map((service) => (
+              <li
+                key={service}
+                className="rounded-2xl border border-white/12 bg-white/[0.04] px-4 py-3 text-center text-sm font-extrabold text-white/90"
+              >
+                {service}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mx-auto mt-10 flex max-w-3xl flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
+            <Button
+              asChild
+              size="lg"
+              className="cta-sheen h-14 min-w-56 bg-[#d7ad69] px-6 text-base text-[#171814] hover:bg-[#e3bd7e]"
+            >
+              <Link href="/book-repair-call">
+                <Clock3 aria-hidden />
+                Book a repair call
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="h-14 min-w-56 border-white/25 bg-white/[0.04] px-6 text-base text-white hover:bg-white/10"
+            >
+              <Link href="/repairs">Explore workshop services</Link>
+            </Button>
+          </div>
+
+          <ol className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { value: "01", label: "Choose a live call time" },
               { value: "02", label: "Describe the issue clearly" },
               { value: "03", label: "Speak with the right person" },
               { value: "04", label: "Agree the practical next step" },
             ].map((item) => (
-              <SpotlightCard
+              <li
                 key={item.value}
-                className="group flex min-h-36 flex-col justify-between bg-background p-6 transition-colors duration-300 hover:bg-brand-soft/40"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
               >
-                <span className="font-display text-3xl text-brand transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:text-brand-strong">
+                <span className="font-display text-3xl text-[#e3bd7e]">
                   {item.value}
                 </span>
-                <span className="max-w-40 text-sm font-extrabold">
+                <p className="mt-4 text-sm font-extrabold text-white/90">
                   {item.label}
-                </span>
-              </SpotlightCard>
+                </p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
