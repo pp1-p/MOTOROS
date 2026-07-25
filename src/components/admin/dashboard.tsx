@@ -19,11 +19,13 @@ import {
   SectionHeading,
   StatusPill,
 } from "@/components/admin/page-kit";
+import { TodayFocus } from "@/components/admin/today-focus";
 import type {
   AdminDiaryAppointment,
   AdminLeadListItem,
 } from "@/lib/types/admin-operational";
 import type { DashboardSnapshot } from "@/lib/data/dashboard";
+import type { TodayFocus as TodayFocusData } from "@/lib/data/admin-today";
 
 type DashboardDetails = {
   leads: AdminLeadListItem[];
@@ -42,9 +44,11 @@ type AttentionItem = {
 export function Dashboard({
   snapshot,
   details,
+  focus,
 }: {
   snapshot: DashboardSnapshot | null;
   details: DashboardDetails | null;
+  focus: TodayFocusData | null;
 }) {
   if (!snapshot) {
     return (
@@ -161,6 +165,8 @@ export function Dashboard({
           These figures are demo fixtures. Production never substitutes them for dealership records.
         </Notice>
       ) : null}
+
+      {focus ? <TodayFocus focus={focus} /> : null}
 
       <DataCard>
         <div className="border-b p-5">

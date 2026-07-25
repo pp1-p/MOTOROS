@@ -6,9 +6,13 @@ import {
   getAdminLeadList,
 } from "@/lib/data/admin-operational";
 import { getDashboardSnapshot } from "@/lib/data/dashboard";
+import { getTodayFocus } from "@/lib/data/admin-today";
 
 export default async function AdminOverviewPage() {
-  const snapshot = await getDashboardSnapshot();
+  const [snapshot, focus] = await Promise.all([
+    getDashboardSnapshot(),
+    getTodayFocus().catch(() => null),
+  ]);
   const details = snapshot
     ? await Promise.all([
         snapshot.canViewLeads ? getAdminLeadList() : Promise.resolve(null),
@@ -27,5 +31,5 @@ export default async function AdminOverviewPage() {
         .catch(() => null)
     : null;
 
-  return <Dashboard snapshot={snapshot} details={details} />;
+  return <Dashboard snapshot={snapshot} details={details} focus={focus} />;
 }
