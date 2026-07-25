@@ -175,87 +175,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="overflow-hidden bg-[#13251f] text-white">
-        <div className="container-shell grid lg:grid-cols-[1fr_1.05fr]">
-          <div className="relative min-h-[420px] lg:min-h-[620px]">
-            <Image
-              src="/images/hero-showroom.png"
-              alt="Carefully presented vehicles inside the dealership showroom"
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#13251f]/50 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-[#13251f]/35]" />
-          </div>
-          <div className="flex items-center py-16 lg:px-16 lg:py-24">
-            <div className="max-w-xl">
-              <p className="mb-4 text-xs font-extrabold tracking-[0.18em] text-[#e3bd7e] uppercase">
-                Personal car sourcing
-              </p>
-              <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
-                Can&apos;t see the right one? We&apos;ll find it for you.
-              </h2>
-              <p className="mt-6 text-base leading-8 text-white/65">
-                Tell us what you are after — the essentials and the little
-                things that matter — and we will look through our trusted
-                network. You see the shortlist; you decide from there.
-              </p>
-              <ol className="mt-8 grid gap-4">
-                {[
-                  "Tell us the car, budget and non-negotiables",
-                  "We search a wider trusted supply network",
-                  "You review the best options before any commitment",
-                ].map((step, index) => (
-                  <li key={step} className="flex items-center gap-4">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full border border-[#d7ad69]/45 bg-[#d7ad69]/10 text-xs font-extrabold text-[#e3bd7e]">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm font-bold text-white/80">{step}</span>
-                  </li>
-                ))}
-              </ol>
-              <Button
-                asChild
-                size="lg"
-                className="cta-sheen mt-9 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
-              >
-                <Link href="/source-a-car">
-                  Build your brief
-                  <ArrowRight aria-hidden />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 sm:py-28">
-        <div className="container-shell">
-          <SectionHeading
-            eyebrow="How we work"
-            title="Straightforward from start to finish"
-            description="We keep the important things visible — what has been checked, what happens next, and who you can speak to."
-            align="centre"
-          />
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {promises.map((item) => (
-              <SpotlightCard
-                key={item.title}
-                className="reveal rounded-3xl border bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_18px_50px_rgba(15,24,18,0.1)] sm:p-8"
-              >
-                <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
-                  <item.icon className="size-6" aria-hidden />
-                </span>
-                <h3 className="mt-6 text-xl font-extrabold">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-foreground/60">
-                  {item.copy}
-                </p>
-              </SpotlightCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="relative isolate overflow-hidden border-y bg-[#10231f] text-white">
         <div
           aria-hidden
@@ -336,6 +255,87 @@ export default async function HomePage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      <section className="overflow-hidden bg-[#13251f] text-white">
+        <div className="container-shell grid lg:grid-cols-[1fr_1.05fr]">
+          <div className="relative min-h-[420px] lg:min-h-[620px]">
+            <Image
+              src="/images/hero-showroom.png"
+              alt="Carefully presented vehicles inside the dealership showroom"
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#13251f]/50 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-[#13251f]/35]" />
+          </div>
+          <div className="flex items-center py-16 lg:px-16 lg:py-24">
+            <div className="max-w-xl">
+              <p className="mb-4 text-xs font-extrabold tracking-[0.18em] text-[#e3bd7e] uppercase">
+                Personal car sourcing
+              </p>
+              <h2 className="tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
+                Can&apos;t see the right one? We&apos;ll find it for you.
+              </h2>
+              <p className="mt-6 text-base leading-8 text-white/65">
+                Tell us what you are after — the essentials and the little
+                things that matter — and we will look through our trusted
+                network. You see the shortlist; you decide from there.
+              </p>
+              <ol className="mt-8 grid gap-4">
+                {[
+                  "Tell us the car, budget and non-negotiables",
+                  "We search a wider trusted supply network",
+                  "You review the best options before any commitment",
+                ].map((step, index) => (
+                  <li key={step} className="flex items-center gap-4">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full border border-[#d7ad69]/45 bg-[#d7ad69]/10 text-xs font-extrabold text-[#e3bd7e]">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-bold text-white/80">{step}</span>
+                  </li>
+                ))}
+              </ol>
+              <Button
+                asChild
+                size="lg"
+                className="cta-sheen mt-9 bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
+              >
+                <Link href="/source-a-car">
+                  Build your brief
+                  <ArrowRight aria-hidden />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 sm:py-28">
+        <div className="container-shell">
+          <SectionHeading
+            eyebrow="How we work"
+            title="Straightforward from start to finish"
+            description="We keep the important things visible — what has been checked, what happens next, and who you can speak to."
+            align="centre"
+          />
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {promises.map((item) => (
+              <SpotlightCard
+                key={item.title}
+                className="reveal rounded-3xl border bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_18px_50px_rgba(15,24,18,0.1)] sm:p-8"
+              >
+                <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
+                  <item.icon className="size-6" aria-hidden />
+                </span>
+                <h3 className="mt-6 text-xl font-extrabold">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-foreground/60">
+                  {item.copy}
+                </p>
+              </SpotlightCard>
+            ))}
+          </div>
         </div>
       </section>
 
