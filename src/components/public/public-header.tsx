@@ -24,7 +24,9 @@ import {
 const navigation = [
   { href: "/cars", label: "Cars for sale" },
   { href: "/source-a-car", label: "Source a car" },
-  { href: "/repairs", label: "Repairs & servicing" },
+  { href: "/part-exchange", label: "Part exchange" },
+  { href: "/finance", label: "Finance" },
+  { href: "/services", label: "MOT & servicing" },
   { href: "/contact", label: "Contact" },
 ];
 

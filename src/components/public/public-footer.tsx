@@ -20,7 +20,9 @@ import {
 const footerLinks = [
   { href: "/cars", label: "Cars for sale" },
   { href: "/source-a-car", label: "Source a car" },
-  { href: "/repairs", label: "Repairs & servicing" },
+  { href: "/part-exchange", label: "Part exchange" },
+  { href: "/finance", label: "Car finance" },
+  { href: "/services", label: "MOT & servicing" },
   { href: "/book-repair-call", label: "Book a repair call" },
   { href: "/contact", label: "Contact us" },
 ];
