@@ -558,6 +558,51 @@
   box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.3) !important;
 }
 
+/* Form fields — dark HUD inputs with high-contrast text. */
+.hud-shell input,
+.hud-shell textarea,
+.hud-shell select {
+  background: rgba(4, 12, 22, 0.75) !important;
+  color: #ffffff !important;
+  border-color: rgba(34, 211, 238, 0.28) !important;
+  caret-color: var(--hud-cyan-strong);
+}
+.hud-shell input[type="checkbox"],
+.hud-shell input[type="radio"] {
+  accent-color: var(--hud-cyan);
+  background: transparent !important;
+}
+.hud-shell input[type="file"] {
+  color: var(--hud-text-dim) !important;
+}
+.hud-shell input::placeholder,
+.hud-shell textarea::placeholder {
+  color: rgba(230, 244, 255, 0.4) !important;
+}
+.hud-shell input:disabled,
+.hud-shell textarea:disabled,
+.hud-shell select:disabled {
+  color: rgba(230, 244, 255, 0.4) !important;
+  background: rgba(4, 12, 22, 0.4) !important;
+}
+.hud-shell select option {
+  color: #ffffff;
+  background: #06121c;
+}
+.hud-shell label,
+.hud-shell legend {
+  color: rgba(230, 244, 255, 0.78) !important;
+}
+/* Chrome autofill leaves inputs looking pale-yellow — neutralise it. */
+.hud-shell input:-webkit-autofill,
+.hud-shell input:-webkit-autofill:hover,
+.hud-shell input:-webkit-autofill:focus,
+.hud-shell textarea:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 100px rgba(4, 12, 22, 0.95) inset !important;
+  caret-color: var(--hud-cyan-strong) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hud-reactor {
     animation: none;
