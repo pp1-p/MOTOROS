@@ -6,6 +6,8 @@ import {
   ChevronRight,
   CircleGauge,
   Clock3,
+  HandCoins,
+  Repeat,
   SearchCheck,
   ShieldCheck,
   Sparkles,
@@ -334,6 +336,65 @@ export default async function HomePage() {
                   {item.copy}
                 </p>
               </SpotlightCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t bg-[#faf7f1] py-16 sm:py-24">
+        <div className="container-shell">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <p className="text-xs font-extrabold tracking-[0.16em] text-brand uppercase">
+              More ways we can help
+            </p>
+            <h2 className="mt-3 tracking-display-lg font-display text-4xl text-balance sm:text-5xl">
+              Buying, funding, and looking after — all in one place.
+            </h2>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {[
+              {
+                href: "/part-exchange",
+                icon: Repeat,
+                title: "Part exchange",
+                copy: "Trade your current car in against your next one — one handover, one figure, no drama.",
+                cta: "Value my car",
+              },
+              {
+                href: "/finance",
+                icon: HandCoins,
+                title: "Car finance",
+                copy: "Spread the cost with a tailored quote from a regulated partner. Soft check first, no obligation.",
+                cta: "Get a finance quote",
+              },
+              {
+                href: "/services",
+                icon: Wrench,
+                title: "MOT & servicing",
+                copy: "Same honest advice on the workshop side — priced up front, booked when it makes sense.",
+                cta: "See what we do",
+              },
+            ].map((tile) => (
+              <Link
+                key={tile.href}
+                href={tile.href}
+                className="group relative overflow-hidden rounded-3xl border bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_18px_50px_rgba(15,24,18,0.1)]"
+              >
+                <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
+                  <tile.icon className="size-6" aria-hidden />
+                </span>
+                <h3 className="mt-6 text-xl font-extrabold">{tile.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-foreground/60">
+                  {tile.copy}
+                </p>
+                <span className="mt-6 inline-flex items-center gap-1 text-sm font-extrabold text-brand">
+                  {tile.cta}
+                  <ArrowRight
+                    className="size-4 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </span>
+              </Link>
             ))}
           </div>
         </div>
