@@ -393,7 +393,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f6f3]">
+    <div className="hud-shell min-h-screen">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col bg-[#10231f] text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)] transition-transform duration-200 lg:translate-x-0",
@@ -577,10 +577,19 @@ export function AdminShell({
               ⌘ K
             </kbd>
           </button>
+          <span
+            className="hidden items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#7feaff] xl:inline-flex"
+            aria-hidden
+          >
+            <span className="hud-reactor" />
+            <span className="hud-mono">Jarvis online</span>
+            <span className="text-white/25">·</span>
+            <span className="hud-mono text-white/55">SEC LVL {roleLabel(role).toUpperCase()}</span>
+          </span>
           <button
             type="button"
             onClick={() => setQuickOpen(true)}
-            className="hidden h-10 items-center gap-2 rounded-xl bg-brand px-3.5 text-xs font-extrabold text-white transition hover:bg-brand-strong sm:flex"
+            className="hud-cta-gold hidden h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-extrabold text-white transition sm:flex"
           >
             <Plus className="size-4" />
             Quick create
@@ -588,7 +597,7 @@ export function AdminShell({
           <button
             type="button"
             onClick={() => setQuickOpen(true)}
-            className="grid size-10 place-items-center rounded-xl bg-brand text-white sm:hidden"
+            className="hud-cta-gold grid size-10 place-items-center rounded-xl text-white sm:hidden"
             aria-label="Quick create"
           >
             <Plus className="size-4" />

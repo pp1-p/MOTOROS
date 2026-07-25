@@ -4,6 +4,8 @@ import { Toaster } from "sonner";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { getStaffContext } from "@/lib/auth/permissions";
 
+import "./admin.css";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
