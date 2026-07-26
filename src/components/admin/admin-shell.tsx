@@ -578,13 +578,13 @@ export function AdminShell({
             </kbd>
           </button>
           <span
-            className="hidden items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#7feaff] xl:inline-flex"
+            className="hidden items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/70 xl:inline-flex"
             aria-hidden
           >
             <span className="hud-reactor" />
-            <span className="hud-mono">Jarvis online</span>
-            <span className="text-white/25">·</span>
-            <span className="hud-mono text-white/55">SEC LVL {roleLabel(role).toUpperCase()}</span>
+            <span>System online</span>
+            <span className="text-foreground/25">·</span>
+            <span className="text-foreground/50">Role: {roleLabel(role)}</span>
           </span>
           <button
             type="button"

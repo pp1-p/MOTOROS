@@ -76,7 +76,7 @@ export function Dashboard({
     dateStyle: "full",
     timeZone: "Europe/London",
   }).format(new Date());
-  const stardate = new Intl.DateTimeFormat("en-GB", {
+  const localTime = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/London",
@@ -159,46 +159,44 @@ export function Dashboard({
 
   return (
     <div className="space-y-6">
-      <section className="hud-panel hud-scan overflow-hidden rounded-2xl px-6 py-6 sm:px-8 sm:py-7">
-        <div className="flex flex-wrap items-center gap-3 text-[10px]">
-          <span className="hud-mono text-[#7feaff]">
-            MISSION CONTROL · {today.toUpperCase()}
-          </span>
-          <span className="text-white/25">{"//"}</span>
-          <span className="hud-mono text-white/55">LOCAL TIME {stardate}</span>
-          <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-[#22d3ee]/30 bg-black/40 px-2.5 py-1">
+      <section className="hud-panel overflow-hidden rounded-2xl px-6 py-6 sm:px-8 sm:py-7">
+        <div className="flex flex-wrap items-center gap-3 text-[11px] font-extrabold tracking-[0.14em] uppercase">
+          <span className="text-brand">Dashboard · {today}</span>
+          <span className="text-foreground/25">·</span>
+          <span className="text-foreground/50">Local time {localTime}</span>
+          <span className="ml-auto inline-flex items-center gap-2 rounded-full border bg-white px-2.5 py-1">
             <span className="hud-reactor" />
-            <span className="hud-mono text-[10px] text-white/70">
-              SYSTEMS NOMINAL
+            <span className="text-[10px] font-extrabold text-foreground/60">
+              All systems operational
             </span>
           </span>
         </div>
-        <h1 className="mt-4 text-balance text-3xl font-extrabold leading-[1.02] tracking-[-0.032em] text-white sm:text-[40px]">
+        <h1 className="mt-4 text-balance text-3xl font-extrabold leading-[1.02] tracking-[-0.032em] text-foreground sm:text-[40px]">
           Welcome back, {firstName}.
         </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
-          Every stat, deal and vehicle is under active telemetry. Start with the priority queue below — JARVIS has flagged what needs your attention first.
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/60">
+          Here&apos;s what needs your attention today. Start with the priority queue below.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-4">
           {[
-            { label: "STOCK", value: snapshot.vehiclesInStock },
+            { label: "Stock", value: snapshot.vehiclesInStock },
             {
-              label: snapshot.canViewLeads ? "NEW ENQUIRIES" : "ACTIVE REPAIRS",
+              label: snapshot.canViewLeads ? "New enquiries" : "Active repairs",
               value: snapshot.canViewLeads
                 ? snapshot.newSalesLeads
                 : snapshot.repairJobsInProgress,
             },
-            { label: "APPTS TODAY", value: snapshot.repairCallsToday },
-            { label: "OVERDUE TASKS", value: snapshot.overdueTasks },
+            { label: "Appts today", value: snapshot.repairCallsToday },
+            { label: "Overdue tasks", value: snapshot.overdueTasks },
           ].map((stat) => (
             <div
               key={stat.label}
-              className="rounded-xl border border-[#22d3ee]/22 bg-black/30 px-3 py-3"
+              className="rounded-xl border bg-white px-3 py-3"
             >
-              <p className="hud-mono text-[10px] text-[#7feaff]/70">
+              <p className="text-[10px] font-extrabold tracking-[0.14em] text-foreground/50 uppercase">
                 {stat.label}
               </p>
-              <p className="mt-1 hud-numeric text-2xl font-extrabold tracking-[-0.02em] text-white">
+              <p className="mt-1 hud-numeric text-2xl font-extrabold tracking-[-0.02em] text-foreground">
                 {stat.value}
               </p>
             </div>
