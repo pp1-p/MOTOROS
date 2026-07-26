@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   Clock3,
   Mail,
   MapPin,
   MessageSquareText,
+  Navigation,
   Phone,
 } from "lucide-react";
 
@@ -85,18 +87,37 @@ export default async function ContactPage() {
                 </a>
               ) : null}
               {contact.address ? (
-                <div className="flex items-center gap-4 rounded-2xl border bg-white p-5">
-                  <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
-                    <MapPin className="size-5" aria-hidden />
-                  </span>
-                  <span>
-                    <span className="block text-xs font-bold text-foreground/45">
-                      Location
+                <div className="rounded-2xl border bg-white p-5">
+                  <div className="flex items-center gap-4">
+                    <span className="grid size-11 place-items-center rounded-2xl bg-brand-soft text-brand">
+                      <MapPin className="size-5" aria-hidden />
                     </span>
-                    <span className="mt-1 block font-extrabold">
-                      {contact.address}
+                    <span>
+                      <span className="block text-xs font-bold text-foreground/45">
+                        Location
+                      </span>
+                      <span className="mt-1 block font-extrabold">
+                        {contact.address}
+                      </span>
                     </span>
-                  </span>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(contact.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-brand-strong"
+                    >
+                      <Navigation className="size-4" aria-hidden />
+                      Get directions
+                    </a>
+                    <Link
+                      href="/find-us"
+                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-extrabold text-foreground transition hover:border-brand"
+                    >
+                      View on map
+                    </Link>
+                  </div>
                 </div>
               ) : null}
               {!hasPublishedPhoneOrEmail ? (
