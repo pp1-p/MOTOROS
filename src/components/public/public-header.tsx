@@ -5,6 +5,7 @@ import {
   Menu,
   Phone,
   ShieldCheck,
+  Smartphone,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -101,14 +102,23 @@ export function PublicHeader({
         </Link>
 
         <div className="flex items-center justify-end gap-3">
-          {contact.phone && contact.phoneHref ? (
-            <a
-              href={contact.phoneHref}
-              className="hidden items-center gap-2 rounded-xl border border-white/15 bg-black/25 px-4 py-2 text-sm font-extrabold text-white transition hover:bg-white/10 lg:inline-flex"
-            >
-              <Phone className="size-4 text-[#d7ad69]" aria-hidden />
-              {contact.phone}
-            </a>
+          {contact.phones.length > 0 ? (
+            <ul className="hidden flex-col gap-1 text-right text-sm font-extrabold text-white lg:flex">
+              {contact.phones.slice(0, 3).map((entry) => {
+                const Icon = entry.kind === "mobile" ? Smartphone : Phone;
+                return (
+                  <li key={entry.href}>
+                    <a
+                      href={entry.href}
+                      className="inline-flex items-center gap-2 tabular-nums transition hover:text-[#e3bd7e]"
+                    >
+                      <Icon className="size-4 text-[#d7ad69]" aria-hidden />
+                      {entry.label}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             <Button
               asChild

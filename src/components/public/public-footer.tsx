@@ -86,14 +86,14 @@ export function PublicFooter({
             Contact the team
           </h2>
           <ul className="grid gap-4 text-sm leading-6 text-white/65">
-            {contact.phone && contact.phoneHref ? (
-              <li className="flex gap-3">
+            {contact.phones.map((entry) => (
+              <li key={entry.href} className="flex gap-3">
                 <Phone className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />
-                <a className="hover:text-white" href={contact.phoneHref}>
-                  {contact.phone}
+                <a className="hover:text-white" href={entry.href}>
+                  {entry.label}
                 </a>
               </li>
-            ) : null}
+            ))}
             {contact.email && contact.emailHref ? (
               <li className="flex gap-3">
                 <Mail className="mt-1 size-4 shrink-0 text-[#d7ad69]" aria-hidden />

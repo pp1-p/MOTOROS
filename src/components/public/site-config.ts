@@ -1,5 +1,28 @@
 import { defaultPublicSiteName } from "@/lib/site-metadata";
 
+// Direct Motors defaults. Any dealership deployment can override by
+// setting NEXT_PUBLIC_DEALERSHIP_PHONES (comma-separated) in env.
+const directMotorsDefaultPhones = [
+  "01922 625925",
+  "07904 268149",
+  "07957 597444",
+];
+
+function parsePhonesFromEnv(): string[] {
+  const listed = process.env.NEXT_PUBLIC_DEALERSHIP_PHONES?.trim();
+  if (listed) {
+    return listed
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  const single = process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim();
+  return single ? [single] : directMotorsDefaultPhones;
+}
+
+const configuredPhones = parsePhonesFromEnv();
+const primaryPhone = configuredPhones[0] ?? "";
+
 export const publicSiteConfig = {
   name: process.env.NEXT_PUBLIC_DEALERSHIP_NAME ?? defaultPublicSiteName,
   strapline: "Quality cars, honest advice, trusted workshop.",
@@ -14,10 +37,11 @@ export const publicSiteConfig = {
   seoTitle: "Quality used cars, sourcing and repairs",
   seoDescription:
     "Explore carefully selected used cars, ask us to source something specific, or book a repair discussion with an independent UK dealership.",
-  phone: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim() ?? "",
-  phoneHref: process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim()
-    ? `tel:${process.env.NEXT_PUBLIC_DEALERSHIP_PHONE.replace(/\s/g, "")}`
+  phone: primaryPhone,
+  phoneHref: primaryPhone
+    ? `tel:${primaryPhone.replace(/\s/g, "")}`
     : "/contact",
+  phones: configuredPhones,
   email: process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL?.trim() ?? "",
   address: process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS?.trim() ?? "",
   hours: [
