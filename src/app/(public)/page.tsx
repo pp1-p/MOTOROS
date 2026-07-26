@@ -209,7 +209,7 @@ export default async function HomePage() {
 
           <div className="mt-8 flex flex-col items-center gap-3">
             <a
-              href="https://www.autotrader.co.uk/dealers"
+              href="https://www.autotrader.co.uk/dealers/staffordshire/walsall/direct-motors-ltd-10015087"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-5 text-xs font-extrabold text-foreground transition hover:border-brand hover:text-brand"

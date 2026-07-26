@@ -323,7 +323,7 @@ export default async function AboutPage() {
               </div>
             </div>
             <a
-              href="https://www.autotrader.co.uk/dealers"
+              href="https://www.autotrader.co.uk/dealers/staffordshire/walsall/direct-motors-ltd-10015087"
               target="_blank"
               rel="noopener noreferrer"
               className="cta-sheen inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-sm font-extrabold text-white transition hover:bg-brand-strong"
