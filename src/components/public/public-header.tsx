@@ -65,64 +65,77 @@ export function PublicHeader({
       )}
     >
       <div className="border-b border-white/10 bg-black/25">
-        <div className="container-shell flex min-h-9 items-center justify-between gap-4 py-1 text-[11px] font-bold tracking-[0.08em] text-white/65 uppercase sm:text-xs">
-          <span className="inline-flex items-center gap-2">
-            <ShieldCheck className="size-3.5 text-[#d7ad69]" aria-hidden />
-            Carefully selected. Properly prepared.
-          </span>
-          {contact.phone && contact.phoneHref ? (
-            <a
-              className="hidden items-center gap-2 transition hover:text-white sm:inline-flex"
-              href={contact.phoneHref}
-            >
-              <Phone className="size-3.5" aria-hidden />
-              {contact.phone}
-            </a>
-          ) : (
-            <Link
-              className="hidden items-center gap-2 transition hover:text-white sm:inline-flex"
-              href="/contact"
-            >
-              Contact the dealership
-              <ChevronRight className="size-3.5" aria-hidden />
-            </Link>
-          )}
+        <div className="container-shell flex min-h-9 items-center justify-center gap-3 py-1 text-[11px] font-bold tracking-[0.12em] text-white/65 uppercase sm:text-xs">
+          <ShieldCheck className="size-3.5 text-[#d7ad69]" aria-hidden />
+          Carefully selected. Properly prepared.
         </div>
       </div>
 
-      <div className="container-shell flex h-20 items-center justify-between gap-6">
+      <div className="container-shell grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-5 sm:py-7">
+        <div className="hidden min-w-0 items-center gap-3 text-[11px] font-extrabold tracking-[0.16em] text-white/55 uppercase lg:inline-flex">
+          <span className="h-px w-8 bg-[#d7ad69]/50" aria-hidden />
+          Independent motor specialists
+        </div>
+
         <Link
           href="/"
-          className="group inline-flex items-center gap-3"
+          className="group flex items-center justify-center"
           aria-label={`${config.name} home`}
         >
-          <span className="grid size-10 place-items-center rounded-full border border-[#d7ad69]/50 bg-[#d7ad69]/10 font-display text-xl text-[#e7c387] transition group-hover:bg-[#d7ad69]/20">
-            {config.logoUrl ? (
-              <Image
-                src={config.logoUrl}
-                alt=""
-                width={40}
-                height={40}
-                className="size-full rounded-full object-contain"
-              />
-            ) : (
-              config.name.slice(0, 1).toUpperCase()
-            )}
-          </span>
-          <span>
-            <span className="block text-lg font-extrabold tracking-tight">
+          {config.logoUrl ? (
+            <Image
+              src={config.logoUrl}
+              alt={config.name}
+              width={1000}
+              height={320}
+              priority
+              className="h-16 w-auto max-w-[280px] object-contain transition group-hover:opacity-90 sm:h-24 sm:max-w-[440px] lg:h-28 lg:max-w-[520px]"
+            />
+          ) : (
+            <span className="font-display text-3xl tracking-tight text-white sm:text-5xl">
               {config.name}
             </span>
-            <span className="hidden text-[10px] font-semibold tracking-[0.12em] text-white/50 uppercase sm:block">
-              Independent motor specialists
-            </span>
-          </span>
+          )}
         </Link>
 
-        <nav
-          aria-label="Main navigation"
-          className="hidden items-center gap-7 lg:flex"
-        >
+        <div className="flex items-center justify-end gap-3">
+          {contact.phone && contact.phoneHref ? (
+            <a
+              href={contact.phoneHref}
+              className="hidden items-center gap-2 rounded-xl border border-white/15 bg-black/25 px-4 py-2 text-sm font-extrabold text-white transition hover:bg-white/10 lg:inline-flex"
+            >
+              <Phone className="size-4 text-[#d7ad69]" aria-hidden />
+              {contact.phone}
+            </a>
+          ) : (
+            <Button
+              asChild
+              className="hidden bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e] lg:inline-flex"
+            >
+              <Link href="/contact">
+                Talk to us
+                <ChevronRight aria-hidden />
+              </Link>
+            </Button>
+          )}
+          <button
+            type="button"
+            className="grid size-11 place-items-center rounded-xl border border-white/20 text-white transition hover:bg-white/10 lg:hidden"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
+            aria-label={open ? "Close navigation" : "Open navigation"}
+          >
+            {open ? <X aria-hidden /> : <Menu aria-hidden />}
+          </button>
+        </div>
+      </div>
+
+      <nav
+        aria-label="Main navigation"
+        className="hidden border-t border-white/10 bg-black/30 lg:block"
+      >
+        <div className="container-shell flex items-center justify-center gap-8 py-3">
           {navigation.map((item) => {
             const active =
               pathname === item.href ||
@@ -132,47 +145,17 @@ export function PublicHeader({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative py-2 text-sm font-bold text-white/70 transition hover:text-white",
+                  "relative py-1.5 text-sm font-bold tracking-wide text-white/70 uppercase transition hover:text-white",
                   active &&
-                    "text-white after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:bg-[#d7ad69]",
+                    "text-white after:absolute after:inset-x-0 after:-bottom-2 after:h-0.5 after:bg-[#d7ad69]",
                 )}
               >
                 {item.label}
               </Link>
             );
           })}
-        </nav>
-
-        <div className="hidden items-center gap-3 lg:flex">
-          <Button
-            asChild
-            variant="outline"
-            className="border-white/25 text-white hover:bg-white/10"
-          >
-            <Link href="/book-repair-call">Book a repair call</Link>
-          </Button>
-          <Button
-            asChild
-            className="bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e]"
-          >
-            <Link href="/contact">
-              Talk to us
-              <ChevronRight aria-hidden />
-            </Link>
-          </Button>
         </div>
-
-        <button
-          type="button"
-          className="grid size-11 place-items-center rounded-xl border border-white/20 text-white transition hover:bg-white/10 lg:hidden"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          aria-controls="mobile-navigation"
-          aria-label={open ? "Close navigation" : "Open navigation"}
-        >
-          {open ? <X aria-hidden /> : <Menu aria-hidden />}
-        </button>
-      </div>
+      </nav>
 
       {open ? (
         <div
