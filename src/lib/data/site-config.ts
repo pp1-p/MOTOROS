@@ -22,7 +22,6 @@ function environmentSiteConfig(): PublicSiteConfig {
     phoneHref: phone ? `tel:${phone.replace(/\s/g, "")}` : "/contact",
     email: process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL?.trim() ?? "",
     address: process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS?.trim() ?? "",
-    hours: [],
   };
 }
 
