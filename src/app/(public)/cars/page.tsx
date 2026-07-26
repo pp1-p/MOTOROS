@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 
+import { BrandPicker } from "@/components/public/brand-picker";
 import { SectionHeading } from "@/components/public/section-heading";
 import { VehicleCard } from "@/components/public/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { carBrands, findBrand } from "@/lib/data/car-brands";
 import {
   filterPublicVehicles,
   getPublicVehicles,
@@ -86,6 +88,23 @@ export default async function CarsPage({
     activeAvailability !== "all" ? activeAvailability : undefined,
   ].filter(Boolean).length;
 
+  const brandStockCounts: Record<string, number> = {};
+  for (const vehicle of vehicles) {
+    const brand = findBrand(vehicle.make);
+    if (!brand) continue;
+    brandStockCounts[brand.slug] = (brandStockCounts[brand.slug] ?? 0) + 1;
+  }
+
+  const makeSelectOptions = Array.from(
+    new Set<string>([...options.makes, ...carBrands.map((b) => b.name)]),
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((value) => {
+      const brand = carBrands.find((b) => b.name === value);
+      const inStock = brand ? (brandStockCounts[brand.slug] ?? 0) : 0;
+      return { value, label: inStock > 0 ? `${value} (${inStock})` : value };
+    });
+
   return (
     <>
       <section className="border-b bg-[#15221d] py-14 text-white sm:py-20">
@@ -102,6 +121,11 @@ export default async function CarsPage({
           </p>
         </div>
       </section>
+
+      <BrandPicker
+        activeMake={filters.make}
+        stockCounts={brandStockCounts}
+      />
 
       <section className="border-b bg-white py-5">
         <div className="container-shell flex snap-x gap-2 overflow-x-auto pb-1">
@@ -188,8 +212,10 @@ export default async function CarsPage({
                       className={selectClass}
                     >
                       <option value="">Any make</option>
-                      {options.makes.map((value) => (
-                        <option key={value}>{value}</option>
+                      {makeSelectOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
                       ))}
                     </select>
                   </label>
