@@ -12,14 +12,11 @@ import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { log } from "@/lib/security/logger";
 
 function environmentSiteConfig(): PublicSiteConfig {
-  const phone = process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim() ?? "";
   return {
     ...publicSiteConfig,
     name:
       process.env.NEXT_PUBLIC_DEALERSHIP_NAME?.trim() ||
       "Independent dealership",
-    phone,
-    phoneHref: phone ? `tel:${phone.replace(/\s/g, "")}` : "/contact",
     email: process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL?.trim() ?? "",
     address: process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS?.trim() ?? "",
   };
@@ -202,6 +199,10 @@ export const getPublicSiteConfig = cache(
         phoneHref: phone
           ? `tel:${String(phone).replace(/\s/g, "")}`
           : safeFallback.phoneHref,
+        phones:
+          phone && phone !== safeFallback.phone
+            ? [phone, ...safeFallback.phones.filter((entry) => entry !== phone)]
+            : safeFallback.phones,
         email: configuredString(dealership.email, safeFallback.email),
         address: formatAddress(dealership.address, safeFallback.address),
         hours: formatHours(dealership.opening_hours, safeFallback.hours),
