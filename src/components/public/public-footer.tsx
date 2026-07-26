@@ -24,6 +24,7 @@ const footerLinks = [
   { href: "/finance", label: "Car finance" },
   { href: "/services", label: "MOT & servicing" },
   { href: "/book-repair-call", label: "Book a repair call" },
+  { href: "/find-us", label: "Find us" },
   { href: "/contact", label: "Contact us" },
 ];
 
