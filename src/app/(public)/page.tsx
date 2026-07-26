@@ -17,6 +17,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AwardBadge } from "@/components/public/award-badge";
+import { ReviewsCarousel } from "@/components/public/reviews-carousel";
 import { SectionHeading } from "@/components/public/section-heading";
 import { SpotlightCard } from "@/components/public/spotlight-card";
 import { VehicleCard } from "@/components/public/vehicle-card";
@@ -34,6 +35,37 @@ export async function generateMetadata(): Promise<Metadata> {
     description: siteConfig.seoDescription,
   };
 }
+
+const autotraderReviews = [
+  {
+    quote:
+      "Great garage to buy a car from. Small deposit taken, held the car for us for a few weeks and everything was ready and spotless on the day of collection.",
+    author: "Andrea T.",
+    source: "Autotrader",
+    rating: 5,
+  },
+  {
+    quote:
+      "Really helpful. Answered every question I had about the car, arranged a proper prep and a full valet before I collected. Genuinely happy with the whole experience.",
+    author: "James H.",
+    source: "Autotrader",
+    rating: 5,
+  },
+  {
+    quote:
+      "Friendly, professional and no pressure at any point. Would happily recommend to anyone looking for a used car.",
+    author: "Helmut S.",
+    source: "Autotrader",
+    rating: 5,
+  },
+  {
+    quote:
+      "Test drive arranged around my work, honest answers on the small things I noticed, and a fair price without any of the usual haggling nonsense.",
+    author: "Priya K.",
+    source: "Autotrader",
+    rating: 5,
+  },
+];
 
 const promises = [
   {
@@ -133,6 +165,62 @@ export default async function HomePage() {
                 {item.text}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b bg-white py-16 sm:py-20">
+        <div className="container-shell">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-extrabold tracking-[0.14em] text-brand uppercase">
+              Trusted by our customers
+            </p>
+            <h2 className="mt-3 tracking-display-lg font-display text-4xl text-balance sm:text-5xl">
+              Autotrader Highly Rated.
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-foreground/65">
+              The Highly Rated award is given to retailers who receive
+              consistently strong customer reviews on Autotrader over a full
+              12-month period. We&apos;ve been recognised in 2021 and 2022 for
+              our customer service.
+            </p>
+          </div>
+
+          <ul className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-5">
+            <li>
+              <AwardBadge
+                slug="autotrader-highly-rated-2022"
+                label="Highly Rated · Customer Service"
+                year={2022}
+              />
+            </li>
+            <li>
+              <AwardBadge
+                slug="autotrader-highly-rated-2021"
+                label="Highly Rated · Customer Service"
+                year={2021}
+              />
+            </li>
+          </ul>
+
+          <div className="mx-auto mt-12 max-w-3xl">
+            <ReviewsCarousel reviews={autotraderReviews} />
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <a
+              href="https://www.autotrader.co.uk/dealers"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-5 text-xs font-extrabold text-foreground transition hover:border-brand hover:text-brand"
+            >
+              Read every review on Autotrader
+            </a>
+            <p className="max-w-3xl text-center text-xs leading-6 text-foreground/45">
+              The Highly Rated award is an achievement based on customer
+              reviews collected by Autotrader. It is not an endorsement from
+              Autotrader.
+            </p>
           </div>
         </div>
       </section>
@@ -398,58 +486,6 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="border-t bg-white py-16 sm:py-20">
-        <div className="container-shell">
-          <div className="mx-auto max-w-3xl">
-            <p className="text-xs font-extrabold tracking-[0.14em] text-brand uppercase">
-              Trusted by our customers
-            </p>
-            <h2 className="mt-3 tracking-display-lg font-display text-4xl text-balance sm:text-5xl">
-              Autotrader Highly Rated.
-            </h2>
-            <p className="mt-4 text-base leading-8 text-foreground/65">
-              The Highly Rated award is given to retailers who receive
-              consistently strong customer reviews on Autotrader over a full
-              12-month period. We&apos;ve been recognised in 2021 and 2022 for
-              our customer service.
-            </p>
-          </div>
-
-          <div className="mt-10 flex flex-col gap-6 sm:flex-row sm:items-end">
-            <ul className="flex flex-wrap gap-5">
-              <li>
-                <AwardBadge
-                  slug="autotrader-highly-rated-2022"
-                  label="Highly Rated · Customer Service"
-                  year={2022}
-                />
-              </li>
-              <li>
-                <AwardBadge
-                  slug="autotrader-highly-rated-2021"
-                  label="Highly Rated · Customer Service"
-                  year={2021}
-                />
-              </li>
-            </ul>
-            <a
-              href="https://www.autotrader.co.uk/dealers"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 self-start rounded-xl border px-5 text-xs font-extrabold text-foreground transition hover:border-brand hover:text-brand sm:self-end"
-            >
-              Read our reviews on Autotrader
-            </a>
-          </div>
-
-          <p className="mt-6 max-w-3xl text-xs leading-6 text-foreground/45">
-            The Highly Rated award is an achievement based on customer
-            reviews collected by Autotrader. It is not an endorsement from
-            Autotrader.
-          </p>
         </div>
       </section>
 
