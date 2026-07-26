@@ -20,13 +20,23 @@ export const metadata: Metadata = {
     "Meet the family behind our independent dealership — Indijit and Rashpal — and the small team that looks after every car and every customer.",
 };
 
-const owners = [
+type TeamMember = {
+  name: string;
+  role: string;
+  initial: string;
+  tint: string;
+  bio: string;
+  isOwner?: boolean;
+};
+
+const team: TeamMember[] = [
   {
     name: "Indijit",
     role: "Co-founder & Director",
     initial: "I",
     tint: "#1b5c4f",
     bio: "Handles the buying, the mechanical inspections and most of the workshop side. Would rather take an hour longer on a car than let one leave before it's right.",
+    isOwner: true,
   },
   {
     name: "Rashpal",
@@ -34,6 +44,28 @@ const owners = [
     initial: "R",
     tint: "#0d2a20",
     bio: "Runs the day-to-day, looks after customers from first phone call to handover, and keeps everything joined-up between sales and workshop.",
+    isOwner: true,
+  },
+  {
+    name: "Luke",
+    role: "Sales & customer care",
+    initial: "L",
+    tint: "#3a5f4c",
+    bio: "Usually the first friendly voice on the phone. Talks you through the cars honestly, arranges viewings around your diary, and makes sure the handover is smooth from start to finish.",
+  },
+  {
+    name: "Workshop technician",
+    role: "Mechanic",
+    initial: "M",
+    tint: "#4a6a5c",
+    bio: "One of two experienced technicians on our workshop side — MOT, servicing, diagnostics and repairs. Every car we sell passes through their hands before it ever reaches you.",
+  },
+  {
+    name: "Workshop technician",
+    role: "Mechanic",
+    initial: "M",
+    tint: "#5a7a6b",
+    bio: "Second of our two-strong workshop team. Between them they cover everything from cambelts to complex diagnostics, and they take the same pride in a service job as they do a prep job.",
   },
 ];
 
@@ -120,40 +152,48 @@ export default async function AboutPage() {
         <div className="container-shell">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-extrabold tracking-[0.14em] text-brand uppercase">
-              Meet the owners
+              Meet the team
             </p>
             <h2 className="mt-3 tracking-display-lg font-display text-4xl text-balance sm:text-5xl">
               The people you&apos;ll actually speak to.
             </h2>
             <p className="mt-4 text-base leading-8 text-foreground/65">
               No call centres, no rotating staff — you&apos;ll be dealing
-              with one of us from your first message to the handover.
+              with the same small team from your first message right through
+              to the workshop.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            {owners.map((owner) => (
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {team.map((member, index) => (
               <article
-                key={owner.name}
+                key={`${member.name}-${index}`}
                 className="rounded-3xl border bg-background p-7 transition hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-[0_18px_50px_rgba(15,24,18,0.08)] sm:p-8"
               >
                 <div className="flex items-center gap-5">
                   <span
                     aria-hidden
                     className="grid size-20 shrink-0 place-items-center rounded-full font-display text-4xl font-extrabold text-white shadow-inner shadow-black/30 ring-2 ring-white/60"
-                    style={{ backgroundColor: owner.tint }}
+                    style={{ backgroundColor: member.tint }}
                   >
-                    {owner.initial}
+                    {member.initial}
                   </span>
                   <div>
-                    <h3 className="text-2xl font-extrabold">{owner.name}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-2xl font-extrabold">{member.name}</h3>
+                      {member.isOwner ? (
+                        <span className="rounded-full bg-[#d7ad69]/15 px-2 py-0.5 text-[10px] font-extrabold tracking-[0.14em] text-[#a97b1f] uppercase">
+                          Owner
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-1 text-sm font-bold text-brand">
-                      {owner.role}
+                      {member.role}
                     </p>
                   </div>
                 </div>
                 <p className="mt-5 text-sm leading-7 text-foreground/65">
-                  {owner.bio}
+                  {member.bio}
                 </p>
               </article>
             ))}
