@@ -24,11 +24,6 @@
   background: var(--hud-bg-a);
 }
 
-.hud-shell > * {
-  position: relative;
-  z-index: 1;
-}
-
 /* Typography helpers */
 .hud-mono {
   font-family: var(--hud-mono);
