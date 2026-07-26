@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 
-import { BrandPicker } from "@/components/public/brand-picker";
+import { BrandLogo } from "@/components/public/brand-logo";
 import { SectionHeading } from "@/components/public/section-heading";
 import { VehicleCard } from "@/components/public/vehicle-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { carBrands, findBrand } from "@/lib/data/car-brands";
 import {
   filterPublicVehicles,
@@ -122,10 +121,111 @@ export default async function CarsPage({
         </div>
       </section>
 
-      <BrandPicker
-        activeMake={filters.make}
-        stockCounts={brandStockCounts}
-      />
+      <section className="border-b bg-white py-6 sm:py-8">
+        <div className="container-shell">
+          <form
+            method="get"
+            action="/cars"
+            className="flex flex-col gap-3 rounded-2xl border bg-white p-3 shadow-sm sm:p-4"
+          >
+            <input
+              type="hidden"
+              name="availability"
+              value={activeAvailability}
+            />
+            <div className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+              <label className="grid gap-1 text-[10px] font-extrabold tracking-[0.14em] text-foreground/55 uppercase">
+                <span className="pl-3">Make</span>
+                <select
+                  name="make"
+                  defaultValue={filters.make ?? ""}
+                  className={cn(selectClass, "h-12")}
+                >
+                  <option value="">All makes</option>
+                  {makeSelectOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-[10px] font-extrabold tracking-[0.14em] text-foreground/55 uppercase">
+                <span className="pl-3">Model</span>
+                <select
+                  name="model"
+                  defaultValue={filters.model ?? ""}
+                  className={cn(selectClass, "h-12")}
+                >
+                  <option value="">All models</option>
+                  {options.models.map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-[10px] font-extrabold tracking-[0.14em] text-foreground/55 uppercase">
+                <span className="pl-3">Min price</span>
+                <select
+                  name="minPrice"
+                  defaultValue={filters.minPrice ?? ""}
+                  className={cn(selectClass, "h-12")}
+                >
+                  <option value="">No minimum</option>
+                  <option value="5000">£5,000</option>
+                  <option value="10000">£10,000</option>
+                  <option value="15000">£15,000</option>
+                  <option value="20000">£20,000</option>
+                  <option value="25000">£25,000</option>
+                  <option value="30000">£30,000</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-[10px] font-extrabold tracking-[0.14em] text-foreground/55 uppercase">
+                <span className="pl-3">Max price</span>
+                <select
+                  name="maxPrice"
+                  defaultValue={filters.maxPrice ?? ""}
+                  className={cn(selectClass, "h-12")}
+                >
+                  <option value="">No maximum</option>
+                  <option value="10000">£10,000</option>
+                  <option value="15000">£15,000</option>
+                  <option value="20000">£20,000</option>
+                  <option value="25000">£25,000</option>
+                  <option value="30000">£30,000</option>
+                  <option value="40000">£40,000</option>
+                  <option value="60000">£60,000</option>
+                </select>
+              </label>
+              <Button
+                type="submit"
+                className="h-12 self-end bg-[#d7ad69] text-[#171814] hover:bg-[#e3bd7e] md:min-w-32"
+              >
+                <Search aria-hidden />
+                Search
+              </Button>
+            </div>
+            {filters.make ? (
+              <div className="flex items-center justify-between gap-3 border-t pt-3">
+                <div className="flex items-center gap-3">
+                  <BrandLogo make={filters.make} size={40} />
+                  <div>
+                    <p className="text-[10px] font-extrabold tracking-[0.14em] text-foreground/50 uppercase">
+                      Filtering by make
+                    </p>
+                    <p className="text-sm font-extrabold">{filters.make}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/cars"
+                  className="inline-flex items-center gap-1 text-xs font-extrabold text-foreground/60 transition hover:text-brand"
+                >
+                  Clear
+                  <X className="size-3.5" aria-hidden />
+                </Link>
+              </div>
+            ) : null}
+          </form>
+        </div>
+      </section>
 
       <section className="border-b bg-white py-5">
         <div className="container-shell flex snap-x gap-2 overflow-x-auto pb-1">
@@ -152,210 +252,63 @@ export default async function CarsPage({
 
       <section className="py-10 sm:py-14">
         <div className="container-shell">
-          <form method="get" action="/cars" className="mb-10">
-            <input
-              type="hidden"
-              name="availability"
-              value={activeAvailability}
+          <div className="mb-10 flex flex-col-reverse gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <SectionHeading
+              eyebrow="Your results"
+              title={`${filteredVehicles.length} ${
+                filteredVehicles.length === 1 ? "car" : "cars"
+              } to explore`}
+              description={
+                filteredVehicles.length
+                  ? "Open any vehicle for its full specification, preparation details and direct enquiry options."
+                  : "Try widening your filters, or send us a brief and we can source the right car."
+              }
             />
-            <div className="rounded-3xl border bg-white p-4 shadow-sm sm:p-6">
-              <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-                <label className="relative block">
-                  <span className="sr-only">Search cars</span>
-                  <Search
-                    className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-foreground/40"
-                    aria-hidden
-                  />
-                  <Input
-                    name="q"
-                    defaultValue={filters.q}
-                    className="h-12 pl-11"
-                    placeholder="Search make, model or body style"
-                  />
-                </label>
-                <select
-                  name="sort"
-                  defaultValue={filters.sort}
-                  className={cn(selectClass, "h-12 lg:w-52")}
-                  aria-label="Sort vehicles"
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="price-asc">Price: low to high</option>
-                  <option value="price-desc">Price: high to low</option>
-                  <option value="mileage-asc">Lowest mileage</option>
-                </select>
-                <Button type="submit" className="h-12">
-                  <Search aria-hidden />
-                  Search stock
-                </Button>
-              </div>
-
-              <details
-                className="group mt-4 border-t pt-4"
-                open={activeFilterCount > 0}
+            <form
+              method="get"
+              action="/cars"
+              className="flex shrink-0 items-center gap-2"
+            >
+              <input type="hidden" name="availability" value={activeAvailability} />
+              {filters.make ? <input type="hidden" name="make" value={filters.make} /> : null}
+              {filters.model ? <input type="hidden" name="model" value={filters.model} /> : null}
+              {filters.minPrice ? <input type="hidden" name="minPrice" value={String(filters.minPrice)} /> : null}
+              {filters.maxPrice ? <input type="hidden" name="maxPrice" value={String(filters.maxPrice)} /> : null}
+              <label className="text-[10px] font-extrabold tracking-[0.14em] text-foreground/55 uppercase">
+                Sort
+              </label>
+              <select
+                name="sort"
+                defaultValue={filters.sort}
+                className={cn(selectClass, "h-11 min-w-40")}
+                aria-label="Sort vehicles"
               >
-                <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 text-sm font-extrabold text-brand">
-                  <SlidersHorizontal className="size-4" aria-hidden />
-                  More filters
-                  {activeFilterCount > 0 ? (
-                    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs">
-                      {activeFilterCount} active
-                    </span>
-                  ) : null}
-                </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Make
-                    <select
-                      name="make"
-                      defaultValue={filters.make ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any make</option>
-                      {makeSelectOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Model
-                    <select
-                      name="model"
-                      defaultValue={filters.model ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any model</option>
-                      {options.models.map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Fuel
-                    <select
-                      name="fuelType"
-                      defaultValue={filters.fuelType ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any fuel</option>
-                      {options.fuelTypes.map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Transmission
-                    <select
-                      name="transmission"
-                      defaultValue={filters.transmission ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any transmission</option>
-                      {options.transmissions.map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Body type
-                    <select
-                      name="bodyType"
-                      defaultValue={filters.bodyType ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any body type</option>
-                      {options.bodyTypes.map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Minimum price
-                    <select
-                      name="minPrice"
-                      defaultValue={filters.minPrice ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">No minimum</option>
-                      <option value="10000">£10,000</option>
-                      <option value="15000">£15,000</option>
-                      <option value="20000">£20,000</option>
-                      <option value="25000">£25,000</option>
-                      <option value="30000">£30,000</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Maximum price
-                    <select
-                      name="maxPrice"
-                      defaultValue={filters.maxPrice ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">No maximum</option>
-                      <option value="15000">£15,000</option>
-                      <option value="20000">£20,000</option>
-                      <option value="25000">£25,000</option>
-                      <option value="30000">£30,000</option>
-                      <option value="40000">£40,000</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Maximum mileage
-                    <select
-                      name="maxMileage"
-                      defaultValue={filters.maxMileage ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any mileage</option>
-                      <option value="20000">20,000 miles</option>
-                      <option value="30000">30,000 miles</option>
-                      <option value="40000">40,000 miles</option>
-                      <option value="50000">50,000 miles</option>
-                      <option value="75000">75,000 miles</option>
-                    </select>
-                  </label>
-                  <label className="grid gap-1.5 text-xs font-bold">
-                    Minimum year
-                    <select
-                      name="minYear"
-                      defaultValue={filters.minYear ?? ""}
-                      className={selectClass}
-                    >
-                      <option value="">Any year</option>
-                      <option value="2019">2019</option>
-                      <option value="2020">2020</option>
-                      <option value="2021">2021</option>
-                      <option value="2022">2022</option>
-                      <option value="2023">2023</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="mt-5 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end">
-                  <Button asChild type="button" variant="ghost">
-                    <Link href="/cars">
-                      <X aria-hidden />
-                      Clear filters
-                    </Link>
-                  </Button>
-                  <Button type="submit">Apply filters</Button>
-                </div>
-              </details>
-            </div>
-          </form>
+                <option value="newest">Newest first</option>
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="mileage-asc">Lowest mileage</option>
+              </select>
+              <Button type="submit" variant="outline" className="h-11">
+                Apply
+              </Button>
+            </form>
+          </div>
 
-          <SectionHeading
-            eyebrow="Your results"
-            title={`${filteredVehicles.length} ${
-              filteredVehicles.length === 1 ? "car" : "cars"
-            } to explore`}
-            description={
-              filteredVehicles.length
-                ? "Open any vehicle for its full specification, preparation details and direct enquiry options."
-                : "Try widening your filters, or send us a brief and we can source the right car."
-            }
-          />
+          {activeFilterCount > 0 ? (
+            <div className="mb-6 flex flex-wrap items-center gap-3 text-xs font-bold text-foreground/60">
+              <span className="rounded-full bg-brand-soft px-3 py-1 text-brand">
+                <SlidersHorizontal className="mr-1 inline size-3.5 -translate-y-px" aria-hidden />
+                {activeFilterCount} active filter{activeFilterCount === 1 ? "" : "s"}
+              </span>
+              <Link
+                href="/cars"
+                className="inline-flex items-center gap-1 transition hover:text-brand"
+              >
+                <X className="size-3.5" aria-hidden />
+                Clear all
+              </Link>
+            </div>
+          ) : null}
 
           {filteredVehicles.length ? (
             <div className="mt-9 grid gap-6 md:grid-cols-2 xl:grid-cols-3">

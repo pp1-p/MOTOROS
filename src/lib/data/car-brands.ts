@@ -6,6 +6,13 @@ export type CarBrand = {
   ink: "light" | "dark";
 };
 
+// The BrandLogo component looks for an SVG at this path. Drop the
+// manufacturer's official logo file at /public/images/brands/<slug>.svg
+// (or .png) and it will replace the monogram fallback automatically.
+export function brandLogoPath(slug: string, ext: "svg" | "png" = "svg") {
+  return `/images/brands/${slug}.${ext}`;
+}
+
 // Common UK-market car brands. Colours are the manufacturer's signature tone,
 // used to accent our own monogram tiles — not an attempt to reproduce the
 // trademarked logo.

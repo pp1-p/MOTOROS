@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { BrandLogo } from "@/components/public/brand-logo";
 import {
   getVehiclePresentation,
   type PublicVehicleRecord,
@@ -53,6 +54,9 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
               Featured
             </span>
           ) : null}
+        </div>
+        <div className="absolute bottom-3 left-3 rounded-xl bg-white/95 p-1.5 shadow-sm backdrop-blur">
+          <BrandLogo make={vehicle.make} size={32} />
         </div>
       </Link>
 

@@ -27,6 +27,7 @@ const navigation = [
   { href: "/part-exchange", label: "Part exchange" },
   { href: "/finance", label: "Finance" },
   { href: "/services", label: "MOT & servicing" },
+  { href: "/about", label: "About us" },
   { href: "/find-us", label: "Find us" },
   { href: "/contact", label: "Contact" },
 ];
