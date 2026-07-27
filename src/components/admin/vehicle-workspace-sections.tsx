@@ -126,11 +126,15 @@ export function VehicleWorkspaceSections({
   vehicle,
   data,
   canViewCommercial,
+  canViewInvoices,
+  canManageInvoices,
 }: {
   tab: VehicleExtendedTab | "costs";
   vehicle: AdminVehicle;
   data: VehicleWorkspaceData;
   canViewCommercial: boolean;
+  canViewInvoices: boolean;
+  canManageInvoices: boolean;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -364,15 +368,58 @@ export function VehicleWorkspaceSections({
       <div className="mt-5 space-y-5">
         {feedback}
         <section className="grid gap-5 xl:grid-cols-2">
+          {canViewInvoices ? (
           <div className="rounded-2xl border bg-white p-5">
             <div className="flex items-center gap-2"><ReceiptText className="size-4 text-brand" /><h2 className="font-extrabold">Related invoices</h2></div>
             <div className="mt-4"><RecordList records={data.invoices} empty="No invoices are linked to this vehicle." /></div>
-            <Button asChild variant="outline" size="sm" className="mt-4"><Link href={`/admin/invoices/new?vehicle=${vehicle.id}`}>Raise linked invoice</Link></Button>
+            {canManageInvoices ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/admin/invoices/new?vehicle=${vehicle.id}`}>
+                  Raise linked invoice
+                </Link>
+              </Button>
+              </div>
+            ) : null}
+            {canManageInvoices && data.unlinkedInvoices.length ? (
+              <form
+                onSubmit={(event) => mutate(event, "link_invoice")}
+                className="mt-4 flex flex-col gap-2 rounded-xl bg-surface-muted p-3 sm:flex-row"
+              >
+                <label className="min-w-0 flex-1 text-[10px] font-extrabold uppercase tracking-wider text-foreground/50">
+                  Attach an existing unlinked invoice
+                  <select
+                    name="invoiceId"
+                    required
+                    defaultValue=""
+                    className="mt-1.5 h-10 w-full rounded-xl border bg-white px-3 text-xs normal-case tracking-normal text-foreground"
+                  >
+                    <option value="">Choose invoice…</option>
+                    {data.unlinkedInvoices.map((invoice) => (
+                      <option key={invoice.id} value={invoice.id}>
+                        {invoice.detail} · {formatCurrency(invoice.amount ?? 0)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button type="submit" size="sm" disabled={saving} className="sm:self-end">
+                  {saving ? <LoaderCircle className="animate-spin" /> : <Plus />}
+                  Attach
+                </Button>
+              </form>
+            ) : canManageInvoices ? (
+              <p className="mt-3 text-[10px] text-foreground/45">
+                There are no unlinked general invoices available to attach.
+              </p>
+            ) : null}
           </div>
-          <div className="rounded-2xl border bg-white p-5">
+          ) : null}
+          {canViewCommercial ? (
+            <div className="rounded-2xl border bg-white p-5">
             <h2 className="font-extrabold">Individual vehicle costs</h2>
             <div className="mt-4"><RecordList records={data.costs} empty="No individual costs are assigned." /></div>
           </div>
+          ) : null}
         </section>
         {canViewCommercial ? (
           <form onSubmit={(event) => mutate(event, "add_cost")} className="grid gap-3 rounded-2xl border bg-white p-5 md:grid-cols-2 xl:grid-cols-6 xl:items-end">

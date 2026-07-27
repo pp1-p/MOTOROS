@@ -13,6 +13,7 @@ import {
   invoiceStatusTone,
   invoiceTypeLabel,
 } from "@/lib/invoices/format";
+import { vehicleInvoiceWorkspaceHref } from "@/lib/invoices/linking";
 import type { InvoiceStatus, InvoiceType } from "@/lib/types/invoices";
 
 const statusFilters: (InvoiceStatus | "all")[] = [
@@ -209,7 +210,18 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                     </td>
                     <td className="px-4 py-3">{invoice.customerName}</td>
                     <td className="px-4 py-3 text-foreground/70">
-                      {invoice.vehicleRegistration ?? invoice.vehicleDescription ?? "—"}
+                      {invoice.vehicleId ? (
+                        <Link
+                          href={vehicleInvoiceWorkspaceHref(invoice.vehicleId)}
+                          className="font-extrabold text-brand hover:underline"
+                        >
+                          {invoice.vehicleRegistration ??
+                            invoice.vehicleDescription ??
+                            "Open vehicle"}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span

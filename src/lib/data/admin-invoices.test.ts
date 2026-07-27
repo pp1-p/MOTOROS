@@ -9,6 +9,10 @@ import {
   paymentMethodLabel,
   vatTreatmentLabel,
 } from "@/lib/invoices/format";
+import {
+  resolveInitialInvoiceVehicle,
+  vehicleInvoiceWorkspaceHref,
+} from "@/lib/invoices/linking";
 
 describe("invoice formatting helpers", () => {
   it("formats money in en-GB with two decimal places", () => {
@@ -98,5 +102,31 @@ describe("invoice formatting helpers", () => {
     ] as const) {
       expect(vatTreatmentLabel(treatment)).not.toBe("");
     }
+  });
+
+  it("preserves a valid stock-vehicle link and rejects an unknown vehicle", () => {
+    const vehicleIds = [
+      "00000000-0000-0000-0000-000000000201",
+      "00000000-0000-0000-0000-000000000202",
+    ];
+    expect(resolveInitialInvoiceVehicle(vehicleIds[0], vehicleIds)).toBe(
+      vehicleIds[0],
+    );
+    expect(
+      resolveInitialInvoiceVehicle(
+        "00000000-0000-0000-0000-000000000999",
+        vehicleIds,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("links invoice users back to the vehicle invoices and costs tab", () => {
+    expect(
+      vehicleInvoiceWorkspaceHref(
+        "00000000-0000-0000-0000-000000000201",
+      ),
+    ).toBe(
+      "/admin/stock/00000000-0000-0000-0000-000000000201?tab=costs",
+    );
   });
 });

@@ -88,6 +88,7 @@ export type InvoiceSummary = {
   type: InvoiceType;
   status: InvoiceStatus;
   customerName: string;
+  vehicleId: string | null;
   vehicleDescription: string | null;
   vehicleRegistration: string | null;
   total: number;
@@ -123,7 +124,6 @@ export type InvoiceDetail = InvoiceSummary & {
   customerEmail: string | null;
   customerPhone: string | null;
   billingAddress: Record<string, unknown>;
-  vehicleId: string | null;
   saleId: string | null;
   repairJobId: string | null;
   sourcingRequestId: string | null;

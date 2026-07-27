@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { requireStaff } from "@/lib/auth/permissions";
 import { getGeneralInvoiceFormOptions } from "@/lib/data/admin-invoices";
+import { resolveInitialInvoiceVehicle } from "@/lib/invoices/linking";
 
 export default async function NewGeneralInvoicePage({
   searchParams,
@@ -15,9 +16,10 @@ export default async function NewGeneralInvoicePage({
   await requireStaff("invoices:manage");
   const { vehicle } = await searchParams;
   const options = await getGeneralInvoiceFormOptions();
-  const initialVehicleId = options.vehicles.some((item) => item.id === vehicle)
-    ? vehicle
-    : undefined;
+  const initialVehicleId = resolveInitialInvoiceVehicle(
+    vehicle,
+    options.vehicles.map((item) => item.id),
+  );
 
   return (
     <div className="space-y-6">
