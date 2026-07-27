@@ -75,6 +75,7 @@ const quickActions = [
   { label: "Add vehicle", hint: "Registration lookup", href: "/admin/stock/new", icon: CarFront },
   { label: "Add lead", hint: "Sales enquiry", href: "/admin/leads?create=1", icon: HeartHandshake },
   { label: "Add customer", hint: "New contact", href: "/admin/customers/new", icon: UsersRound },
+  { label: "New invoice", hint: "General invoice", href: "/admin/invoices/new", icon: Receipt },
   { label: "Repair booking", hint: "Book a call", href: "/admin/diary?create=1", icon: Wrench },
   { label: "Add task", hint: "Set a reminder", href: "/admin/tasks?create=1", icon: CheckSquare2 },
 ] as const;
@@ -328,6 +329,12 @@ export function AdminShell({
     pathname.startsWith(item.href),
   );
   const visibleQuickActions = quickActions.filter((item) => {
+    if (
+      item.href.startsWith("/admin/invoices") &&
+      !["owner", "manager", "salesperson"].includes(role ?? "")
+    ) {
+      return false;
+    }
     const href = item.href.split("?")[0] ?? item.href;
     const section =
       href === "/admin/stock/new"
@@ -338,6 +345,8 @@ export function AdminShell({
             ? "/admin/customers"
             : href === "/admin/sourcing"
               ? "/admin/sourcing"
+              : href === "/admin/invoices/new"
+                ? "/admin/invoices"
               : href === "/admin/diary"
                 ? "/admin/diary"
                 : "/admin/tasks";

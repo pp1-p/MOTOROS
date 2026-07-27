@@ -48,3 +48,10 @@ table, and RPCs `issue_credit_note`, `refund_credit_note`,
 `cancel_credit_note` and `void_invoice`; also replaces
 `recompute_invoice_totals` to subtract active credit notes from the
 balance. Apply after Phase 2.
+
+The general-invoice workflow adds
+`../migrations/202607270001_general_invoices.sql`. It adds invoice titles,
+VAT/payment-display controls and the transactional
+`create_general_invoice`/`update_general_invoice` RPCs. Existing projects
+should apply it after Phase 3; fresh projects receive it through the regenerated
+`combined_migrations.sql`.

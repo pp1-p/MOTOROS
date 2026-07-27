@@ -70,6 +70,11 @@ export default async function InvoicePrintPage({
             <p className="font-extrabold">{invoice.customerName}</p>
             {invoice.customerEmail ? <p>{invoice.customerEmail}</p> : null}
             {invoice.customerPhone ? <p>{invoice.customerPhone}</p> : null}
+            {invoice.title ? (
+              <p className="mt-3 text-[11px] text-foreground/65">
+                Reference: <span className="font-extrabold">{invoice.title}</span>
+              </p>
+            ) : null}
           </div>
           {invoice.vehicleDescription ? (
             <div>
@@ -92,7 +97,7 @@ export default async function InvoicePrintPage({
               <th className="py-2">Description</th>
               <th className="py-2 text-right">Qty</th>
               <th className="py-2 text-right">Unit</th>
-              <th className="py-2 text-right">VAT</th>
+              {invoice.showVat ? <th className="py-2 text-right">VAT</th> : null}
               <th className="py-2 text-right">Total</th>
             </tr>
           </thead>
@@ -104,9 +109,11 @@ export default async function InvoicePrintPage({
                 <td className="py-2 text-right tabular-nums">
                   {formatMoney(line.unitPrice, invoice.currency)}
                 </td>
-                <td className="py-2 text-right tabular-nums text-foreground/60">
-                  {line.vatRate.toFixed(0)}%
-                </td>
+                {invoice.showVat ? (
+                  <td className="py-2 text-right tabular-nums text-foreground/60">
+                    {line.vatRate.toFixed(0)}%
+                  </td>
+                ) : null}
                 <td className="py-2 text-right tabular-nums font-extrabold">
                   {line.itemType === "discount" ? "−" : ""}
                   {formatMoney(line.lineTotal, invoice.currency)}
@@ -130,14 +137,16 @@ export default async function InvoicePrintPage({
                 −{formatMoney(invoice.discountTotal, invoice.currency)}
               </dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-foreground/55">
-                VAT ({vatTreatmentLabel(invoice.vatTreatment)})
-              </dt>
-              <dd className="tabular-nums">
-                {formatMoney(invoice.vatTotal, invoice.currency)}
-              </dd>
-            </div>
+            {invoice.showVat ? (
+              <div className="flex justify-between">
+                <dt className="text-foreground/55">
+                  VAT ({vatTreatmentLabel(invoice.vatTreatment)})
+                </dt>
+                <dd className="tabular-nums">
+                  {formatMoney(invoice.vatTotal, invoice.currency)}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex justify-between border-t border-[#0f150f] pt-2">
               <dt className="font-extrabold">Total</dt>
               <dd className="font-extrabold tabular-nums">
@@ -207,6 +216,18 @@ export default async function InvoicePrintPage({
               Terms
             </p>
             <p className="mt-1 whitespace-pre-line">{invoice.terms}</p>
+          </section>
+        ) : null}
+
+        {invoice.showPaymentDetails ? (
+          <section className="rounded-lg border bg-[#fafaf8] p-4 text-xs">
+            <p className="font-extrabold uppercase tracking-wider text-foreground/50">
+              Payment reference
+            </p>
+            <p className="mt-1">
+              Please quote <span className="font-extrabold">{invoice.invoiceNumber}</span>{" "}
+              with your payment.
+            </p>
           </section>
         ) : null}
 

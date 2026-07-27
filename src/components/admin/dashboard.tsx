@@ -4,9 +4,15 @@ import {
   CarFront,
   CheckCircle2,
   Clock3,
+  FileText,
   HeartHandshake,
   ListTodo,
+  PoundSterling,
+  ReceiptText,
   Search,
+  Settings,
+  TrendingUp,
+  UsersRound,
   Wrench,
 } from "lucide-react";
 
@@ -40,6 +46,12 @@ type AttentionItem = {
   icon: typeof ListTodo;
   tone: string;
 };
+
+const dashboardMoney = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  maximumFractionDigits: 0,
+});
 
 export function Dashboard({
   snapshot,
@@ -211,6 +223,137 @@ export function Dashboard({
       ) : null}
 
       {focus ? <TodayFocus focus={focus} /> : null}
+
+      {snapshot.canViewCommercial ? (
+        <DataCard>
+          <div className="border-b p-5">
+            <SectionHeading
+              title="Forecourt position"
+              description="A live commercial snapshot of stock and completed sales."
+              action={
+                <Link
+                  href="/admin/reports"
+                  className="text-xs font-extrabold text-brand hover:underline"
+                >
+                  Open reports
+                </Link>
+              }
+            />
+          </div>
+          <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-5">
+            {[
+              {
+                label: "Vehicles",
+                value: snapshot.vehiclesInStock.toString(),
+                icon: CarFront,
+              },
+              {
+                label: "Stock value",
+                value: dashboardMoney.format(snapshot.estimatedStockValue),
+                icon: PoundSterling,
+              },
+              {
+                label: "Potential gross",
+                value: dashboardMoney.format(snapshot.estimatedGrossProfit),
+                icon: TrendingUp,
+              },
+              {
+                label: "Sales this month",
+                value: dashboardMoney.format(snapshot.salesRevenueThisMonth),
+                icon: ReceiptText,
+              },
+              {
+                label: "Realised gross",
+                value: dashboardMoney.format(snapshot.realisedGrossProfitThisMonth),
+                icon: PoundSterling,
+              },
+            ].map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div key={metric.label} className="p-5">
+                  <div className="flex items-center gap-2 text-foreground/42">
+                    <Icon className="size-3.5" aria-hidden="true" />
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider">
+                      {metric.label}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-2xl font-extrabold tracking-[-0.03em] tabular-nums">
+                    {metric.value}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </DataCard>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <DataCard>
+          <div className="border-b p-5">
+            <SectionHeading
+              title="Stock overview"
+              description="Vehicle readiness and ageing at a glance."
+              action={
+                <Link
+                  href="/admin/stock"
+                  className="text-xs font-extrabold text-brand hover:underline"
+                >
+                  View full stock
+                </Link>
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-5">
+            {[
+              ["Ready", snapshot.stockReadyForSale, "text-emerald-700"],
+              ["Preparing", snapshot.stockInPreparation, "text-blue-700"],
+              ["Reserved", snapshot.vehiclesReserved, "text-violet-700"],
+              ["Due in", snapshot.vehiclesDueIn, "text-amber-700"],
+              ["60+ days", snapshot.stockAgeing60Days, "text-red-700"],
+            ].map(([label, value, tone]) => (
+              <div key={String(label)} className="bg-white p-4 text-center">
+                <p className={`text-2xl font-extrabold tabular-nums ${tone}`}>
+                  {value}
+                </p>
+                <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wider text-foreground/42">
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </DataCard>
+
+        <DataCard>
+          <div className="border-b p-5">
+            <SectionHeading
+              title="Quick links"
+              description="Common dealership workflows."
+            />
+          </div>
+          <div className="grid gap-2 p-4 sm:grid-cols-2">
+            {[
+              ["General invoices", "/admin/invoices", ReceiptText],
+              ["Add customer", "/admin/customers/new", UsersRound],
+              ["Documents", "/admin/documents", FileText],
+              ["Settings", "/admin/settings", Settings],
+            ].map(([label, href, icon]) => {
+              const Icon = icon as typeof ReceiptText;
+              return (
+                <Link
+                  key={String(label)}
+                  href={String(href)}
+                  className="flex items-center gap-3 rounded-xl border p-3 text-xs font-extrabold transition hover:border-brand/35 hover:bg-[#fafaf8]"
+                >
+                  <span className="grid size-8 place-items-center rounded-lg bg-brand-soft text-brand">
+                    <Icon className="size-3.5" aria-hidden="true" />
+                  </span>
+                  {String(label)}
+                </Link>
+              );
+            })}
+          </div>
+        </DataCard>
+      </div>
 
       <DataCard>
         <div className="border-b p-5">

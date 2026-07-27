@@ -84,6 +84,7 @@ export type InvoiceActivity = {
 export type InvoiceSummary = {
   id: string;
   invoiceNumber: string;
+  title: string | null;
   type: InvoiceType;
   status: InvoiceStatus;
   customerName: string;
@@ -96,6 +97,7 @@ export type InvoiceSummary = {
   issuedAt: string | null;
   dueAt: string | null;
   createdAt: string;
+  itemCount: number;
 };
 
 export type CreditNoteStatus = "issued" | "refunded" | "cancelled";
@@ -132,6 +134,8 @@ export type InvoiceDetail = InvoiceSummary & {
   creditNotes: CreditNote[];
   vatTreatment: InvoiceVatTreatment;
   vatRegistration: string | null;
+  showVat: boolean;
+  showPaymentDetails: boolean;
   notes: string | null;
   terms: string | null;
   lineItems: InvoiceLineItem[];

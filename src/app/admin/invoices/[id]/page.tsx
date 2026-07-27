@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Pencil, Printer } from "lucide-react";
 
 import {
   IssueCreditNoteForm,
@@ -8,6 +8,7 @@ import {
   VoidInvoiceButton,
 } from "@/components/admin/credit-note-actions";
 import { InvoicePaymentForm } from "@/components/admin/invoice-payment-form";
+import { InvoiceEmailButton } from "@/components/admin/invoice-email-button";
 import { PageHeader } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { requireStaff, hasPermission } from "@/lib/auth/permissions";
@@ -34,6 +35,7 @@ export default async function InvoiceDetailPage({
   const invoice = await getInvoiceById(id);
   if (!invoice) notFound();
 
+  const canManage = hasPermission(staff.role, "invoices:manage");
   const canRecordPayment = hasPermission(staff.role, "invoices:record_payment");
   const canIssueCredit = hasPermission(staff.role, "invoices:issue_credit");
   const totalPayments = invoice.payments.reduce(
@@ -56,7 +58,7 @@ export default async function InvoiceDetailPage({
       <PageHeader
         eyebrow={invoiceTypeLabel(invoice.type)}
         title={`Invoice ${invoice.invoiceNumber}`}
-        description={`${invoice.customerName}${invoice.vehicleRegistration ? ` · ${invoice.vehicleRegistration}` : ""}`}
+        description={`${invoice.title ? `${invoice.title} · ` : ""}${invoice.customerName}${invoice.vehicleRegistration ? ` · ${invoice.vehicleRegistration}` : ""}`}
         actions={
           <div className="flex items-center gap-2">
             <span
@@ -70,6 +72,15 @@ export default async function InvoiceDetailPage({
                 Print / PDF
               </Link>
             </Button>
+            {canManage ? <InvoiceEmailButton invoiceId={invoice.id} /> : null}
+            {canManage && ["general", "pro_forma", "vat"].includes(invoice.type) ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/admin/invoices/${invoice.id}/edit`}>
+                  <Pencil />
+                  Edit
+                </Link>
+              </Button>
+            ) : null}
             <Button asChild size="sm" variant="ghost">
               <Link href="/admin/invoices">
                 <ArrowLeft />
