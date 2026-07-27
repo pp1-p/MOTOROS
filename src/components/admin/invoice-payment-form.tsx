@@ -44,7 +44,7 @@ export function InvoicePaymentForm({
   const [message, setMessage] = useState("");
   const [amount, setAmount] = useState(balance > 0 ? balance.toFixed(2) : "");
   const [method, setMethod] = useState<InvoicePaymentMethod>("card");
-  const clientReference = useMemo(() => crypto.randomUUID(), [invoiceId]);
+  const clientReference = useMemo(() => crypto.randomUUID(), []);
 
   const currencyLabel = new Intl.NumberFormat("en-GB", {
     style: "currency",

@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { FileText, Filter, Search } from "lucide-react";
+import { Eye, FileText, Filter, Pencil, Plus, Printer, Search } from "lucide-react";
 
+import { InvoiceEmailButton } from "@/components/admin/invoice-email-button";
 import { PageHeader } from "@/components/admin/page-kit";
+import { Button } from "@/components/ui/button";
+import { hasPermission, requireStaff } from "@/lib/auth/permissions";
 import { getInvoiceList } from "@/lib/data/admin-invoices";
 import {
   formatDate,
@@ -39,6 +42,8 @@ type PageProps = {
 };
 
 export default async function InvoicesPage({ searchParams }: PageProps) {
+  const staff = await requireStaff("invoices:view");
+  const canManage = hasPermission(staff.role, "invoices:manage");
   const params = await searchParams;
   const status = (statusFilters.includes(params.status as InvoiceStatus)
     ? (params.status as InvoiceStatus)
@@ -68,6 +73,14 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
         eyebrow="Money"
         title="Invoices"
         description="Invoices linked to sales, repairs and sourcing jobs across your dealership."
+        actions={canManage ? (
+          <Button asChild size="sm">
+            <Link href="/admin/invoices/new">
+              <Plus />
+              New invoice
+            </Link>
+          </Button>
+        ) : undefined}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -154,10 +167,11 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       <div className="overflow-hidden rounded-2xl border bg-white">
         {invoices.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-xs">
+            <table className="w-full min-w-[1050px] text-left text-xs">
               <thead className="border-b bg-[#fafaf8] text-[10px] font-extrabold uppercase tracking-wider text-foreground/38">
                 <tr>
                   <th className="px-4 py-3">Number</th>
+                  <th className="px-4 py-3">Title</th>
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Vehicle</th>
@@ -165,6 +179,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                   <th className="px-4 py-3">Issued</th>
                   <th className="px-4 py-3 text-right">Total</th>
                   <th className="px-4 py-3 text-right">Balance</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y font-semibold">
@@ -180,6 +195,14 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                       >
                         {invoice.invoiceNumber}
                       </Link>
+                    </td>
+                    <td className="max-w-56 px-4 py-3">
+                      <span className="block truncate font-extrabold">
+                        {invoice.title ?? "Untitled invoice"}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] text-foreground/42">
+                        {invoice.itemCount} {invoice.itemCount === 1 ? "item" : "items"}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-foreground/70">
                       {invoiceTypeLabel(invoice.type)}
@@ -203,6 +226,40 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                     </td>
                     <td className="px-4 py-3 text-right font-extrabold tabular-nums text-amber-800">
                       {formatMoney(invoice.balance, invoice.currency)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        <Button asChild size="sm" variant="ghost">
+                          <Link
+                            href={`/admin/invoices/${invoice.id}`}
+                            aria-label={`View ${invoice.invoiceNumber}`}
+                          >
+                            <Eye />
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" variant="ghost">
+                          <Link
+                            href={`/admin/invoices/${invoice.id}/print`}
+                            target="_blank"
+                            aria-label={`Print ${invoice.invoiceNumber}`}
+                          >
+                            <Printer />
+                          </Link>
+                        </Button>
+                        {canManage ? (
+                          <InvoiceEmailButton invoiceId={invoice.id} compact />
+                        ) : null}
+                        {canManage && ["general", "pro_forma", "vat"].includes(invoice.type) ? (
+                          <Button asChild size="sm" variant="ghost">
+                            <Link
+                              href={`/admin/invoices/${invoice.id}/edit`}
+                              aria-label={`Edit ${invoice.invoiceNumber}`}
+                            >
+                              <Pencil />
+                            </Link>
+                          </Button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

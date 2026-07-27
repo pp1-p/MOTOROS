@@ -11,7 +11,7 @@ const saleOptionsSchema = z
     due_at: z.iso.datetime({ offset: true }).optional(),
     vat_rate: z.coerce.number().min(0).max(100).optional(),
     vat_treatment: z
-      .enum(["standard", "margin", "zero", "exempt", "not_registered"])
+      .enum(["standard", "zero", "exempt", "not_registered"])
       .optional(),
     warranty_price: z.coerce.number().min(0).max(1_000_000).optional(),
     delivery_fee: z.coerce.number().min(0).max(100_000).optional(),
@@ -46,6 +46,38 @@ const repairOptionsSchema = z
   })
   .strict();
 
+const generalInvoiceSchema = z
+  .object({
+    source: z.literal("general"),
+    title: z.string().trim().min(1).max(160),
+    type: z.enum(["general", "pro_forma", "vat"]).default("general"),
+    status: z.enum(["draft", "sent"]).default("draft"),
+    customer_id: z.uuid(),
+    vehicle_id: z.uuid().nullable().optional(),
+    issued_at: z.iso.datetime({ offset: true }).nullable().optional(),
+    due_at: z.iso.datetime({ offset: true }).nullable().optional(),
+    vat_treatment: z
+      .enum(["standard", "margin", "zero", "exempt", "not_registered"])
+      .default("standard"),
+    show_vat: z.boolean().default(true),
+    show_payment_details: z.boolean().default(true),
+    notes: z.string().trim().max(4000).nullable().optional(),
+    terms: z.string().trim().max(4000).nullable().optional(),
+    line_items: z
+      .array(
+        z.object({
+          item_type: z.enum(["charge", "labour", "part", "fee", "discount", "note"]),
+          description: z.string().trim().min(1).max(500),
+          quantity: z.coerce.number().positive().max(100_000),
+          unit_price: z.coerce.number().min(0).max(10_000_000),
+          vat_rate: z.coerce.number().min(0).max(100),
+        }),
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict();
+
 const createSchema = z.discriminatedUnion("source", [
   z
     .object({
@@ -61,6 +93,7 @@ const createSchema = z.discriminatedUnion("source", [
       options: repairOptionsSchema.optional(),
     })
     .strict(),
+  generalInvoiceSchema,
 ]);
 
 export async function POST(request: Request) {
@@ -99,19 +132,37 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminSupabaseClient();
-  const options = parsed.data.options ?? {};
   const result =
     parsed.data.source === "sale"
       ? await supabase.rpc("create_sale_invoice", {
           p_actor_user_id: staff.userId,
           p_sale_id: parsed.data.saleId,
-          p_options: options,
+          p_options: parsed.data.options ?? {},
         })
-      : await supabase.rpc("create_repair_invoice", {
-          p_actor_user_id: staff.userId,
-          p_repair_job_id: parsed.data.repairJobId,
-          p_options: options,
-        });
+      : parsed.data.source === "repair"
+        ? await supabase.rpc("create_repair_invoice", {
+            p_actor_user_id: staff.userId,
+            p_repair_job_id: parsed.data.repairJobId,
+            p_options: parsed.data.options ?? {},
+          })
+        : await supabase.rpc("create_general_invoice", {
+            p_actor_user_id: staff.userId,
+            p_input: {
+              title: parsed.data.title,
+              type: parsed.data.type,
+              status: parsed.data.status,
+              customer_id: parsed.data.customer_id,
+              vehicle_id: parsed.data.vehicle_id ?? null,
+              issued_at: parsed.data.issued_at ?? null,
+              due_at: parsed.data.due_at ?? null,
+              vat_treatment: parsed.data.vat_treatment,
+              show_vat: parsed.data.show_vat,
+              show_payment_details: parsed.data.show_payment_details,
+              notes: parsed.data.notes ?? null,
+              terms: parsed.data.terms ?? null,
+              line_items: parsed.data.line_items,
+            },
+          });
 
   if (result.error) {
     if (result.error.code === "23505") {
@@ -120,7 +171,9 @@ export async function POST(request: Request) {
           message:
             parsed.data.source === "sale"
               ? "This sale already has an active invoice."
-              : "This repair already has an active final invoice.",
+              : parsed.data.source === "repair"
+                ? "This repair already has an active final invoice."
+                : "An invoice with this number already exists.",
         },
         { status: 409 },
       );
@@ -137,7 +190,9 @@ export async function POST(request: Request) {
           message:
             parsed.data.source === "sale"
               ? "The sale could not be found."
-              : "The repair job could not be found.",
+              : parsed.data.source === "repair"
+                ? "The repair job could not be found."
+                : "The selected customer or vehicle could not be found.",
         },
         { status: 404 },
       );

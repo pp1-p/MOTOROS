@@ -14,6 +14,7 @@ describe("getPublicContactDetails", () => {
     ).toEqual({
       phone: null,
       phoneHref: null,
+      phones: [],
       email: null,
       emailHref: null,
       address: null,
@@ -32,6 +33,13 @@ describe("getPublicContactDetails", () => {
     ).toEqual({
       phone: "+44 (0)20 1234 5678",
       phoneHref: "tel:+4402012345678",
+      phones: [
+        {
+          label: "+44 (0)20 1234 5678",
+          href: "tel:+4402012345678",
+          kind: "unknown",
+        },
+      ],
       email: "hello@example.com",
       emailHref: "mailto:hello@example.com",
       address: "1 High Street, London",

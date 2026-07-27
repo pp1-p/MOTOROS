@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "seed": "tsx scripts/seed.ts",
+    "build:combined-migrations": "node scripts/build-combined-migrations.mjs",
     "verify:supabase-security": "node scripts/verify-supabase-security.mjs"
   },
   "dependencies": {

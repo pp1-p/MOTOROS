@@ -19,9 +19,15 @@ function numeric(value: unknown): number {
 }
 
 function mapSummary(row: Record<string, unknown>): InvoiceSummary {
+  const lineItemCount = Array.isArray(row.invoice_line_items)
+    ? numeric(
+        (row.invoice_line_items[0] as { count?: number } | undefined)?.count,
+      )
+    : 0;
   return {
     id: String(row.id),
     invoiceNumber: String(row.invoice_number),
+    title: (row.invoice_title as string | null) ?? null,
     type: String(row.type) as InvoiceType,
     status: String(row.status) as InvoiceStatus,
     customerName: String(row.customer_name_snapshot ?? "Customer"),
@@ -34,6 +40,7 @@ function mapSummary(row: Record<string, unknown>): InvoiceSummary {
     issuedAt: (row.issued_at as string | null) ?? null,
     dueAt: (row.due_at as string | null) ?? null,
     createdAt: String(row.created_at),
+    itemCount: lineItemCount,
   };
 }
 
@@ -42,6 +49,92 @@ export type InvoiceListFilters = {
   type?: InvoiceType | "all";
   search?: string;
 };
+
+export type GeneralInvoiceCustomerOption = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+};
+
+export type GeneralInvoiceVehicleOption = {
+  id: string;
+  registration: string;
+  description: string;
+};
+
+export type GeneralInvoiceFormOptions = {
+  customers: GeneralInvoiceCustomerOption[];
+  vehicles: GeneralInvoiceVehicleOption[];
+};
+
+export async function getGeneralInvoiceFormOptions(): Promise<GeneralInvoiceFormOptions> {
+  if (!isSupabaseConfigured()) {
+    return {
+      customers: [
+        {
+          id: "00000000-0000-0000-0000-000000000101",
+          name: "Demo customer",
+          email: "customer@example.test",
+          phone: "07123 456789",
+        },
+      ],
+      vehicles: [
+        {
+          id: "00000000-0000-0000-0000-000000000201",
+          registration: "DEMO 001",
+          description: "2021 BMW 3 Series",
+        },
+      ],
+    };
+  }
+
+  const staff = await getStaffContext();
+  if (!staff) return { customers: [], vehicles: [] };
+  const supabase = createAdminSupabaseClient();
+  const [customersResult, vehiclesResult] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("id,full_name,first_name,last_name,email,phone")
+      .eq("organisation_id", staff.organisationId)
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("staff_vehicle_records")
+      .select("id,registration,make,model,year")
+      .eq("organisation_id", staff.organisationId)
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(500),
+  ]);
+
+  if (customersResult.error) {
+    throw new Error(`Customers could not be loaded: ${customersResult.error.message}`);
+  }
+  if (vehiclesResult.error) {
+    throw new Error(`Vehicles could not be loaded: ${vehiclesResult.error.message}`);
+  }
+
+  return {
+    customers: (customersResult.data ?? []).map((customer) => ({
+      id: String(customer.id),
+      name:
+        customer.full_name?.trim() ||
+        [customer.first_name, customer.last_name].filter(Boolean).join(" ") ||
+        "Customer",
+      email: customer.email ?? null,
+      phone: customer.phone ?? null,
+    })),
+    vehicles: (vehiclesResult.data ?? []).map((vehicle) => ({
+      id: String(vehicle.id),
+      registration: String(vehicle.registration ?? "No registration"),
+      description:
+        [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
+        String(vehicle.registration ?? "Vehicle"),
+    })),
+  };
+}
 
 export async function getInvoiceList(
   filters: InvoiceListFilters = {},
@@ -56,10 +149,11 @@ export async function getInvoiceList(
   let query = supabase
     .from("invoices")
     .select(
-      "id,invoice_number,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at",
+      "id,invoice_number,invoice_title,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at,invoice_line_items(count)",
     )
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)
+    .is("invoice_line_items.deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -245,6 +339,8 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
     ),
     vatTreatment: row.vat_treatment as InvoiceDetail["vatTreatment"],
     vatRegistration: (row.vat_registration_snapshot as string | null) ?? null,
+    showVat: row.show_vat !== false,
+    showPaymentDetails: row.show_payment_details !== false,
     notes: (row.notes as string | null) ?? null,
     terms: (row.terms as string | null) ?? null,
     lineItems,
@@ -272,11 +368,12 @@ export async function getInvoicesForRepair(
   const result = await supabase
     .from("invoices")
     .select(
-      "id,invoice_number,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at",
+      "id,invoice_number,invoice_title,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at,invoice_line_items(count)",
     )
     .eq("repair_job_id", repairJobId)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)
+    .is("invoice_line_items.deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -297,11 +394,12 @@ export async function getInvoiceForSale(
   const result = await supabase
     .from("invoices")
     .select(
-      "id,invoice_number,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at",
+      "id,invoice_number,invoice_title,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at,invoice_line_items(count)",
     )
     .eq("sale_id", saleId)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)
+    .is("invoice_line_items.deleted_at", null)
     .not("status", "in", '("cancelled","void")')
     .order("created_at", { ascending: false })
     .limit(1)

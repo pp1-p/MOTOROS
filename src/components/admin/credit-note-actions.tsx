@@ -179,7 +179,7 @@ export function RefundCreditNoteButton({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [method, setMethod] = useState<InvoicePaymentMethod>("bank_transfer");
-  const clientReference = useMemo(() => crypto.randomUUID(), [creditNoteId]);
+  const clientReference = useMemo(() => crypto.randomUUID(), []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
