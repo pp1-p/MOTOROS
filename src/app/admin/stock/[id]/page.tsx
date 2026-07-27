@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { VehicleWorkspace } from "@/components/admin/vehicle-workspace";
-import { getAdminVehicleInventory } from "@/lib/data/admin-vehicles";
+import {
+  getAdminVehicleInventory,
+  getVehicleWorkspaceData,
+} from "@/lib/data/admin-vehicles";
 
 export default async function VehicleDetailPage({
   params,
@@ -16,6 +19,7 @@ export default async function VehicleDetailPage({
     await getAdminVehicleInventory();
   const vehicle = vehicles.find((item) => item.id === id);
   if (!vehicle) notFound();
+  const workspaceData = await getVehicleWorkspaceData(vehicle.id);
 
   return (
     <VehicleWorkspace
@@ -24,6 +28,7 @@ export default async function VehicleDetailPage({
       initialHistory={historyByVehicle[vehicle.id] ?? []}
       canViewCommercial={canViewCommercial}
       initialTab={tab}
+      workspaceData={workspaceData}
     />
   );
 }

@@ -9,8 +9,12 @@ import { Input } from "@/components/ui/input";
 
 export function DocumentUploadForm({
   technicianRepairJobs,
+  entityType,
+  entityId,
 }: {
   technicianRepairJobs?: Array<{ id: string; label: string }>;
+  entityType?: "vehicle" | "customer" | "lead" | "sourcing_request" | "appointment" | "sale";
+  entityId?: string;
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -53,6 +57,8 @@ export function DocumentUploadForm({
       className="grid gap-3 rounded-2xl border bg-white p-4 lg:grid-cols-2 lg:items-end xl:grid-cols-[1fr_1fr_170px_1fr_auto]"
     >
       {technicianRepairJobs ? <input type="hidden" name="entityType" value="repair_job" /> : null}
+      {entityType ? <input type="hidden" name="entityType" value={entityType} /> : null}
+      {entityType && entityId ? <input type="hidden" name="entityId" value={entityId} /> : null}
       <label className="text-xs font-extrabold">
         Document title
         <Input name="title" required maxLength={200} className="mt-2" />

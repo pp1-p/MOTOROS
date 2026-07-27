@@ -20,6 +20,61 @@ type AdminVehicleInventory = {
   canViewCommercial: boolean;
 };
 
+export type VehicleRelatedRecord = {
+  id: string;
+  title: string;
+  detail?: string | null;
+  status?: string | null;
+  amount?: number | null;
+  date?: string | null;
+  href?: string | null;
+};
+
+export type VehicleFeatureRecord = {
+  id: string;
+  category: string;
+  name: string;
+  isHighlight: boolean;
+};
+
+export type VehicleChannelRecord = {
+  id: string;
+  channel: string;
+  status: string;
+  externalStockId?: string | null;
+  externalDerivativeId?: string | null;
+  listingTitle?: string | null;
+  listingSubtitle?: string | null;
+  category?: string | null;
+  listingUrl?: string | null;
+  lastSyncedAt?: string | null;
+  lastError?: string | null;
+};
+
+export type VehicleWorkspaceData = {
+  costs: VehicleRelatedRecord[];
+  invoices: VehicleRelatedRecord[];
+  leads: VehicleRelatedRecord[];
+  documents: VehicleRelatedRecord[];
+  serviceRecords: VehicleRelatedRecord[];
+  notes: VehicleRelatedRecord[];
+  videos: VehicleRelatedRecord[];
+  features: VehicleFeatureRecord[];
+  channels: VehicleChannelRecord[];
+};
+
+const emptyWorkspaceData = (): VehicleWorkspaceData => ({
+  costs: [],
+  invoices: [],
+  leads: [],
+  documents: [],
+  serviceRecords: [],
+  notes: [],
+  videos: [],
+  features: [],
+  channels: [],
+});
+
 function displayStatus(value: string) {
   const words = value.replaceAll("_", " ");
   return `${words.slice(0, 1).toUpperCase()}${words.slice(1)}`;
@@ -238,8 +293,253 @@ export async function getAdminVehicleInventory(): Promise<AdminVehicleInventory>
         !canViewCommercial || row.actual_sale_price === null
           ? null
           : numeric(row.actual_sale_price),
+      vatStatus: row.vat_status,
+      capId: row.cap_id,
+      plate: row.plate,
+      interiorColour: row.interior_colour,
+      interiorMaterial: row.interior_material,
+      fuelConsumptionUrbanMpg:
+        row.fuel_consumption_urban_mpg === null
+          ? null
+          : numeric(row.fuel_consumption_urban_mpg),
+      fuelConsumptionExtraUrbanMpg:
+        row.fuel_consumption_extra_urban_mpg === null
+          ? null
+          : numeric(row.fuel_consumption_extra_urban_mpg),
+      fuelConsumptionCombinedMpg:
+        row.fuel_consumption_combined_mpg === null
+          ? null
+          : numeric(row.fuel_consumption_combined_mpg),
+      euroEmissionsStandard: row.euro_emissions_standard,
+      insuranceGroup: row.insurance_group,
+      roadTaxAnnual:
+        row.road_tax_annual === null ? null : numeric(row.road_tax_annual),
+      ulezStatus: row.ulez_status,
+      wheelchairAccessible: row.wheelchair_accessible,
+      acceleration060Seconds:
+        row.acceleration_0_60_seconds === null
+          ? null
+          : numeric(row.acceleration_0_60_seconds),
+      topSpeedMph: row.top_speed_mph,
+      torqueLbFt: row.torque_lb_ft,
+      aspiration: row.aspiration,
+      engineLocation: row.engine_location,
+      engineNumber: row.engine_number,
+      chassisNumber: row.chassis_number,
+      cylinderCount: row.cylinder_count,
+      gearCount: row.gear_count,
+      driveType: row.drive_type,
+      grossWeightKg: row.gross_weight_kg,
+      lengthMm: row.length_mm,
+      widthMm: row.width_mm,
+      firstRegistrationDate: row.first_registration_date,
+      acquiredAt: row.acquired_at,
+      keeperStartDate: row.keeper_start_date,
+      advertisedCondition: row.advertised_condition,
+      insuranceWriteOffCategory: row.insurance_write_off_category,
+      serviceHistoryVisible: row.service_history_visible,
+      serviceHistorySummary: row.service_history_summary,
+      silentSalesmanHeadline: row.silent_salesman_headline,
+      silentSalesmanSummary: row.silent_salesman_summary,
+      silentSalesmanCallToAction: row.silent_salesman_call_to_action,
+      standardEquipment:
+        typeof row.standard_equipment === "string"
+          ? row.standard_equipment.split(/\r?\n/).filter(Boolean)
+          : [],
+      optionalEquipment:
+        typeof row.optional_equipment === "string"
+          ? row.optional_equipment.split(/\r?\n/).filter(Boolean)
+          : [],
+      videoUrl: row.video_url,
+      autotraderPublicationStatus: row.autotrader_publication_status,
+      autotraderStockId: row.autotrader_stock_id,
+      autotraderReference: row.autotrader_reference,
     };
   });
 
   return { vehicles, photosByVehicle, historyByVehicle, canViewCommercial };
+}
+
+export async function getVehicleWorkspaceData(
+  vehicleId: string,
+): Promise<VehicleWorkspaceData> {
+  if (!isSupabaseConfigured()) return emptyWorkspaceData();
+  if (!getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Supabase service access is required to load vehicle records.");
+  }
+
+  const staff = await getStaffContext();
+  if (!staff) throw new Error("A dealership membership is required.");
+  const supabase = createAdminSupabaseClient();
+  const scope = { organisationId: staff.organisationId, vehicleId };
+
+  const [
+    costResult,
+    invoiceResult,
+    leadResult,
+    documentResult,
+    serviceResult,
+    noteResult,
+    videoResult,
+    featureResult,
+    channelResult,
+  ] = await Promise.all([
+    supabase
+      .from("vehicle_costs")
+      .select("id,cost_type,supplier_name,description,amount_net,vat_amount,incurred_on")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .not("cost_type", "is", null)
+      .is("deleted_at", null)
+      .order("incurred_on", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select("id,invoice_number,invoice_title,type,status,total,issued_at,created_at")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("leads")
+      .select("id,reference,title,source,status,priority,due_at,created_at")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("documents")
+      .select("id,title,file_name,document_type,visibility,created_at")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("vehicle_service_records")
+      .select("id,service_date,mileage,dealership_name,work_completed")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .is("deleted_at", null)
+      .order("service_date", { ascending: false }),
+    supabase
+      .from("vehicle_notes")
+      .select("id,note,is_pinned,created_at")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .is("deleted_at", null)
+      .order("is_pinned", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("vehicle_videos")
+      .select("id,title,video_url,is_public,created_at")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("vehicle_features")
+      .select("id,category,name,is_highlight")
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("vehicle_sales_channels")
+      .select(
+        "id,channel,status,external_stock_id,external_derivative_id,listing_title,listing_subtitle,category,listing_url,last_synced_at,last_error",
+      )
+      .eq("organisation_id", scope.organisationId)
+      .eq("vehicle_id", scope.vehicleId)
+      .order("channel", { ascending: true }),
+  ]);
+
+  const firstError = [
+    costResult,
+    invoiceResult,
+    leadResult,
+    documentResult,
+    serviceResult,
+    noteResult,
+    videoResult,
+    featureResult,
+    channelResult,
+  ].find((result) => result.error)?.error;
+  if (firstError) {
+    throw new Error(`Vehicle workspace could not be loaded: ${firstError.message}`);
+  }
+
+  return {
+    costs: (costResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.description,
+      detail: [row.cost_type, row.supplier_name].filter(Boolean).join(" · "),
+      amount: numeric(row.amount_net) + numeric(row.vat_amount),
+      date: row.incurred_on,
+    })),
+    invoices: (invoiceResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.invoice_title ?? row.invoice_number,
+      detail: row.invoice_number,
+      status: row.status,
+      amount: numeric(row.total),
+      date: row.issued_at ?? row.created_at,
+      href: `/admin/invoices/${row.id}`,
+    })),
+    leads: (leadResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title ?? row.reference,
+      detail: `${row.reference} · ${row.source} · ${row.priority}`,
+      status: row.status,
+      date: row.due_at ?? row.created_at,
+      href: `/admin/leads?lead=${row.id}`,
+    })),
+    documents: (documentResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title ?? row.file_name ?? "Vehicle document",
+      detail: `${row.document_type} · ${row.visibility}`,
+      date: row.created_at,
+      href: `/api/admin/documents/${row.id}/download`,
+    })),
+    serviceRecords: (serviceResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.dealership_name ?? "Service record",
+      detail: [
+        row.mileage === null ? null : `${Number(row.mileage).toLocaleString("en-GB")} miles`,
+        row.work_completed,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      date: row.service_date,
+    })),
+    notes: (noteResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.is_pinned ? "Pinned note" : "Internal note",
+      detail: row.note,
+      date: row.created_at,
+    })),
+    videos: (videoResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      detail: row.is_public ? "Public video" : "Internal video",
+      date: row.created_at,
+      href: row.video_url,
+    })),
+    features: (featureResult.data ?? []).map((row) => ({
+      id: row.id,
+      category: row.category,
+      name: row.name,
+      isHighlight: row.is_highlight,
+    })),
+    channels: (channelResult.data ?? []).map((row) => ({
+      id: row.id,
+      channel: row.channel,
+      status: row.status,
+      externalStockId: row.external_stock_id,
+      externalDerivativeId: row.external_derivative_id,
+      listingTitle: row.listing_title,
+      listingSubtitle: row.listing_subtitle,
+      category: row.category,
+      listingUrl: row.listing_url,
+      lastSyncedAt: row.last_synced_at,
+      lastError: row.last_error,
+    })),
+  };
 }
