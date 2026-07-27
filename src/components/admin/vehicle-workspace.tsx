@@ -94,6 +94,8 @@ export function VehicleWorkspace({
   initialPhotos,
   initialHistory,
   canViewCommercial,
+  canViewInvoices,
+  canManageInvoices,
   initialTab,
   workspaceData,
 }: {
@@ -101,6 +103,8 @@ export function VehicleWorkspace({
   initialPhotos: AdminVehiclePhoto[];
   initialHistory: AdminVehicleHistory[];
   canViewCommercial: boolean;
+  canViewInvoices: boolean;
+  canManageInvoices: boolean;
   initialTab?: string;
   workspaceData: VehicleWorkspaceData;
 }) {
@@ -405,7 +409,7 @@ export function VehicleWorkspace({
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "overview", label: "Vehicle details" },
-    ...(canViewCommercial
+    ...(canViewCommercial || canViewInvoices
       ? ([
           {
             id: "costs",
@@ -1080,6 +1084,8 @@ export function VehicleWorkspace({
           vehicle={vehicle}
           data={workspaceData}
           canViewCommercial={canViewCommercial}
+          canViewInvoices={canViewInvoices}
+          canManageInvoices={canManageInvoices}
         />
       ) : null}
 

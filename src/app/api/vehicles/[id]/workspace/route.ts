@@ -73,6 +73,10 @@ const mutationSchema = z.discriminatedUnion("action", [
     category: nullableShortText,
     listingUrl: z.url().optional().nullable().or(z.literal("")),
   }),
+  z.object({
+    action: z.literal("link_invoice"),
+    invoiceId: z.uuid(),
+  }),
 ]);
 
 export async function POST(
@@ -117,11 +121,20 @@ export async function POST(
       { status: 403 },
     );
   }
+  if (
+    parsed.data.action === "link_invoice" &&
+    !hasPermission(staff.role, "invoices:manage")
+  ) {
+    return NextResponse.json(
+      { message: "Invoice management permission is required." },
+      { status: 403 },
+    );
+  }
 
   const supabase = createAdminSupabaseClient();
   const vehicle = await supabase
     .from("vehicles")
-    .select("id")
+    .select("id,registration,year,make,model,derivative")
     .eq("id", id)
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)
@@ -226,6 +239,51 @@ export async function POST(
       auditAction = "vehicle.sales_channel_updated";
       auditReason = `${parsed.data.channel} channel set to ${parsed.data.status}`;
       break;
+    case "link_invoice": {
+      const invoice = await supabase
+        .from("invoices")
+        .select("id,invoice_number,vehicle_id,type")
+        .eq("id", parsed.data.invoiceId)
+        .eq("organisation_id", staff.organisationId)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (invoice.error || !invoice.data) {
+        return NextResponse.json({ message: "Invoice not found." }, { status: 404 });
+      }
+      if (!["general", "pro_forma", "vat"].includes(invoice.data.type)) {
+        return NextResponse.json(
+          { message: "Sale and repair invoices must remain linked through their source record." },
+          { status: 422 },
+        );
+      }
+      if (invoice.data.vehicle_id && invoice.data.vehicle_id !== id) {
+        return NextResponse.json(
+          { message: "That invoice is already linked to another vehicle." },
+          { status: 409 },
+        );
+      }
+      mutation = await supabase
+        .from("invoices")
+        .update({
+          vehicle_id: id,
+          vehicle_registration_snapshot: vehicle.data.registration,
+          vehicle_description_snapshot: [
+            vehicle.data.year,
+            vehicle.data.make,
+            vehicle.data.model,
+            vehicle.data.derivative,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        })
+        .eq("id", parsed.data.invoiceId)
+        .eq("organisation_id", staff.organisationId)
+        .select("id")
+        .single();
+      auditAction = "vehicle.invoice_linked";
+      auditReason = `Invoice ${invoice.data.invoice_number} linked to vehicle`;
+      break;
+    }
   }
 
   if (mutation.error) {
@@ -233,6 +291,16 @@ export async function POST(
       { message: `The record could not be saved: ${mutation.error.message}` },
       { status: 500 },
     );
+  }
+
+  if (parsed.data.action === "link_invoice") {
+    await supabase.from("invoice_activity").insert({
+      organisation_id: staff.organisationId,
+      invoice_id: parsed.data.invoiceId,
+      actor_user_id: staff.userId,
+      action: "invoice.vehicle_linked",
+      detail: `Linked to ${vehicle.data.registration ?? "stock vehicle"}`,
+    });
   }
 
   await supabase.from("audit_logs").insert({

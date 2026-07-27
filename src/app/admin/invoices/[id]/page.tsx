@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, CarFront, Pencil, Printer } from "lucide-react";
 
 import {
   IssueCreditNoteForm,
@@ -24,6 +24,7 @@ import {
   paymentMethodLabel,
   vatTreatmentLabel,
 } from "@/lib/invoices/format";
+import { vehicleInvoiceWorkspaceHref } from "@/lib/invoices/linking";
 
 export default async function InvoiceDetailPage({
   params,
@@ -272,6 +273,46 @@ export default async function InvoiceDetailPage({
               ) : null}
             </div>
           </section>
+
+          {invoice.vehicleId ? (
+            <section className="rounded-2xl border border-brand/20 bg-brand-soft/35 p-5">
+              <div className="flex items-center gap-2">
+                <CarFront className="size-4 text-brand" />
+                <h2 className="font-extrabold">Linked stock vehicle</h2>
+              </div>
+              <p className="mt-3 text-sm font-extrabold">
+                {invoice.vehicleRegistration ??
+                  invoice.vehicleDescription ??
+                  "Vehicle record"}
+              </p>
+              {invoice.vehicleDescription &&
+              invoice.vehicleDescription !== invoice.vehicleRegistration ? (
+                <p className="mt-0.5 text-xs text-foreground/55">
+                  {invoice.vehicleDescription}
+                </p>
+              ) : null}
+              <Button asChild size="sm" variant="outline" className="mt-4 w-full">
+                <Link href={vehicleInvoiceWorkspaceHref(invoice.vehicleId)}>
+                  <CarFront />
+                  Open vehicle invoices & costs
+                </Link>
+              </Button>
+            </section>
+          ) : canManage &&
+            ["general", "pro_forma", "vat"].includes(invoice.type) ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <h2 className="font-extrabold text-amber-950">No vehicle linked</h2>
+              <p className="mt-1 text-xs text-amber-900/70">
+                Edit this invoice and choose a stock vehicle to connect both records.
+              </p>
+              <Button asChild size="sm" variant="outline" className="mt-4 w-full">
+                <Link href={`/admin/invoices/${invoice.id}/edit`}>
+                  <Pencil />
+                  Link a vehicle
+                </Link>
+              </Button>
+            </section>
+          ) : null}
 
           {canRecordPayment ? (
             <section className="rounded-2xl border bg-white p-5">

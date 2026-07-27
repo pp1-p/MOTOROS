@@ -31,6 +31,7 @@ function mapSummary(row: Record<string, unknown>): InvoiceSummary {
     type: String(row.type) as InvoiceType,
     status: String(row.status) as InvoiceStatus,
     customerName: String(row.customer_name_snapshot ?? "Customer"),
+    vehicleId: (row.vehicle_id as string | null) ?? null,
     vehicleDescription: (row.vehicle_description_snapshot as string | null) ?? null,
     vehicleRegistration: (row.vehicle_registration_snapshot as string | null) ?? null,
     total: numeric(row.total),
@@ -149,7 +150,7 @@ export async function getInvoiceList(
   let query = supabase
     .from("invoices")
     .select(
-      "id,invoice_number,invoice_title,type,status,customer_name_snapshot,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at,invoice_line_items(count)",
+      "id,invoice_number,invoice_title,type,status,customer_name_snapshot,vehicle_id,vehicle_description_snapshot,vehicle_registration_snapshot,total,amount_paid,balance,currency,issued_at,due_at,created_at,invoice_line_items(count)",
     )
     .eq("organisation_id", staff.organisationId)
     .is("deleted_at", null)

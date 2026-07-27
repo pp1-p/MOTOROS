@@ -18,6 +18,8 @@ type AdminVehicleInventory = {
   photosByVehicle: Record<string, AdminVehiclePhoto[]>;
   historyByVehicle: Record<string, AdminVehicleHistory[]>;
   canViewCommercial: boolean;
+  canViewInvoices: boolean;
+  canManageInvoices: boolean;
 };
 
 export type VehicleRelatedRecord = {
@@ -54,6 +56,7 @@ export type VehicleChannelRecord = {
 export type VehicleWorkspaceData = {
   costs: VehicleRelatedRecord[];
   invoices: VehicleRelatedRecord[];
+  unlinkedInvoices: VehicleRelatedRecord[];
   leads: VehicleRelatedRecord[];
   documents: VehicleRelatedRecord[];
   serviceRecords: VehicleRelatedRecord[];
@@ -66,6 +69,7 @@ export type VehicleWorkspaceData = {
 const emptyWorkspaceData = (): VehicleWorkspaceData => ({
   costs: [],
   invoices: [],
+  unlinkedInvoices: [],
   leads: [],
   documents: [],
   serviceRecords: [],
@@ -89,6 +93,8 @@ function demoInventory(): AdminVehicleInventory {
   return {
     vehicles: demoVehicles,
     canViewCommercial: true,
+    canViewInvoices: true,
+    canManageInvoices: true,
     historyByVehicle: {},
     photosByVehicle: Object.fromEntries(
       demoVehicles.map((vehicle) => [
@@ -116,6 +122,8 @@ export async function getAdminVehicleInventory(): Promise<AdminVehicleInventory>
           photosByVehicle: {},
           historyByVehicle: {},
           canViewCommercial: false,
+          canViewInvoices: false,
+          canManageInvoices: false,
         };
   }
   if (!getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
@@ -125,6 +133,8 @@ export async function getAdminVehicleInventory(): Promise<AdminVehicleInventory>
   const staff = await getStaffContext();
   if (!staff) throw new Error("A dealership membership is required.");
   const canViewCommercial = hasPermission(staff.role, "commercial:view");
+  const canViewInvoices = hasPermission(staff.role, "invoices:view");
+  const canManageInvoices = hasPermission(staff.role, "invoices:manage");
   const canViewHistory = hasPermission(staff.role, "audit:view");
   const presentationOnly = staff.role === "website_editor";
 
@@ -357,7 +367,14 @@ export async function getAdminVehicleInventory(): Promise<AdminVehicleInventory>
     };
   });
 
-  return { vehicles, photosByVehicle, historyByVehicle, canViewCommercial };
+  return {
+    vehicles,
+    photosByVehicle,
+    historyByVehicle,
+    canViewCommercial,
+    canViewInvoices,
+    canManageInvoices,
+  };
 }
 
 export async function getVehicleWorkspaceData(
@@ -372,10 +389,13 @@ export async function getVehicleWorkspaceData(
   if (!staff) throw new Error("A dealership membership is required.");
   const supabase = createAdminSupabaseClient();
   const scope = { organisationId: staff.organisationId, vehicleId };
+  const canViewInvoices = hasPermission(staff.role, "invoices:view");
+  const canManageInvoices = hasPermission(staff.role, "invoices:manage");
 
   const [
     costResult,
     invoiceResult,
+    unlinkedInvoiceResult,
     leadResult,
     documentResult,
     serviceResult,
@@ -392,13 +412,26 @@ export async function getVehicleWorkspaceData(
       .not("cost_type", "is", null)
       .is("deleted_at", null)
       .order("incurred_on", { ascending: false }),
-    supabase
-      .from("invoices")
-      .select("id,invoice_number,invoice_title,type,status,total,issued_at,created_at")
-      .eq("organisation_id", scope.organisationId)
-      .eq("vehicle_id", scope.vehicleId)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false }),
+    canViewInvoices
+      ? supabase
+          .from("invoices")
+          .select("id,invoice_number,invoice_title,type,status,total,issued_at,created_at")
+          .eq("organisation_id", scope.organisationId)
+          .eq("vehicle_id", scope.vehicleId)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    canManageInvoices
+      ? supabase
+          .from("invoices")
+          .select("id,invoice_number,invoice_title,type,status,total,issued_at,created_at")
+          .eq("organisation_id", scope.organisationId)
+          .is("vehicle_id", null)
+          .in("type", ["general", "pro_forma", "vat"])
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(100)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("leads")
       .select("id,reference,title,source,status,priority,due_at,created_at")
@@ -454,6 +487,7 @@ export async function getVehicleWorkspaceData(
   const firstError = [
     costResult,
     invoiceResult,
+    unlinkedInvoiceResult,
     leadResult,
     documentResult,
     serviceResult,
@@ -478,6 +512,15 @@ export async function getVehicleWorkspaceData(
       id: row.id,
       title: row.invoice_title ?? row.invoice_number,
       detail: row.invoice_number,
+      status: row.status,
+      amount: numeric(row.total),
+      date: row.issued_at ?? row.created_at,
+      href: `/admin/invoices/${row.id}`,
+    })),
+    unlinkedInvoices: (unlinkedInvoiceResult.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.invoice_title ?? row.invoice_number,
+      detail: `${row.invoice_number} · ${String(row.type).replaceAll("_", " ")}`,
       status: row.status,
       amount: numeric(row.total),
       date: row.issued_at ?? row.created_at,

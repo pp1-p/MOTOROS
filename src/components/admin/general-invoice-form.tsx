@@ -249,11 +249,18 @@ export function GeneralInvoiceForm({
                 ))}
               </select>
             </Field>
-            <Field label="Vehicle (optional)">
+            <Field
+              label={
+                initialVehicleId
+                  ? "Linked vehicle (from stock workspace)"
+                  : "Vehicle (optional)"
+              }
+            >
               <select
                 value={vehicleId}
                 onChange={(event) => setVehicleId(event.target.value)}
-                className="h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                disabled={Boolean(initialVehicleId)}
+                className="h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-brand-soft/40 disabled:font-bold"
               >
                 <option value="">No linked vehicle</option>
                 {vehicles.map((vehicle) => (
@@ -262,6 +269,11 @@ export function GeneralInvoiceForm({
                   </option>
                 ))}
               </select>
+              {initialVehicleId ? (
+                <p className="mt-1.5 text-[10px] font-semibold text-brand">
+                  This invoice will be attached to the vehicle you opened it from.
+                </p>
+              ) : null}
             </Field>
             <Field label="Invoice date">
               <input

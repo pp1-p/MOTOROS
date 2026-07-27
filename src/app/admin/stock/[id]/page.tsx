@@ -15,7 +15,14 @@ export default async function VehicleDetailPage({
 }) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const { vehicles, photosByVehicle, historyByVehicle, canViewCommercial } =
+  const {
+    vehicles,
+    photosByVehicle,
+    historyByVehicle,
+    canViewCommercial,
+    canViewInvoices,
+    canManageInvoices,
+  } =
     await getAdminVehicleInventory();
   const vehicle = vehicles.find((item) => item.id === id);
   if (!vehicle) notFound();
@@ -27,6 +34,8 @@ export default async function VehicleDetailPage({
       initialPhotos={photosByVehicle[vehicle.id] ?? []}
       initialHistory={historyByVehicle[vehicle.id] ?? []}
       canViewCommercial={canViewCommercial}
+      canViewInvoices={canViewInvoices}
+      canManageInvoices={canManageInvoices}
       initialTab={tab}
       workspaceData={workspaceData}
     />
