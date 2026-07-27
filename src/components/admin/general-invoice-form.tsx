@@ -71,10 +71,12 @@ export function GeneralInvoiceForm({
   customers,
   vehicles,
   initial,
+  initialVehicleId,
 }: {
   customers: GeneralInvoiceCustomerOption[];
   vehicles: GeneralInvoiceVehicleOption[];
   initial?: GeneralInvoiceFormInitial;
+  initialVehicleId?: string;
 }) {
   const router = useRouter();
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
@@ -88,7 +90,9 @@ export function GeneralInvoiceForm({
     initial?.status ?? "draft",
   );
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
-  const [vehicleId, setVehicleId] = useState(initial?.vehicleId ?? "");
+  const [vehicleId, setVehicleId] = useState(
+    initial?.vehicleId ?? initialVehicleId ?? "",
+  );
   const [issuedDate, setIssuedDate] = useState(initial?.issuedDate ?? today);
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? dueDefault);
   const [vatTreatment, setVatTreatment] = useState<InvoiceVatTreatment>(

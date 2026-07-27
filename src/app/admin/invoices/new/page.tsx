@@ -7,9 +7,17 @@ import { Button } from "@/components/ui/button";
 import { requireStaff } from "@/lib/auth/permissions";
 import { getGeneralInvoiceFormOptions } from "@/lib/data/admin-invoices";
 
-export default async function NewGeneralInvoicePage() {
+export default async function NewGeneralInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vehicle?: string }>;
+}) {
   await requireStaff("invoices:manage");
+  const { vehicle } = await searchParams;
   const options = await getGeneralInvoiceFormOptions();
+  const initialVehicleId = options.vehicles.some((item) => item.id === vehicle)
+    ? vehicle
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -37,6 +45,7 @@ export default async function NewGeneralInvoicePage() {
       <GeneralInvoiceForm
         customers={options.customers}
         vehicles={options.vehicles}
+        initialVehicleId={initialVehicleId}
       />
     </div>
   );

@@ -32,10 +32,21 @@ import { Notice, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  VehicleWorkspaceSections,
+  type VehicleExtendedTab,
+} from "@/components/admin/vehicle-workspace-sections";
+import type { VehicleWorkspaceData } from "@/lib/data/admin-vehicles";
 import { notify } from "@/lib/notify";
 import { cn, formatCurrency, formatMileage } from "@/lib/utils";
 
-type Tab = "overview" | "advert" | "media" | "costs" | "history";
+type Tab =
+  | "overview"
+  | "advert"
+  | "media"
+  | "costs"
+  | "history"
+  | VehicleExtendedTab;
 function FormField({
   label,
   name,
@@ -60,7 +71,23 @@ function FormField({
   );
 }
 
-const tabIds: Tab[] = ["overview", "advert", "media", "costs", "history"];
+const tabIds: Tab[] = [
+  "overview",
+  "costs",
+  "advert",
+  "specification",
+  "features",
+  "condition",
+  "media",
+  "videos",
+  "highlight",
+  "channels",
+  "documents",
+  "assistant",
+  "leads",
+  "notes",
+  "history",
+];
 
 export function VehicleWorkspace({
   vehicle,
@@ -68,12 +95,14 @@ export function VehicleWorkspace({
   initialHistory,
   canViewCommercial,
   initialTab,
+  workspaceData,
 }: {
   vehicle: AdminVehicle;
   initialPhotos: AdminVehiclePhoto[];
   initialHistory: AdminVehicleHistory[];
   canViewCommercial: boolean;
   initialTab?: string;
+  workspaceData: VehicleWorkspaceData;
 }) {
   const [tab, setTab] = useState<Tab>(
     tabIds.includes(initialTab as Tab) ? (initialTab as Tab) : "overview",
@@ -134,7 +163,12 @@ export function VehicleWorkspace({
     event.preventDefault();
     const values = Object.fromEntries(new FormData(event.currentTarget));
     const payload: Record<string, unknown> = {
-      ...values,
+      ...Object.fromEntries(
+        Object.entries(values).map(([key, value]) => [
+          key,
+          value === "" ? null : value,
+        ]),
+      ),
       changeReason: `Staff saved the ${tab} section`,
     };
 
@@ -371,12 +405,28 @@ export function VehicleWorkspace({
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "overview", label: "Vehicle details" },
-    { id: "advert", label: "Advert" },
-    { id: "media", label: "Photos", count: photos.length },
     ...(canViewCommercial
-      ? ([{ id: "costs", label: "Costs & margin" }] as const)
+      ? ([
+          {
+            id: "costs",
+            label: "Invoices / costs",
+            count: workspaceData.costs.length + workspaceData.invoices.length,
+          },
+        ] as const)
       : []),
-    { id: "history", label: "History", count: initialHistory.length },
+    { id: "advert", label: "Write-up" },
+    { id: "specification", label: "Specification" },
+    { id: "features", label: "Features" },
+    { id: "condition", label: "Condition & history", count: workspaceData.serviceRecords.length },
+    { id: "media", label: "Images", count: photos.length },
+    { id: "videos", label: "Videos", count: workspaceData.videos.length },
+    { id: "highlight", label: "Highlight" },
+    { id: "channels", label: "Sales channels", count: workspaceData.channels.length },
+    { id: "documents", label: "Documents", count: workspaceData.documents.length },
+    { id: "assistant", label: "Silent Salesman" },
+    { id: "leads", label: "Leads", count: workspaceData.leads.length },
+    { id: "notes", label: "Notes", count: workspaceData.notes.length },
+    { id: "history", label: "Audit trail", count: initialHistory.length },
   ];
 
   return (
@@ -592,6 +642,8 @@ export function VehicleWorkspace({
                 <FormField label="Registration" name="registration" defaultValue={vehicle.registration} />
                 <FormField label="Stock number" name="stockNumber" defaultValue={vehicle.stockNumber} />
                 <FormField label="VIN" name="vin" defaultValue={vehicle.vin ?? ""} />
+                <FormField label="CAP ID" name="capId" defaultValue={vehicle.capId ?? ""} />
+                <FormField label="Plate" name="plate" defaultValue={vehicle.plate ?? ""} />
                 <FormField label="Make" name="make" defaultValue={vehicle.make ?? ""} />
                 <FormField label="Model" name="model" defaultValue={vehicle.model ?? ""} />
                 <FormField label="Derivative" name="derivative" defaultValue={vehicle.derivative ?? ""} />
@@ -599,8 +651,23 @@ export function VehicleWorkspace({
                 <FormField label="Fuel type" name="fuelType" defaultValue={vehicle.fuelType ?? ""} />
                 <FormField label="Transmission" name="transmission" defaultValue={vehicle.transmission ?? ""} />
                 <FormField label="Colour" name="colour" defaultValue={vehicle.colour ?? ""} />
+                <FormField label="Interior colour" name="interiorColour" defaultValue={vehicle.interiorColour ?? ""} />
+                <FormField label="Interior material" name="interiorMaterial" defaultValue={vehicle.interiorMaterial ?? ""} />
                 <FormField label="Doors" name="doors" type="number" defaultValue={vehicle.doors ?? ""} />
                 <FormField label="Seats" name="seats" type="number" defaultValue={vehicle.seats ?? ""} />
+                <label className="text-[11px] font-extrabold">
+                  VAT status
+                  <select
+                    name="vatStatus"
+                    defaultValue={vehicle.vatStatus ?? "no_vat"}
+                    className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  >
+                    <option value="no_vat">No VAT</option>
+                    <option value="margin_scheme">Margin scheme</option>
+                    <option value="including_vat">Including VAT</option>
+                    <option value="excluding_vat">Excluding VAT</option>
+                  </select>
+                </label>
               </div>
             </section>
 
@@ -991,6 +1058,29 @@ export function VehicleWorkspace({
             </Button>
           </aside>
         </form>
+      ) : null}
+
+      {(
+        [
+          "costs",
+          "specification",
+          "features",
+          "condition",
+          "videos",
+          "highlight",
+          "channels",
+          "documents",
+          "assistant",
+          "leads",
+          "notes",
+        ] as Tab[]
+      ).includes(tab) ? (
+        <VehicleWorkspaceSections
+          tab={tab as VehicleExtendedTab | "costs"}
+          vehicle={vehicle}
+          data={workspaceData}
+          canViewCommercial={canViewCommercial}
+        />
       ) : null}
 
       {tab === "history" ? (
