@@ -454,12 +454,25 @@ export function VehicleWorkspace({
             {vehicle.stockNumber} · {vehicle.registration} · {formatMileage(vehicle.mileage)}
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/cars/${slug}`} target="_blank">
+        {published ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/cars/${slug}`} target="_blank">
+              <Eye />
+              Public preview
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled
+            title="Publish this vehicle to preview its public page"
+          >
             <Eye />
             Public preview
-          </Link>
-        </Button>
+          </Button>
+        )}
         <button
           type="button"
           onClick={() => void togglePublished()}
@@ -835,12 +848,25 @@ export function VehicleWorkspace({
               {saving ? <LoaderCircle className="animate-spin" /> : <Save />}
               Save advert
             </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link href={`/cars/${slug}`} target="_blank">
+            {published ? (
+              <Button asChild variant="outline" className="w-full">
+                <Link href={`/cars/${slug}`} target="_blank">
+                  <Eye />
+                  Preview public page
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled
+                title="Publish this vehicle to preview its public page"
+              >
                 <Eye />
                 Preview public page
-              </Link>
-            </Button>
+              </Button>
+            )}
           </aside>
         </form>
       ) : null}
