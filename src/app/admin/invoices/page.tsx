@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, FileText, Filter, Pencil, Plus, Printer, Search } from "lucide-react";
+import { Eye, FileText, Filter, Pencil, Plus, Printer, Search, Wrench } from "lucide-react";
 
 import { InvoiceEmailButton } from "@/components/admin/invoice-email-button";
 import { PageHeader } from "@/components/admin/page-kit";
@@ -75,12 +75,20 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
         title="Invoices"
         description="Invoices linked to sales, repairs and sourcing jobs across your dealership."
         actions={canManage ? (
-          <Button asChild size="sm">
-            <Link href="/admin/invoices/new">
-              <Plus />
-              New invoice
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/invoices/new/repair">
+                <Wrench />
+                New repair invoice
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/admin/invoices/new">
+                <Plus />
+                New invoice
+              </Link>
+            </Button>
+          </div>
         ) : undefined}
       />
 

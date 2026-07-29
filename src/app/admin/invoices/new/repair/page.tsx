@@ -1,0 +1,52 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
+import { PageHeader } from "@/components/admin/page-kit";
+import { RepairInvoiceForm } from "@/components/admin/repair-invoice-form";
+import { Button } from "@/components/ui/button";
+import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
+import { getGeneralInvoiceFormOptions } from "@/lib/data/admin-invoices";
+import { getRepairCodes } from "@/lib/data/admin-repair-codes";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "New repair invoice",
+};
+
+export default async function NewRepairInvoicePage() {
+  const staff = await getStaffContext();
+  if (!staff) redirect("/admin/sign-in");
+  if (!hasPermission(staff.role, "invoices:manage")) {
+    redirect("/admin/invoices");
+  }
+
+  const [options, repairCodes] = await Promise.all([
+    getGeneralInvoiceFormOptions(),
+    getRepairCodes({ includeInactive: false }),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Invoicing"
+        title="New repair invoice"
+        description="Raise a repair invoice with reusable codes, categorised line items and the workshop narrative your customer expects."
+        actions={
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/admin/invoices">
+              <ArrowLeft />
+              All invoices
+            </Link>
+          </Button>
+        }
+      />
+      <RepairInvoiceForm
+        customers={options.customers}
+        vehicles={options.vehicles}
+        repairCodes={repairCodes}
+      />
+    </div>
+  );
+}
