@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CarFront, Eye, FileText, Filter, Pencil, Plus, Printer, Search, Wrench } from "lucide-react";
+import { ArrowDownToLine, BarChart3, CarFront, Eye, FileText, Filter, Pencil, Plus, Printer, Search, Wrench } from "lucide-react";
 
 import { InvoiceEmailButton } from "@/components/admin/invoice-email-button";
 import { PageHeader } from "@/components/admin/page-kit";
@@ -74,28 +74,44 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
         eyebrow="Money"
         title="Invoices"
         description="Invoices linked to sales, repairs and sourcing jobs across your dealership."
-        actions={canManage ? (
+        actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button asChild size="sm" variant="outline">
-              <Link href="/admin/invoices/new/repair">
-                <Wrench />
-                New repair invoice
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/admin/reports/invoices">
+                <BarChart3 />
+                Reports
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href="/admin/invoices/new/vehicle-sale">
-                <CarFront />
-                New sale invoice
-              </Link>
+              <a href="/api/admin/invoices/export" download>
+                <ArrowDownToLine />
+                Export CSV
+              </a>
             </Button>
-            <Button asChild size="sm">
-              <Link href="/admin/invoices/new">
-                <Plus />
-                New invoice
-              </Link>
-            </Button>
+            {canManage ? (
+              <>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/admin/invoices/new/repair">
+                    <Wrench />
+                    New repair invoice
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/admin/invoices/new/vehicle-sale">
+                    <CarFront />
+                    New sale invoice
+                  </Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/admin/invoices/new">
+                    <Plus />
+                    New invoice
+                  </Link>
+                </Button>
+              </>
+            ) : null}
           </div>
-        ) : undefined}
+        }
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
