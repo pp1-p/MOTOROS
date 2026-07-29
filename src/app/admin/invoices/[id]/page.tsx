@@ -7,6 +7,7 @@ import {
   RefundCreditNoteButton,
   VoidInvoiceButton,
 } from "@/components/admin/credit-note-actions";
+import { DuplicateInvoiceButton } from "@/components/admin/duplicate-invoice-button";
 import { InvoicePaymentForm } from "@/components/admin/invoice-payment-form";
 import { InvoiceEmailButton } from "@/components/admin/invoice-email-button";
 import { PageHeader } from "@/components/admin/page-kit";
@@ -74,6 +75,7 @@ export default async function InvoiceDetailPage({
               </Link>
             </Button>
             {canManage ? <InvoiceEmailButton invoiceId={invoice.id} /> : null}
+            {canManage ? <DuplicateInvoiceButton invoiceId={invoice.id} /> : null}
             {canManage && ["general", "pro_forma", "vat"].includes(invoice.type) ? (
               <Button asChild size="sm" variant="outline">
                 <Link href={`/admin/invoices/${invoice.id}/edit`}>
