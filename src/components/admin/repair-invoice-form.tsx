@@ -96,17 +96,25 @@ export function RepairInvoiceForm({
   customers,
   vehicles,
   repairCodes,
+  initialVehicleId,
+  initialCustomerId,
 }: {
   customers: GeneralInvoiceCustomerOption[];
   vehicles: GeneralInvoiceVehicleOption[];
   repairCodes: RepairCode[];
+  initialVehicleId?: string;
+  initialCustomerId?: string;
 }) {
   const router = useRouter();
-  const [customerId, setCustomerId] = useState<string>(customers[0]?.id ?? "");
-  const [vehicleMode, setVehicleMode] = useState<"linked" | "manual">(
-    vehicles.length ? "linked" : "manual",
+  const [customerId, setCustomerId] = useState<string>(
+    initialCustomerId ?? customers[0]?.id ?? "",
   );
-  const [vehicleId, setVehicleId] = useState<string>(vehicles[0]?.id ?? "");
+  const [vehicleMode, setVehicleMode] = useState<"linked" | "manual">(
+    initialVehicleId || vehicles.length ? "linked" : "manual",
+  );
+  const [vehicleId, setVehicleId] = useState<string>(
+    initialVehicleId ?? vehicles[0]?.id ?? "",
+  );
   const [vehicleSnapshot, setVehicleSnapshot] = useState<VehicleSnapshot>({
     ...emptyVehicle,
   });

@@ -374,11 +374,21 @@ export function VehicleWorkspaceSections({
             <div className="mt-4"><RecordList records={data.invoices} empty="No invoices are linked to this vehicle." /></div>
             {canManageInvoices ? (
               <div className="mt-4 flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/admin/invoices/new?vehicle=${vehicle.id}`}>
-                  Raise linked invoice
-                </Link>
-              </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/admin/invoices/new/repair?vehicle=${vehicle.id}`}>
+                    Raise repair invoice
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/admin/invoices/new/vehicle-sale?vehicle=${vehicle.id}`}>
+                    Raise sale invoice
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/admin/invoices/new?vehicle=${vehicle.id}`}>
+                    Raise general invoice
+                  </Link>
+                </Button>
               </div>
             ) : null}
             {canManageInvoices && data.unlinkedInvoices.length ? (
