@@ -140,6 +140,25 @@ export default async function SettingsPage() {
         </Notice>
       ) : null}
 
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <a
+          href="/admin/settings/repair-codes"
+          className="group flex items-start gap-3 rounded-2xl border bg-white p-4 transition hover:border-brand/40 hover:shadow-[0_8px_24px_rgba(15,24,18,0.05)]"
+        >
+          <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
+            <span aria-hidden className="font-display text-sm font-extrabold">RC</span>
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-extrabold group-hover:text-brand">
+              Repair codes
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-foreground/55">
+              Reusable labour, parts and diagnostic codes for the repair invoice builder.
+            </span>
+          </span>
+        </a>
+      </div>
+
       <AsyncForm
         endpoint="/api/admin/settings"
         className="rounded-2xl border bg-white"
