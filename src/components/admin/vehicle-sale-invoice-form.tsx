@@ -64,16 +64,24 @@ const defaultWarrantyTerms =
 export function VehicleSaleInvoiceForm({
   customers,
   vehicles,
+  initialVehicleId,
+  initialCustomerId,
 }: {
   customers: GeneralInvoiceCustomerOption[];
   vehicles: GeneralInvoiceVehicleOption[];
+  initialVehicleId?: string;
+  initialCustomerId?: string;
 }) {
   const router = useRouter();
-  const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
-  const [vehicleMode, setVehicleMode] = useState<"linked" | "manual">(
-    vehicles.length ? "linked" : "manual",
+  const [customerId, setCustomerId] = useState(
+    initialCustomerId ?? customers[0]?.id ?? "",
   );
-  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "");
+  const [vehicleMode, setVehicleMode] = useState<"linked" | "manual">(
+    initialVehicleId || vehicles.length ? "linked" : "manual",
+  );
+  const [vehicleId, setVehicleId] = useState(
+    initialVehicleId ?? vehicles[0]?.id ?? "",
+  );
   const [vehicleSnapshot, setVehicleSnapshot] = useState<VehicleSnapshot>({
     ...emptyVehicle,
   });

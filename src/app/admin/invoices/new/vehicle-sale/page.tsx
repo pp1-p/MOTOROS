@@ -7,6 +7,7 @@ import { VehicleSaleInvoiceForm } from "@/components/admin/vehicle-sale-invoice-
 import { Button } from "@/components/ui/button";
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { getGeneralInvoiceFormOptions } from "@/lib/data/admin-invoices";
+import { resolveInitialInvoiceVehicle } from "@/lib/invoices/linking";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +15,29 @@ export const metadata = {
   title: "New vehicle sale invoice",
 };
 
-export default async function NewVehicleSaleInvoicePage() {
+export default async function NewVehicleSaleInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vehicle?: string; customer?: string }>;
+}) {
   const staff = await getStaffContext();
   if (!staff) redirect("/admin/sign-in");
   if (!hasPermission(staff.role, "invoices:manage")) {
     redirect("/admin/invoices");
   }
 
-  const options = await getGeneralInvoiceFormOptions();
+  const [{ vehicle, customer }, options] = await Promise.all([
+    searchParams,
+    getGeneralInvoiceFormOptions(),
+  ]);
+  const initialVehicleId = resolveInitialInvoiceVehicle(
+    vehicle,
+    options.vehicles.map((item) => item.id),
+  );
+  const initialCustomerId =
+    customer && options.customers.some((c) => c.id === customer)
+      ? customer
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -41,6 +57,8 @@ export default async function NewVehicleSaleInvoicePage() {
       <VehicleSaleInvoiceForm
         customers={options.customers}
         vehicles={options.vehicles}
+        initialVehicleId={initialVehicleId}
+        initialCustomerId={initialCustomerId}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { getGeneralInvoiceFormOptions } from "@/lib/data/admin-invoices";
 import { getRepairCodes } from "@/lib/data/admin-repair-codes";
+import { resolveInitialInvoiceVehicle } from "@/lib/invoices/linking";
 
 export const dynamic = "force-dynamic";
 
@@ -15,17 +16,30 @@ export const metadata = {
   title: "New repair invoice",
 };
 
-export default async function NewRepairInvoicePage() {
+export default async function NewRepairInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vehicle?: string; customer?: string }>;
+}) {
   const staff = await getStaffContext();
   if (!staff) redirect("/admin/sign-in");
   if (!hasPermission(staff.role, "invoices:manage")) {
     redirect("/admin/invoices");
   }
 
-  const [options, repairCodes] = await Promise.all([
+  const [{ vehicle, customer }, options, repairCodes] = await Promise.all([
+    searchParams,
     getGeneralInvoiceFormOptions(),
     getRepairCodes({ includeInactive: false }),
   ]);
+  const initialVehicleId = resolveInitialInvoiceVehicle(
+    vehicle,
+    options.vehicles.map((item) => item.id),
+  );
+  const initialCustomerId =
+    customer && options.customers.some((c) => c.id === customer)
+      ? customer
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -46,6 +60,8 @@ export default async function NewRepairInvoicePage() {
         customers={options.customers}
         vehicles={options.vehicles}
         repairCodes={repairCodes}
+        initialVehicleId={initialVehicleId}
+        initialCustomerId={initialCustomerId}
       />
     </div>
   );
