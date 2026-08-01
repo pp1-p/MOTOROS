@@ -91,6 +91,77 @@ export default async function InvoicePrintPage({
           ) : null}
         </section>
 
+        {invoice.type === "repair" && invoice.repairDetails ? (
+          <section className="space-y-3 border-t border-foreground/15 pt-4 text-xs">
+            <p className="font-extrabold uppercase tracking-wider text-foreground/50">
+              Workshop narrative
+            </p>
+            <dl className="grid grid-cols-2 gap-4">
+              {(
+                [
+                  ["Reported fault", invoice.repairDetails.reportedFault],
+                  ["Diagnosis", invoice.repairDetails.diagnosis],
+                  ["Work completed", invoice.repairDetails.workCompleted],
+                  ["Recommendations", invoice.repairDetails.recommendations],
+                  ["Warranty", invoice.repairDetails.warranty],
+                ] as [string, string | null | undefined][]
+              )
+                .filter(([, value]) => Boolean(value))
+                .map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="font-extrabold text-foreground/70">{label}</dt>
+                    <dd className="mt-0.5 whitespace-pre-line leading-5 text-foreground/80">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+            </dl>
+          </section>
+        ) : null}
+
+        {invoice.type === "vehicle_sale" && invoice.saleDetails ? (
+          <section className="space-y-3 border-t border-foreground/15 pt-4 text-xs">
+            <p className="font-extrabold uppercase tracking-wider text-foreground/50">
+              Sale details
+            </p>
+            <dl className="grid grid-cols-2 gap-4">
+              {invoice.saleDetails.warrantyTerms ? (
+                <div>
+                  <dt className="font-extrabold text-foreground/70">Warranty</dt>
+                  <dd className="mt-0.5 whitespace-pre-line leading-5 text-foreground/80">
+                    {invoice.saleDetails.warrantyTerms}
+                  </dd>
+                </div>
+              ) : null}
+              {invoice.saleDetails.paymentMethodNote ? (
+                <div>
+                  <dt className="font-extrabold text-foreground/70">Payment method</dt>
+                  <dd className="mt-0.5 leading-5 text-foreground/80">
+                    {invoice.saleDetails.paymentMethodNote}
+                  </dd>
+                </div>
+              ) : null}
+              {invoice.saleDetails.partExchange ? (
+                <div className="col-span-2">
+                  <dt className="font-extrabold text-foreground/70">Part exchange</dt>
+                  <dd className="mt-0.5 leading-5 text-foreground/80">
+                    {invoice.saleDetails.partExchange.description || "—"}
+                    {invoice.saleDetails.partExchange.registration
+                      ? ` · ${invoice.saleDetails.partExchange.registration}`
+                      : ""}
+                    {invoice.saleDetails.partExchange.mileage
+                      ? ` · ${invoice.saleDetails.partExchange.mileage} miles`
+                      : ""}
+                    {invoice.saleDetails.partExchange.allowance
+                      ? ` · allowance ${formatMoney(invoice.saleDetails.partExchange.allowance, invoice.currency)}`
+                      : ""}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </section>
+        ) : null}
+
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b-2 border-[#0f150f] text-left uppercase tracking-wider text-foreground/50">

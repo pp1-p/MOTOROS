@@ -96,6 +96,157 @@ export default async function InvoiceDetailPage({
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-5">
+          {invoice.type === "repair" && invoice.repairDetails ? (
+            <section className="rounded-2xl border bg-white">
+              <div className="border-b p-5">
+                <h2 className="font-extrabold">Workshop narrative</h2>
+                <p className="mt-1 text-xs text-foreground/45">
+                  The customer-facing story of the job. Prints on the invoice.
+                </p>
+              </div>
+              <dl className="grid gap-4 p-5 sm:grid-cols-2">
+                {(
+                  [
+                    ["Reported fault", invoice.repairDetails.reportedFault],
+                    ["Diagnosis", invoice.repairDetails.diagnosis],
+                    ["Work completed", invoice.repairDetails.workCompleted],
+                    ["Technician notes", invoice.repairDetails.technicianNotes],
+                    ["Recommendations", invoice.repairDetails.recommendations],
+                    ["Warranty", invoice.repairDetails.warranty],
+                  ] as [string, string | null | undefined][]
+                )
+                  .filter(([, value]) => Boolean(value))
+                  .map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/50">
+                        {label}
+                      </dt>
+                      <dd className="mt-1 text-sm leading-6 whitespace-pre-line text-foreground/80">
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+              {invoice.repairDetails.vehicle ? (
+                <div className="border-t bg-[#fafaf8] p-5">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/50">
+                    Vehicle
+                  </p>
+                  <p className="mt-1 text-sm font-extrabold">
+                    {[
+                      invoice.repairDetails.vehicle.year,
+                      invoice.repairDetails.vehicle.make,
+                      invoice.repairDetails.vehicle.model,
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || "—"}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-foreground/60">
+                    {invoice.repairDetails.vehicle.registration ? (
+                      <span>
+                        <span className="font-extrabold">Reg</span>{" "}
+                        {invoice.repairDetails.vehicle.registration}
+                      </span>
+                    ) : null}
+                    {invoice.repairDetails.vehicle.vin ? (
+                      <span>
+                        <span className="font-extrabold">VIN</span>{" "}
+                        {invoice.repairDetails.vehicle.vin}
+                      </span>
+                    ) : null}
+                    {invoice.repairDetails.vehicle.mileage ? (
+                      <span>
+                        <span className="font-extrabold">Mileage</span>{" "}
+                        {invoice.repairDetails.vehicle.mileage}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {invoice.type === "vehicle_sale" && invoice.saleDetails ? (
+            <section className="rounded-2xl border bg-white">
+              <div className="border-b p-5">
+                <h2 className="font-extrabold">Sale details</h2>
+                <p className="mt-1 text-xs text-foreground/45">
+                  Warranty, payment method and part-exchange summary attached to
+                  this sale.
+                </p>
+              </div>
+              <div className="grid gap-5 p-5 sm:grid-cols-2">
+                {invoice.saleDetails.warrantyTerms ? (
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/50">
+                      Warranty terms
+                    </p>
+                    <p className="mt-1 text-sm leading-6 whitespace-pre-line text-foreground/80">
+                      {invoice.saleDetails.warrantyTerms}
+                    </p>
+                  </div>
+                ) : null}
+                {invoice.saleDetails.paymentMethodNote ? (
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/50">
+                      Payment method
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-foreground/80">
+                      {invoice.saleDetails.paymentMethodNote}
+                    </p>
+                  </div>
+                ) : null}
+                {invoice.saleDetails.depositPaid &&
+                invoice.saleDetails.depositPaid > 0 ? (
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/50">
+                      Deposit paid
+                    </p>
+                    <p className="mt-1 text-sm font-extrabold text-emerald-700 tabular-nums">
+                      {formatMoney(
+                        invoice.saleDetails.depositPaid,
+                        invoice.currency,
+                      )}
+                    </p>
+                  </div>
+                ) : null}
+                {invoice.saleDetails.partExchange ? (
+                  <div className="sm:col-span-2 rounded-xl border bg-[#fafaf8] p-4">
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/50">
+                      Part exchange
+                    </p>
+                    <p className="mt-1 text-sm font-extrabold">
+                      {invoice.saleDetails.partExchange.description || "—"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-foreground/60">
+                      {invoice.saleDetails.partExchange.registration ? (
+                        <span>
+                          <span className="font-extrabold">Reg</span>{" "}
+                          {invoice.saleDetails.partExchange.registration}
+                        </span>
+                      ) : null}
+                      {invoice.saleDetails.partExchange.mileage ? (
+                        <span>
+                          <span className="font-extrabold">Mileage</span>{" "}
+                          {invoice.saleDetails.partExchange.mileage}
+                        </span>
+                      ) : null}
+                      {invoice.saleDetails.partExchange.allowance ? (
+                        <span>
+                          <span className="font-extrabold">Allowance</span>{" "}
+                          {formatMoney(
+                            invoice.saleDetails.partExchange.allowance,
+                            invoice.currency,
+                          )}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
           <section className="rounded-2xl border bg-white">
             <div className="border-b p-5">
               <h2 className="font-extrabold">Charges</h2>
