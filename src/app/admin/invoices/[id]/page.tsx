@@ -76,13 +76,32 @@ export default async function InvoiceDetailPage({
             </Button>
             {canManage ? <InvoiceEmailButton invoiceId={invoice.id} /> : null}
             {canManage ? <DuplicateInvoiceButton invoiceId={invoice.id} /> : null}
-            {canManage && ["general", "pro_forma", "vat"].includes(invoice.type) ? (
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/admin/invoices/${invoice.id}/edit`}>
-                  <Pencil />
-                  Edit
-                </Link>
-              </Button>
+            {canManage && invoice.status !== "cancelled" && invoice.status !== "void" ? (
+              (() => {
+                const editHref =
+                  invoice.type === "repair"
+                    ? `/admin/invoices/${invoice.id}/edit/repair`
+                    : invoice.type === "vehicle_sale"
+                      ? `/admin/invoices/${invoice.id}/edit/sale`
+                      : ["general", "pro_forma", "vat"].includes(invoice.type)
+                        ? `/admin/invoices/${invoice.id}/edit`
+                        : null;
+                if (!editHref) return null;
+                const editLabel =
+                  invoice.type === "repair"
+                    ? "Edit narrative"
+                    : invoice.type === "vehicle_sale"
+                      ? "Edit details"
+                      : "Edit";
+                return (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={editHref}>
+                      <Pencil />
+                      {editLabel}
+                    </Link>
+                  </Button>
+                );
+              })()
             ) : null}
             <Button asChild size="sm" variant="ghost">
               <Link href="/admin/invoices">
