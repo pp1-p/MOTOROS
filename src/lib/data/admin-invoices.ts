@@ -178,12 +178,29 @@ export async function getInvoiceList(
     throw new Error(`Invoices could not be loaded: ${result.error.message}`);
   }
 
-  const invoices = (result.data ?? []).map(mapSummary);
+  const invoices = (result.data ?? []).map(mapSummary).map(applyOverdueAtRead);
   const totals = emptyTotals();
   for (const invoice of invoices) {
     totals[invoice.status] = (totals[invoice.status] ?? 0) + 1;
   }
   return { invoices, totals };
+}
+
+// The DB only flips status → 'overdue' inside recompute_invoice_totals,
+// which fires on payment / credit-note actions — nothing runs it on a
+// schedule. So an invoice that hits its due date and has no further
+// activity sits as 'sent' forever and the Overdue KPI under-counts.
+// Reclassify at read time so filters and totals reflect reality.
+function applyOverdueAtRead<T extends { status: InvoiceStatus; dueAt: string | null; balance: number }>(
+  invoice: T,
+): T {
+  if (invoice.status !== "sent" && invoice.status !== "viewed" && invoice.status !== "partially_paid") {
+    return invoice;
+  }
+  if (invoice.balance <= 0.005) return invoice;
+  if (!invoice.dueAt) return invoice;
+  if (new Date(invoice.dueAt).getTime() >= Date.now()) return invoice;
+  return { ...invoice, status: "overdue" };
 }
 
 function emptyTotals(): Record<InvoiceStatus, number> {

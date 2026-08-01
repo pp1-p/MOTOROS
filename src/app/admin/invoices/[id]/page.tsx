@@ -443,6 +443,26 @@ export default async function InvoiceDetailPage({
                   </Link>
                 </p>
               ) : null}
+              {invoice.repairJobId ? (
+                <p className="mt-1">
+                  <Link
+                    href={`/admin/repairs/${invoice.repairJobId}`}
+                    className="font-extrabold text-brand hover:underline"
+                  >
+                    Open linked repair job →
+                  </Link>
+                </p>
+              ) : null}
+              {invoice.sourcingRequestId ? (
+                <p className="mt-1">
+                  <Link
+                    href={`/admin/sourcing?request=${invoice.sourcingRequestId}`}
+                    className="font-extrabold text-brand hover:underline"
+                  >
+                    Open linked sourcing request →
+                  </Link>
+                </p>
+              ) : null}
             </div>
           </section>
 
