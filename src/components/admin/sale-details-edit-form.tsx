@@ -127,7 +127,7 @@ export function SaleDetailsEditForm({
         <p className="mt-1 text-xs text-foreground/60">
           Editing here updates the sale narrative only. Changing the
           part-exchange <em>allowance</em> here does <strong>not</strong>{" "}
-          recalculate the invoice total — for that you'll need to duplicate
+          recalculate the invoice total — for that you&apos;ll need to duplicate
           and re-issue.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
