@@ -130,6 +130,54 @@ export function VehicleWorkspace({
   const margin = vehicle.price - vehicle.cost;
   const marginPercent = Math.round((margin / vehicle.price) * 1000) / 10;
 
+  // Publish readiness — mirrors the six checks the PATCH endpoint enforces
+  // when isPublic goes true. Rendered both in the Website readiness card
+  // below the header and reused to disable the Publish button while any
+  // criteria are missing, so staff aren't clicking Publish and then hunting
+  // for a fleeting error toast.
+  const publishableStatuses = new Set([
+    "Ready for sale",
+    "On forecourt",
+    "Reserved",
+    "Sold",
+  ]);
+  const readinessChecks: { ok: boolean; label: string; fix: string }[] = [
+    {
+      ok: publishableStatuses.has(status),
+      label: "Status is a sales stage",
+      fix: 'Change status to "On forecourt"',
+    },
+    {
+      ok: photos.length > 0 && photos.some((photo) => photo.status !== "error"),
+      label: "At least one photo",
+      fix: "Add a photo on the Media tab",
+    },
+    {
+      ok: (vehicle.price ?? 0) > 0,
+      label: "Retail price above £0",
+      fix: "Set a retail price on the Costs tab",
+    },
+    {
+      ok: Boolean(
+        vehicle.description && vehicle.description.trim().length >= 20,
+      ),
+      label: "Description has 20+ characters",
+      fix: "Fill in the description on the Advert tab",
+    },
+    {
+      ok: Boolean(vehicle.title?.trim()),
+      label: "Public title set",
+      fix: "Set the vehicle title on the Advert tab",
+    },
+    {
+      ok: Boolean(slug),
+      label: "URL slug set",
+      fix: "Set a slug on the Advert tab (auto-generates from title if left blank)",
+    },
+  ];
+  const outstandingReadiness = readinessChecks.filter((check) => !check.ok);
+  const readyToPublish = outstandingReadiness.length === 0;
+
   async function patchVehicle(payload: Record<string, unknown>, successMessage: string) {
     setSaving(true);
     setMessage("");
@@ -476,9 +524,16 @@ export function VehicleWorkspace({
         <button
           type="button"
           onClick={() => void togglePublished()}
-          disabled={saving}
+          disabled={saving || (!published && !readyToPublish)}
+          title={
+            !published && !readyToPublish
+              ? `Not ready to publish — ${outstandingReadiness
+                  .map((entry) => entry.label)
+                  .join("; ")}`
+              : undefined
+          }
           className={cn(
-            "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-extrabold transition-colors",
+            "inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
             published
               ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
               : "border-foreground/20 bg-white text-foreground/70 hover:bg-surface-muted",
@@ -521,53 +576,58 @@ export function VehicleWorkspace({
         </label>
       </div>
 
-      {(() => {
-        const readinessChecks = [
-          {
-            ok: [
-              "Ready for sale",
-              "On forecourt",
-              "Reserved",
-              "Sold",
-            ].includes(status),
-            label: "Status is a sales stage",
-            fix: 'Change status to "On forecourt"',
-          },
-          { ok: photos.length > 0, label: "Has at least one photo", fix: "Add a photo on the Photos tab" },
-          { ok: vehicle.price > 0, label: "Retail price above £0", fix: "Set a retail price on Costs & margin" },
-          {
-            ok: Boolean(vehicle.description && vehicle.description.length >= 20),
-            label: "Description has 20+ characters",
-            fix: "Fill in the description on the Advert tab",
-          },
-        ];
-        const outstanding = readinessChecks.filter((check) => !check.ok);
-        if (published) return null;
-        return (
-          <div className="rounded-2xl border bg-white p-4">
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-foreground/50">
-              Website readiness
+      {published ? null : (
+        <div
+          className={cn(
+            "rounded-2xl border p-4",
+            readyToPublish
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50",
+          )}
+        >
+          <p
+            className={cn(
+              "text-[10px] font-extrabold uppercase tracking-wider",
+              readyToPublish ? "text-emerald-800" : "text-amber-800",
+            )}
+          >
+            Website readiness
+          </p>
+          {readyToPublish ? (
+            <p className="mt-2 text-xs font-semibold text-emerald-900">
+              All checks pass. Click <em>Publish to website</em> above.
             </p>
-            {outstanding.length === 0 ? (
-              <p className="mt-2 text-xs font-semibold text-emerald-800">
-                Ready to publish. Click <em>Publish to website</em> above.
+          ) : (
+            <>
+              <p className="mt-2 text-xs text-amber-900">
+                This car isn&apos;t ready for the public site yet — fix the
+                items below then click <em>Publish to website</em>.
               </p>
-            ) : (
-              <ul className="mt-2 space-y-1 text-xs">
-                {outstanding.map((check) => (
-                  <li key={check.label} className="flex items-start gap-2 text-foreground/70">
-                    <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-foreground/25" aria-hidden />
+              <ul className="mt-3 space-y-1.5 text-xs">
+                {outstandingReadiness.map((check) => (
+                  <li
+                    key={check.label}
+                    className="flex items-start gap-2 text-amber-900"
+                  >
+                    <span
+                      className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-amber-400 bg-amber-100 text-amber-800"
+                      aria-hidden
+                    >
+                      ✕
+                    </span>
                     <span>
-                      <span className="font-semibold text-foreground">{check.label}</span>
-                      <span className="ml-1 text-foreground/50">— {check.fix}</span>
+                      <span className="font-extrabold">{check.label}</span>
+                      <span className="ml-1 text-amber-800/80">
+                        — {check.fix}
+                      </span>
                     </span>
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
-        );
-      })()}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
