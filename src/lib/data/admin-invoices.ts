@@ -11,6 +11,7 @@ import type {
   InvoiceStatus,
   InvoiceSummary,
   InvoiceType,
+  VehicleSnapshot,
 } from "@/lib/types/invoices";
 
 function numeric(value: unknown): number {
@@ -355,7 +356,87 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
         ? actorNames.get(entry.actor_user_id) ?? "Team member"
         : "System",
     })),
+    repairDetails: mapRepairDetails(row.repair_details),
+    saleDetails: mapSaleDetails(row.sale_details),
   };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && !Number.isNaN(Number(value))) {
+    return Number(value);
+  }
+  return null;
+}
+
+function mapVehicleSnapshot(value: unknown): VehicleSnapshot | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const snapshot: VehicleSnapshot = {
+    registration: asString(record.registration),
+    vin: asString(record.vin),
+    make: asString(record.make),
+    model: asString(record.model),
+    year: asString(record.year) ?? asNumber(record.year),
+    mileage: asString(record.mileage) ?? asNumber(record.mileage),
+  };
+  const hasAny = Object.values(snapshot).some((entry) => entry !== null);
+  return hasAny ? snapshot : null;
+}
+
+function mapRepairDetails(value: unknown): InvoiceDetail["repairDetails"] {
+  const record = asRecord(value);
+  if (!record) return null;
+  const details = {
+    reportedFault: asString(record.reported_fault),
+    diagnosis: asString(record.diagnosis),
+    workCompleted: asString(record.work_completed),
+    technicianNotes: asString(record.technician_notes),
+    recommendations: asString(record.recommendations),
+    warranty: asString(record.warranty),
+    vehicle: mapVehicleSnapshot(record.vehicle),
+  };
+  const hasAny = Object.values(details).some((entry) => entry !== null);
+  return hasAny ? details : null;
+}
+
+function mapSaleDetails(value: unknown): InvoiceDetail["saleDetails"] {
+  const record = asRecord(value);
+  if (!record) return null;
+  const partExchangeRecord = asRecord(record.part_exchange);
+  const partExchange = partExchangeRecord
+    ? {
+        description: asString(partExchangeRecord.description),
+        allowance: asNumber(partExchangeRecord.allowance),
+        registration: asString(partExchangeRecord.registration),
+        vin: asString(partExchangeRecord.vin),
+        mileage:
+          asString(partExchangeRecord.mileage) ?? asNumber(partExchangeRecord.mileage),
+      }
+    : null;
+  const details = {
+    warrantyTerms: asString(record.warranty_terms),
+    paymentMethodNote: asString(record.payment_method_note),
+    partExchange:
+      partExchange &&
+      Object.values(partExchange).some((entry) => entry !== null)
+        ? partExchange
+        : null,
+    depositPaid: asNumber(record.deposit_paid),
+    vehicle: mapVehicleSnapshot(record.vehicle),
+  };
+  const hasAny = Object.values(details).some((entry) => entry !== null);
+  return hasAny ? details : null;
 }
 
 export async function getInvoicesForRepair(

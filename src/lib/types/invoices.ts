@@ -119,6 +119,41 @@ export type CreditNote = {
   currency: string;
 };
 
+export type VehicleSnapshot = {
+  registration?: string | null;
+  vin?: string | null;
+  make?: string | null;
+  model?: string | null;
+  year?: string | number | null;
+  mileage?: string | number | null;
+};
+
+export type RepairInvoiceDetails = {
+  reportedFault?: string | null;
+  diagnosis?: string | null;
+  workCompleted?: string | null;
+  technicianNotes?: string | null;
+  recommendations?: string | null;
+  warranty?: string | null;
+  vehicle?: VehicleSnapshot | null;
+};
+
+export type PartExchangeSummary = {
+  description?: string | null;
+  allowance?: number | null;
+  registration?: string | null;
+  vin?: string | null;
+  mileage?: string | number | null;
+};
+
+export type SaleInvoiceDetails = {
+  warrantyTerms?: string | null;
+  paymentMethodNote?: string | null;
+  partExchange?: PartExchangeSummary | null;
+  depositPaid?: number | null;
+  vehicle?: VehicleSnapshot | null;
+};
+
 export type InvoiceDetail = InvoiceSummary & {
   customerId: string | null;
   customerEmail: string | null;
@@ -141,4 +176,6 @@ export type InvoiceDetail = InvoiceSummary & {
   lineItems: InvoiceLineItem[];
   payments: InvoicePayment[];
   activity: InvoiceActivity[];
+  repairDetails: RepairInvoiceDetails | null;
+  saleDetails: SaleInvoiceDetails | null;
 };
