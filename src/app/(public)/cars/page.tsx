@@ -15,6 +15,12 @@ import {
 } from "@/lib/data/vehicles";
 import { cn } from "@/lib/utils";
 
+// The public stock list must always reflect the newest published state.
+// Without this, Next.js can serve a statically cached version and a car
+// that was just published in the admin won't show up until the cache
+// invalidates.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Used cars for sale",
   description:

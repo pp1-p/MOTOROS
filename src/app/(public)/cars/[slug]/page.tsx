@@ -37,6 +37,11 @@ import { getPublicSiteConfig } from "@/lib/data/site-config";
 import { getPublicContactDetails } from "@/lib/public-contact";
 import { formatCurrency, formatMileage } from "@/lib/utils";
 
+// The public vehicle page must reflect the latest published state so a
+// newly-published car (or a status change from Reserved to Sold) appears
+// without waiting for a static cache to expire.
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
