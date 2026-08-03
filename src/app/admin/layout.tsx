@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 
 import { AdminShell } from "@/components/admin/admin-shell";
 import { getStaffContext } from "@/lib/auth/permissions";
+import { getPlatformAdmin } from "@/lib/auth/platform-admin";
 
 import "./admin.css";
 
@@ -18,12 +19,16 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const staff = await getStaffContext();
+  const [staff, platformAdmin] = await Promise.all([
+    getStaffContext(),
+    getPlatformAdmin(),
+  ]);
   return (
     <AdminShell
       role={staff?.role ?? null}
       organisationName={staff?.organisationName ?? "DealerOS"}
       displayName={staff?.displayName ?? "Team member"}
+      isPlatformAdmin={platformAdmin !== null}
     >
       {children}
       <Toaster

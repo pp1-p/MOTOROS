@@ -21,6 +21,7 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   Users,
   UsersRound,
   WalletCards,
@@ -189,11 +190,13 @@ export function AdminShell({
   role,
   organisationName,
   displayName,
+  isPlatformAdmin = false,
 }: {
   children: React.ReactNode;
   role: StaffRole | null;
   organisationName: string;
   displayName: string;
+  isPlatformAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -527,6 +530,17 @@ export function AdminShell({
         </nav>
 
         <div className="border-t border-white/10 p-3">
+          {isPlatformAdmin ? (
+            <Link
+              href="/platform"
+              onClick={() => setMobileOpen(false)}
+              className="mb-2 flex items-center gap-2 rounded-xl border border-[#22d3ee]/30 bg-[#22d3ee]/10 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#67e8f9] hover:bg-[#22d3ee]/20"
+            >
+              <ShieldCheck className="size-3.5" aria-hidden />
+              <span className="flex-1">Platform admin</span>
+              <span className="text-[9px] text-[#67e8f9]/70">All dealerships</span>
+            </Link>
+          ) : null}
           <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.05] p-1">
             <Link
               href="/admin/settings"
