@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { FinanceEnquiryForm } from "@/components/forms/finance-enquiry-form";
+import { FinanceCalculator } from "@/components/public/finance-calculator";
 
 export const metadata: Metadata = {
   title: "Car finance made simple",
@@ -92,6 +93,25 @@ export default function FinancePage() {
               </p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="bg-white pt-4 pb-14 sm:pt-8 sm:pb-20">
+        <div className="container-shell grid gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-start lg:gap-16">
+          <div>
+            <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
+              Try the numbers
+            </p>
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
+              See what a monthly payment could look like.
+            </h2>
+            <p className="mt-6 text-base leading-8 text-foreground/65">
+              Move the deposit, term and APR to shape a payment you would be
+              comfortable with. When you&apos;re happy, drop us the numbers
+              and we&apos;ll put a proper quote in front of the right lender.
+            </p>
+          </div>
+          <FinanceCalculator cashPrice={15_000} variant="full" />
         </div>
       </section>
 

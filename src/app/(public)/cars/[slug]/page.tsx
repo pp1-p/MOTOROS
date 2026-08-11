@@ -21,6 +21,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { VehicleEnquiryForm } from "@/components/forms/vehicle-enquiry-form";
+import { FinanceCalculator } from "@/components/public/finance-calculator";
 import { SectionHeading } from "@/components/public/section-heading";
 import { ShareButton } from "@/components/public/share-button";
 import { VehicleCard } from "@/components/public/vehicle-card";
@@ -305,6 +306,14 @@ export default async function VehicleDetailPage({
                   </p>
                 )}
               </div>
+              {vehicle.status !== "sold" ? (
+                <div className="mt-5">
+                  <FinanceCalculator
+                    cashPrice={vehicle.price}
+                    vehicleReference={vehicle.publicTitle}
+                  />
+                </div>
+              ) : null}
             </aside>
           </div>
         </div>
