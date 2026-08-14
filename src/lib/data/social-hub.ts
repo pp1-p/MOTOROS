@@ -4,7 +4,7 @@ import { isDevelopmentDemoMode } from "@/lib/demo/store";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import {
   connectionStatusLabel,
-  providerSupports,
+  getGrantedSocialCapabilities,
   socialProviders,
   type SocialCapability,
   type SocialConnectionStatus,
@@ -99,13 +99,10 @@ export async function getSocialConnections(
   return socialProviders.map((provider) => {
     const row = rows.find((item) => item.provider === provider.id);
     const status = connectionStatus(row?.status);
-    const storedCapabilities = Array.isArray(row?.capabilities)
-      ? row.capabilities.filter(
-          (capability): capability is SocialCapability =>
-            typeof capability === "string" &&
-            provider.capabilities.includes(capability as SocialCapability),
-        )
-      : [];
+    const storedCapabilities = getGrantedSocialCapabilities(
+      provider.id,
+      row?.capabilities,
+    );
     return {
       id: row ? String(row.id) : null,
       provider: provider.id,
@@ -117,10 +114,10 @@ export async function getSocialConnections(
       accountUsername: row?.account_username
         ? String(row.account_username)
         : null,
-      capabilities:
-        storedCapabilities.length > 0
-          ? storedCapabilities
-          : provider.capabilities,
+      // A persisted connection must declare the capabilities actually granted
+      // by its provider. Falling back to the catalogue for a connected row
+      // would turn a missing scope into permission to publish.
+      capabilities: row ? storedCapabilities : provider.capabilities,
       setupNote: provider.setupNote,
       requiredEnvironment: provider.requiredEnvironment,
       deploymentConfigured: providerDeploymentConfigured(
@@ -233,14 +230,5 @@ export function connectionCanPublish(connection: SocialConnectionView) {
     connection.id !== null &&
     (connection.capabilities.includes("image_publish") ||
       connection.capabilities.includes("video_publish"))
-  );
-}
-
-export function providerCanPublish(providerId: string) {
-  const provider = socialProviders.find((item) => item.id === providerId);
-  return Boolean(
-    provider &&
-      (providerSupports(provider, "image_publish") ||
-        providerSupports(provider, "video_publish")),
   );
 }

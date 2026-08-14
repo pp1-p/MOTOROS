@@ -170,6 +170,29 @@ export function providerSupports(
   return provider.capabilities.includes(capability);
 }
 
+export function getGrantedSocialCapabilities(
+  providerId: string,
+  capabilities: unknown,
+): SocialCapability[] {
+  const provider = getSocialProvider(providerId);
+  if (!provider || !Array.isArray(capabilities)) return [];
+  return capabilities.filter(
+    (capability): capability is SocialCapability =>
+      typeof capability === "string" &&
+      provider.capabilities.includes(capability as SocialCapability),
+  );
+}
+
+export function connectionGrantsPublishing(
+  providerId: string,
+  capabilities: unknown,
+) {
+  const granted = getGrantedSocialCapabilities(providerId, capabilities);
+  return (
+    granted.includes("image_publish") || granted.includes("video_publish")
+  );
+}
+
 export function connectionStatusLabel(status: SocialConnectionStatus) {
   const labels: Record<SocialConnectionStatus, string> = {
     not_configured: "Requires API configuration",

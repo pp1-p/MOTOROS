@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getPlatformAdmin } from "@/lib/auth/platform-admin";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { socialProviders } from "@/lib/integrations/social-provider";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -69,6 +70,7 @@ const empty: PlatformOverview = {
 };
 
 export async function getPlatformOverview(): Promise<PlatformOverview> {
+  if (!(await getPlatformAdmin())) return empty;
   if (!isSupabaseConfigured() || !getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
     return empty;
   }
@@ -249,6 +251,7 @@ export type PlatformDealershipDetail = {
 export async function getPlatformDealership(
   id: string,
 ): Promise<PlatformDealershipDetail | null> {
+  if (!(await getPlatformAdmin())) return null;
   if (!isSupabaseConfigured() || !getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
     return null;
   }
@@ -474,6 +477,8 @@ export async function logPlatformAdminAccess(params: {
   actorEmail: string;
   action: string;
 }) {
+  const admin = await getPlatformAdmin();
+  if (!admin || admin.userId !== params.actorUserId) return;
   if (!isSupabaseConfigured() || !getServerEnv().SUPABASE_SERVICE_ROLE_KEY) return;
   const supabase = createAdminSupabaseClient();
   await supabase.from("audit_logs").insert({
@@ -499,6 +504,7 @@ export type PlatformIntegrationHealth = {
 export async function getPlatformIntegrationHealth(): Promise<
   PlatformIntegrationHealth[]
 > {
+  if (!(await getPlatformAdmin())) return [];
   if (!isSupabaseConfigured() || !getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
     return [];
   }
@@ -552,6 +558,7 @@ export type PlatformWebsiteSummary = {
 };
 
 export async function getPlatformWebsites(): Promise<PlatformWebsiteSummary[]> {
+  if (!(await getPlatformAdmin())) return [];
   if (!isSupabaseConfigured() || !getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
     return [];
   }

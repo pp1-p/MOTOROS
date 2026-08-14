@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   resolveEntitlements,
+  resolveSubscriptionEntitlements,
   type PlanCode,
   type ResolvedEntitlements,
 } from "@/lib/entitlements";
@@ -69,6 +70,10 @@ export async function getTenantEntitlements(
   return {
     plan,
     subscriptionStatus: String(subscriptionResult.data.status),
-    features: resolveEntitlements(plan, overrides),
+    features: resolveSubscriptionEntitlements(
+      plan,
+      String(subscriptionResult.data.status),
+      overrides,
+    ),
   };
 }

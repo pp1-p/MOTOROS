@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
 import { getTenantEntitlements } from "@/lib/data/tenant-entitlements";
-import { providerCanPublish } from "@/lib/data/social-hub";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
+import { connectionGrantsPublishing } from "@/lib/integrations/social-provider";
 import { assertSameOrigin } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
@@ -99,12 +99,17 @@ export async function POST(request: Request) {
   if (input.connectionIds.length > 0) {
     const connectionResult = await supabase
       .from("integration_settings")
-      .select("id,provider,status")
+      .select("id,provider,status,capabilities")
       .eq("organisation_id", staff.organisationId)
       .eq("status", "connected")
       .in("id", input.connectionIds);
     connections = (connectionResult.data ?? [])
-      .filter((row) => providerCanPublish(String(row.provider)))
+      .filter((row) =>
+        connectionGrantsPublishing(
+          String(row.provider),
+          row.capabilities,
+        ),
+      )
       .map((row) => ({ id: String(row.id), provider: String(row.provider) }));
     if (
       connectionResult.error ||

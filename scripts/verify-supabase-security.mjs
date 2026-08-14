@@ -285,6 +285,12 @@ assert(
   "SaaS foundation is missing the safe integration column grant",
 );
 assert(
+  saasFoundation.includes(
+    "revoke all on public.integration_settings from anon, authenticated;",
+  ),
+  "Authenticated browsers retain direct integration-setting write privileges",
+);
+assert(
   !integrationBrowserGrant.includes("secret_reference"),
   "Authenticated integration grant exposes the provider secret reference",
 );

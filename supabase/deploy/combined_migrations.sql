@@ -13920,8 +13920,9 @@ grant select (
 ) on public.vehicle_features to anon, authenticated;
 
 -- An authenticated browser can inspect connection state but never the
--- server-side secret reference used by provider adapters.
-revoke select on public.integration_settings from authenticated;
+-- server-side secret reference used by provider adapters. Connection writes
+-- are server-only so a browser cannot claim a connection or granted scope.
+revoke all on public.integration_settings from anon, authenticated;
 grant select (
   id,
   organisation_id,

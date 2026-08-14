@@ -12,6 +12,12 @@ export const featureKeys = [
 
 export type FeatureKey = (typeof featureKeys)[number];
 export type PlanCode = "starter" | "professional" | "premium" | "custom";
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "cancelled"
+  | "suspended";
 
 export type EntitlementOverride = {
   featureKey: string;
@@ -54,6 +60,26 @@ export function resolveEntitlements(
   }
 
   return resolved;
+}
+
+export function resolveSubscriptionEntitlements(
+  plan: PlanCode,
+  status: string,
+  overrides: readonly EntitlementOverride[] = [],
+  now = new Date(),
+): ResolvedEntitlements {
+  if (status === "active" || status === "trialing") {
+    return resolveEntitlements(plan, overrides, now);
+  }
+
+  // Keep the safe Starter foundation available, but do not let an expired,
+  // cancelled or suspended subscription retain paid plan features. Negative
+  // overrides remain effective so a disabled feature never fails open.
+  return resolveEntitlements(
+    "starter",
+    overrides.filter((override) => !override.enabled),
+    now,
+  );
 }
 
 export function hasEntitlement(

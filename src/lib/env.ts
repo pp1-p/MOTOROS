@@ -28,8 +28,8 @@ const serverEnvSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   CRON_SECRET: z.string().optional(),
-  // Comma-separated list of user emails that unlock the /platform super-admin
-  // area. Empty (or unset) means the platform admin surface is disabled.
+  // Read-only bootstrap access for /platform. Durable management access comes
+  // from the database-backed platform_admins table.
   PLATFORM_ADMIN_EMAILS: z.string().optional(),
   META_APP_ID: z.string().optional(),
   META_APP_SECRET: z.string().optional(),

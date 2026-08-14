@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveEntitlements } from "@/lib/entitlements";
+import {
+  resolveEntitlements,
+  resolveSubscriptionEntitlements,
+} from "@/lib/entitlements";
 
 describe("feature entitlements", () => {
   it("keeps the Starter core available without enabling social publishing", () => {
@@ -33,5 +36,18 @@ describe("feature entitlements", () => {
       new Date("2026-08-14T00:00:00.000Z"),
     );
     expect(result["social.inbox"]).toBe(false);
+  });
+
+  it("removes paid features when a subscription is not active", () => {
+    const active = resolveSubscriptionEntitlements("professional", "active");
+    const pastDue = resolveSubscriptionEntitlements(
+      "professional",
+      "past_due",
+      [{ featureKey: "social.publishing", enabled: true }],
+    );
+    expect(active["social.publishing"]).toBe(true);
+    expect(pastDue["dealership.core"]).toBe(true);
+    expect(pastDue["social.publishing"]).toBe(false);
+    expect(pastDue["website.themes.premium"]).toBe(false);
   });
 });
