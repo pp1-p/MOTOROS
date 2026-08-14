@@ -12,6 +12,10 @@ const technicianStatusGuardPath = join(
   migrationsDirectory,
   "202607180002_technician_status_guard.sql",
 );
+const saasFoundationPath = join(
+  migrationsDirectory,
+  "202608140001_motoros_saas_foundation.sql",
+);
 
 function read(path) {
   return readFileSync(path, "utf8").replaceAll("\r\n", "\n");
@@ -208,6 +212,158 @@ assert(
   "Hardening migration is missing the customer audit guard trigger",
 );
 
+const saasFoundation = read(saasFoundationPath);
+assert(
+  saasFoundation.includes(
+    "create or replace view public.public_dealerships\nwith (security_invoker = on, security_barrier = true)",
+  ),
+  "SaaS foundation regresses public_dealerships security-invoker hardening",
+);
+assert(
+  saasFoundation.includes(
+    "create or replace view public.platform_dealership_metrics\nwith (security_invoker = on, security_barrier = true)",
+  ),
+  "Platform metrics view is not security-invoker",
+);
+for (const table of [
+  "platform_admins",
+  "dealership_subscriptions",
+  "dealership_entitlements",
+  "website_themes",
+  "dealership_sites",
+  "dealership_domains",
+  "social_posts",
+  "social_post_targets",
+  "social_conversations",
+  "social_messages",
+]) {
+  assert(
+    saasFoundation.includes(`alter table public.${table} enable row level security;`),
+    `SaaS foundation is missing RLS for ${table}`,
+  );
+}
+
+for (const constraint of [
+  "social_posts_vehicle_tenant_fk",
+  "social_post_targets_post_tenant_fk",
+  "social_post_targets_connection_tenant_fk",
+  "social_conversations_connection_tenant_fk",
+  "social_conversations_customer_tenant_fk",
+  "social_conversations_vehicle_tenant_fk",
+  "social_conversations_lead_tenant_fk",
+  "social_messages_conversation_tenant_fk",
+  "leads_originating_conversation_tenant_fk",
+]) {
+  assert(
+    saasFoundation.includes(`constraint ${constraint}`),
+    `SaaS foundation is missing tenant constraint ${constraint}`,
+  );
+}
+
+const platformMutationBody = saasFoundation.match(
+  /create or replace function public\.platform_set_dealership_status[\s\S]*?as \$\$([\s\S]*?)\$\$;/u,
+)?.[1];
+assert(platformMutationBody, "Could not locate the platform status RPC");
+assert(
+  platformMutationBody.includes("if not public.is_platform_admin()"),
+  "Platform status mutation does not enforce the database platform role",
+);
+assert(
+  platformMutationBody.includes("for update;"),
+  "Platform status mutation does not lock the dealership row",
+);
+assert(
+  platformMutationBody.includes("insert into public.audit_logs"),
+  "Platform status mutation is missing an audit event",
+);
+
+const integrationBrowserGrant = saasFoundation.match(
+  /grant select \(([\s\S]*?)\) on public\.integration_settings to authenticated;/u,
+)?.[1];
+assert(
+  integrationBrowserGrant,
+  "SaaS foundation is missing the safe integration column grant",
+);
+assert(
+  !integrationBrowserGrant.includes("secret_reference"),
+  "Authenticated integration grant exposes the provider secret reference",
+);
+const domainBrowserGrant = saasFoundation.match(
+  /grant select \(([\s\S]*?)\) on public\.dealership_domains to authenticated;/u,
+)?.[1];
+assert(
+  domainBrowserGrant,
+  "SaaS foundation is missing the safe domain column grant",
+);
+assert(
+  !domainBrowserGrant.includes("verification_token_hash"),
+  "Authenticated domain grant exposes the verification token hash",
+);
+const publicSiteGrant = saasFoundation.match(
+  /grant select \(([\s\S]*?)\) on public\.dealership_sites to anon, authenticated;/u,
+)?.[1];
+assert(publicSiteGrant, "SaaS foundation is missing the public-safe site grant");
+for (const sensitiveColumn of [
+  "branding",
+  "homepage_settings",
+  "navigation",
+  "seo_settings",
+  "updated_by",
+]) {
+  assert(
+    !publicSiteGrant.includes(sensitiveColumn),
+    `Public site grant exposes ${sensitiveColumn}`,
+  );
+}
+const publicVehicleGrant = saasFoundation.match(
+  /grant select \(([\s\S]*?)\) on public\.vehicles to anon, authenticated;/u,
+)?.[1];
+assert(
+  publicVehicleGrant,
+  "SaaS foundation is missing the columns required by public security-invoker vehicle views",
+);
+for (const commercialColumn of [
+  "registration,",
+  "vin,",
+  "purchase_price",
+  "preparation_costs",
+  "repair_costs",
+  "other_costs",
+  "minimum_acceptable_price",
+  "actual_gross_profit",
+  "inspection_notes",
+  "known_faults",
+]) {
+  assert(
+    !publicVehicleGrant.includes(commercialColumn),
+    `Public vehicle column grant exposes ${commercialColumn}`,
+  );
+}
+assert(
+  saasFoundation.includes(
+    "revoke all on public.platform_dealership_metrics from public, anon, authenticated;",
+  ) &&
+    saasFoundation.includes(
+      "grant select on public.platform_dealership_metrics to service_role;",
+    ),
+  "Platform aggregate view is not restricted to the service role",
+);
+const conversationLeadBody = saasFoundation.match(
+  /create or replace function public\.convert_social_conversation_to_lead[\s\S]*?as \$\$([\s\S]*?)\$\$;/u,
+)?.[1];
+assert(
+  conversationLeadBody?.includes(
+    "where organisation_id = target_organisation_id\n    and id = target_conversation_id",
+  ),
+  "Conversation-to-lead workflow is missing its tenant predicate",
+);
+assert(
+  saasFoundation.includes(
+    "grant execute on function public.convert_social_conversation_to_lead(uuid, uuid, uuid)\n  to service_role;",
+  ),
+  "Conversation-to-lead workflow is not restricted to the service role",
+);
+
 const snapshotBody = hardening.match(
   /create or replace function public\.customer_audit_snapshot[\s\S]*?as \$\$([\s\S]*?)\$\$;/u,
 )?.[1];
@@ -236,5 +392,5 @@ for (const key of [
 }
 
 console.log(
-  `Verified ${migrationFiles.length} migrations, combined parity, technician status guard, digest qualification, service RPC ACL declarations and customer audit redaction.`,
+  `Verified ${migrationFiles.length} migrations, combined parity, technician status guard, SaaS tenant boundaries, platform mutation checks, secret-safe grants, service RPC ACL declarations and customer audit redaction.`,
 );

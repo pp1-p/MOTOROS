@@ -40,10 +40,11 @@ export default async function PublicLayout({ children }: { children: ReactNode }
   return (
     <div
       className="min-h-screen bg-background"
+      data-website-theme={siteConfig.themeId}
       style={
         {
-          "--brand": siteConfig.primaryColour,
-          "--accent": siteConfig.accentColour,
+          "--dealer-brand": siteConfig.primaryColour,
+          "--dealer-accent": siteConfig.accentColour,
         } as React.CSSProperties
       }
     >

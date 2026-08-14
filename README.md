@@ -1,12 +1,15 @@
-# DealerOS
+# MOTOR.OS
 
-DealerOS is a Vercel-compatible UK dealership platform built as one Next.js
+MOTOR.OS is a Vercel-compatible UK dealership SaaS built as one Next.js
 application over one Supabase database:
 
 - a premium public website for stock, enquiries, car sourcing and repair-call
   booking;
 - a permission-aware operating system for stock, leads, sourcing, repairs,
-  diary, customers, tasks, reporting, website content, audit and integrations.
+  diary, customers, tasks, reporting, website content, social communications,
+  audit and integrations;
+- a separate platform control centre for dealership, subscription, website and
+  provider-health oversight.
 
 The application is brand-neutral. Dealership identity, contact information,
 colours and published home-page content are database-backed and managed in
@@ -146,8 +149,17 @@ DealerOS:
 - `/admin/sourcing`, `/admin/repairs`, `/admin/diary`
 - `/admin/customers`, `/admin/tasks`, `/admin/documents`
 - `/admin/reports`, `/admin/website`
+- `/admin/website/themes`
+- `/admin/social`, `/admin/social/connections`, `/admin/social/compose`
+- `/admin/social/calendar`, `/admin/social/inbox`
 - `/admin/team`, `/admin/integrations`, `/admin/settings`
 - `/admin/audit`, `/admin/health`
+
+Platform:
+
+- `/platform` overview
+- `/platform/dealerships`, `/platform/dealerships/[id]`
+- `/platform/websites`, `/platform/integrations`
 
 ## External integrations
 
@@ -159,6 +171,8 @@ The core system works without paid providers:
 - SMS defaults to disabled; notifications remain visible inside DealerOS.
 - Auto Trader remains manual/CSV until authorised credentials and endpoint
   permissions are verified.
+- Social providers remain explicitly unconfigured until real OAuth scopes,
+  server-side secrets and delivery/webhook adapters are verified.
 
 No Auto Trader pages are scraped. A configured credential set is not displayed
 as “connected” until the authorised integration is actually verified.
@@ -166,6 +180,7 @@ as “connected” until the authorised integration is actually verified.
 See:
 
 - `docs/INTEGRATIONS.md`
+- `docs/SAAS_ARCHITECTURE.md`
 - `docs/DEPLOYMENT.md`
 - `docs/SECURITY.md`
 - `docs/KNOWN_LIMITATIONS.md`

@@ -259,6 +259,71 @@ select {
   }
 }
 
+/* Public dealer-site templates. These tokens sit on the public route-group
+   wrapper, keeping the dealer admin and platform control centre unchanged. */
+[data-website-theme] {
+  --brand: var(--dealer-brand, #1b5c4f);
+  --brand-strong: color-mix(in srgb, var(--brand) 78%, black);
+  --brand-soft: color-mix(in srgb, var(--brand) 14%, white);
+  --accent: var(--dealer-accent, #c38d39);
+}
+
+[data-website-theme="performance"] {
+  --background: #0b0d0f;
+  --foreground: #f7f7f5;
+  --surface: #14171a;
+  --surface-muted: #202428;
+  --border: #343a40;
+  font-family: var(--font-sans-web, "Aptos"), sans-serif;
+}
+
+[data-website-theme="performance"] .bg-white {
+  background-color: var(--surface);
+}
+
+[data-website-theme="performance"] .rounded-3xl,
+[data-website-theme="performance"] .rounded-2xl {
+  border-radius: 0.55rem;
+}
+
+[data-website-theme="classic"] {
+  --background: #f6f1e7;
+  --foreground: #22354a;
+  --surface: #fffcf5;
+  --surface-muted: #ece3d2;
+  --border: #d8cbb6;
+}
+
+[data-website-theme="classic"] h1,
+[data-website-theme="classic"] h2,
+[data-website-theme="classic"] h3 {
+  font-family: var(--font-display-web, Georgia), serif;
+}
+
+[data-website-theme="classic"] .bg-white {
+  background-color: var(--surface);
+}
+
+[data-website-theme="luxury"] {
+  --background: #f7f5f0;
+  --foreground: #161616;
+  --surface: #fffefa;
+  --surface-muted: #ece9e1;
+  --border: #d8d2c6;
+  letter-spacing: 0.005em;
+}
+
+[data-website-theme="luxury"] h1,
+[data-website-theme="luxury"] h2,
+[data-website-theme="luxury"] h3 {
+  font-family: var(--font-display-web, Georgia), serif;
+  font-weight: 600;
+}
+
+[data-website-theme="luxury"] .bg-white {
+  background-color: var(--surface);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

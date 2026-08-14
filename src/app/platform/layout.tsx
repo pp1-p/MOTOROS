@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, Home, LogOut, ShieldCheck } from "lucide-react";
+import {
+  Building2,
+  Cable,
+  Globe2,
+  Home,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react";
 
 import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
 
@@ -31,7 +38,7 @@ export default async function PlatformLayout({
               <ShieldCheck className="size-5" aria-hidden />
             </span>
             <span>
-              <span className="block text-sm">MOTOROS platform</span>
+              <span className="block text-sm">MOTOR.OS platform</span>
               <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 Super-admin
               </span>
@@ -46,11 +53,25 @@ export default async function PlatformLayout({
               Overview
             </Link>
             <Link
-              href="/platform#dealerships"
+              href="/platform/dealerships"
               className="rounded-lg px-3 py-2 hover:bg-white/10"
             >
               <Building2 className="mr-1.5 inline size-3.5" aria-hidden />
               Dealerships
+            </Link>
+            <Link
+              href="/platform/websites"
+              className="rounded-lg px-3 py-2 hover:bg-white/10"
+            >
+              <Globe2 className="mr-1.5 inline size-3.5" aria-hidden />
+              Websites
+            </Link>
+            <Link
+              href="/platform/integrations"
+              className="rounded-lg px-3 py-2 hover:bg-white/10"
+            >
+              <Cable className="mr-1.5 inline size-3.5" aria-hidden />
+              Integrations
             </Link>
           </nav>
           <div className="flex items-center gap-3">

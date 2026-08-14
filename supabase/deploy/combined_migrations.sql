@@ -11509,3 +11509,2450 @@ grant select, insert, update, delete on public.vehicle_videos to authenticated;
 grant select, insert, update, delete on public.vehicle_notes to authenticated;
 
 commit;
+
+-- ===== 202607280001_repair_codes.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS repair codes catalogue
+--
+-- A reusable per-organisation catalogue of common repair, labour, parts and
+-- diagnostic codes. Repair invoices reference these by code so a technician
+-- can type or scan a code and have the default description, price, labour
+-- time, tax rate and category pre-filled.
+--
+-- Codes are soft-deleted (deleted_at) so historical invoice line items keep
+-- their reference intact. `active` toggles visibility in the picker without
+-- affecting historical rows.
+-- =============================================================================
+
+create table if not exists public.repair_codes (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  code text not null,
+  description text not null,
+  default_price numeric(12, 2) not null default 0 check (default_price >= 0),
+  labour_hours numeric(6, 2) not null default 0 check (labour_hours >= 0),
+  tax_rate numeric(5, 2) not null default 20 check (tax_rate >= 0 and tax_rate <= 100),
+  category text not null default 'other'
+    check (category in ('labour', 'parts', 'diagnostic', 'consumable', 'other')),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null,
+  deleted_at timestamptz,
+  constraint repair_codes_code_unique_per_org
+    unique (organisation_id, code) deferrable initially deferred
+);
+
+create index if not exists repair_codes_organisation_idx
+  on public.repair_codes (organisation_id)
+  where deleted_at is null;
+
+create index if not exists repair_codes_code_search_idx
+  on public.repair_codes using gin (to_tsvector('simple', code || ' ' || description))
+  where deleted_at is null;
+
+alter table public.repair_codes enable row level security;
+
+create policy repair_codes_read on public.repair_codes
+  for select
+  using (
+    public.has_org_role(
+      organisation_id,
+      array['owner', 'manager', 'service_advisor', 'sales_advisor', 'technician', 'accountant']
+    )
+  );
+
+create policy repair_codes_insert on public.repair_codes
+  for insert
+  with check (
+    public.has_org_role(
+      organisation_id,
+      array['owner', 'manager', 'service_advisor']
+    )
+  );
+
+create policy repair_codes_update on public.repair_codes
+  for update
+  using (
+    public.has_org_role(
+      organisation_id,
+      array['owner', 'manager', 'service_advisor']
+    )
+  );
+
+create policy repair_codes_delete on public.repair_codes
+  for delete
+  using (
+    public.has_org_role(organisation_id, array['owner', 'manager'])
+  );
+
+-- Trigger to keep updated_at fresh.
+create or replace function public.repair_codes_touch_updated_at()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists repair_codes_updated_at on public.repair_codes;
+create trigger repair_codes_updated_at
+  before update on public.repair_codes
+  for each row
+  execute function public.repair_codes_touch_updated_at();
+
+commit;
+
+-- ===== 202607280002_standalone_repair_invoice.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS standalone repair invoice
+--
+-- Adds:
+--  * repair_details jsonb column on invoices for repair-specific narrative
+--    fields (reported fault, diagnosis, work completed, tech notes,
+--    recommendations, warranty) and the vehicle snapshot when the invoice is
+--    not tied to a stock/customer vehicle row.
+--  * create_standalone_repair_invoice(actor, input) RPC that mirrors the
+--    general-invoice creator but forces type = 'repair' and accepts the
+--    repair-specific narrative + free-form vehicle details.
+-- =============================================================================
+
+alter table public.invoices
+  add column if not exists repair_details jsonb;
+
+comment on column public.invoices.repair_details is
+  'Repair-invoice specific fields: reported_fault, diagnosis, work_completed, technician_notes, recommendations, warranty, vehicle {registration, vin, make, model, year, mileage}';
+
+create or replace function public.create_standalone_repair_invoice(
+  p_actor_user_id uuid,
+  p_input jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  member_org uuid;
+  cust public.customers%rowtype;
+  vehicle public.vehicles%rowtype;
+  settings public.dealership_settings%rowtype;
+  invoice_id uuid := gen_random_uuid();
+  invoice_number text;
+  invoice_status text := coalesce(p_input ->> 'status', 'draft');
+  vat_treatment text := coalesce(p_input ->> 'vat_treatment', 'standard');
+  entry record;
+  item_type text;
+  item_vat_rate numeric(5,2);
+  vehicle_snapshot jsonb := coalesce(p_input -> 'vehicle_snapshot', '{}'::jsonb);
+  vehicle_description text;
+  vehicle_registration text;
+begin
+  if p_actor_user_id is null then
+    raise exception 'Authentication is required' using errcode = '28000';
+  end if;
+
+  select organisation_id into member_org
+  from public.organisation_members
+  where user_id = p_actor_user_id
+    and is_active = true
+    and role in ('owner', 'manager', 'service_advisor', 'salesperson')
+  order by joined_at asc nulls last
+  limit 1;
+
+  if member_org is null then
+    raise exception 'Not authorised to create repair invoices' using errcode = '42501';
+  end if;
+  if invoice_status not in ('draft', 'sent') then
+    raise exception 'A new invoice must be draft or sent' using errcode = '22023';
+  end if;
+  if vat_treatment not in ('standard', 'margin', 'zero', 'exempt', 'not_registered') then
+    raise exception 'Unsupported VAT treatment' using errcode = '22023';
+  end if;
+  if jsonb_array_length(coalesce(p_input -> 'line_items', '[]'::jsonb)) = 0 then
+    raise exception 'At least one repair line is required' using errcode = '22023';
+  end if;
+
+  select * into cust
+  from public.customers
+  where id = (p_input ->> 'customer_id')::uuid
+    and organisation_id = member_org
+    and deleted_at is null;
+  if not found then
+    raise exception 'Customer not found' using errcode = 'P0002';
+  end if;
+
+  -- Optional link to a stock vehicle; otherwise we rely on the snapshot.
+  if nullif(p_input ->> 'vehicle_id', '') is not null then
+    select * into vehicle
+    from public.vehicles
+    where id = (p_input ->> 'vehicle_id')::uuid
+      and organisation_id = member_org
+      and deleted_at is null;
+    if not found then
+      raise exception 'Vehicle not found' using errcode = 'P0002';
+    end if;
+    vehicle_registration := vehicle.registration;
+    vehicle_description := nullif(
+      trim(concat_ws(' ', vehicle.year::text, vehicle.make, vehicle.model)), '');
+  else
+    vehicle_registration := nullif(trim(vehicle_snapshot ->> 'registration'), '');
+    vehicle_description := nullif(
+      trim(concat_ws(' ',
+        vehicle_snapshot ->> 'year',
+        vehicle_snapshot ->> 'make',
+        vehicle_snapshot ->> 'model')),
+      '');
+  end if;
+
+  select * into settings
+  from public.dealership_settings
+  where organisation_id = member_org;
+
+  invoice_number := public.allocate_invoice_number(member_org);
+
+  insert into public.invoices (
+    id, organisation_id, invoice_number, invoice_title, type, status,
+    customer_id, customer_name_snapshot, customer_email_snapshot,
+    customer_phone_snapshot, billing_address_snapshot,
+    vehicle_id, vehicle_registration_snapshot, vehicle_description_snapshot,
+    issued_at, due_at, vat_treatment, vat_registration_snapshot,
+    show_vat, show_payment_details, notes, terms, repair_details,
+    created_by, issued_by
+  )
+  values (
+    invoice_id,
+    member_org,
+    invoice_number,
+    nullif(trim(p_input ->> 'title'), ''),
+    'repair',
+    invoice_status,
+    cust.id,
+    coalesce(cust.full_name, trim(concat_ws(' ', cust.first_name, cust.last_name))),
+    cust.email,
+    cust.phone,
+    coalesce(cust.address, '{}'::jsonb),
+    vehicle.id,
+    vehicle_registration,
+    vehicle_description,
+    case
+      when invoice_status = 'sent'
+        then coalesce((p_input ->> 'issued_at')::timestamptz, now())
+      else null
+    end,
+    nullif(p_input ->> 'due_at', '')::timestamptz,
+    vat_treatment,
+    settings.vat_number,
+    coalesce((p_input ->> 'show_vat')::boolean, true),
+    coalesce((p_input ->> 'show_payment_details')::boolean, true),
+    nullif(trim(p_input ->> 'notes'), ''),
+    nullif(trim(p_input ->> 'terms'), ''),
+    jsonb_strip_nulls(jsonb_build_object(
+      'reported_fault', nullif(trim(p_input ->> 'reported_fault'), ''),
+      'diagnosis', nullif(trim(p_input ->> 'diagnosis'), ''),
+      'work_completed', nullif(trim(p_input ->> 'work_completed'), ''),
+      'technician_notes', nullif(trim(p_input ->> 'technician_notes'), ''),
+      'recommendations', nullif(trim(p_input ->> 'recommendations'), ''),
+      'warranty', nullif(trim(p_input ->> 'warranty'), ''),
+      'vehicle', case
+        when vehicle_snapshot = '{}'::jsonb then null
+        else vehicle_snapshot
+      end
+    )),
+    p_actor_user_id,
+    case when invoice_status = 'sent' then p_actor_user_id else null end
+  );
+
+  for entry in
+    select value as item, ordinality as sort_order
+    from jsonb_array_elements(p_input -> 'line_items') with ordinality
+  loop
+    item_type := coalesce(entry.item ->> 'item_type', 'charge');
+    if item_type not in ('charge', 'labour', 'part', 'fee', 'discount', 'note') then
+      raise exception 'Unsupported invoice item type' using errcode = '22023';
+    end if;
+    item_vat_rate := case
+      when item_type in ('discount', 'note') then 0
+      when vat_treatment in ('zero', 'exempt', 'not_registered') then 0
+      when coalesce((p_input ->> 'show_vat')::boolean, true) = false then 0
+      else coalesce((entry.item ->> 'vat_rate')::numeric, 20)
+    end;
+
+    insert into public.invoice_line_items (
+      organisation_id, invoice_id, sort_order, item_type, description,
+      quantity, unit_price, vat_rate, vat_treatment, source_type, source_id
+    )
+    values (
+      member_org,
+      invoice_id,
+      entry.sort_order - 1,
+      item_type,
+      trim(entry.item ->> 'description'),
+      coalesce((entry.item ->> 'quantity')::numeric, 1),
+      coalesce((entry.item ->> 'unit_price')::numeric, 0),
+      item_vat_rate,
+      vat_treatment,
+      case when nullif(entry.item ->> 'repair_code_id', '') is not null
+        then 'repair_code' else 'other' end,
+      nullif(entry.item ->> 'repair_code_id', '')::uuid
+    );
+  end loop;
+
+  perform public.recompute_invoice_totals(invoice_id);
+
+  insert into public.invoice_activity (
+    organisation_id, invoice_id, actor_user_id, action, detail
+  ) values (
+    member_org, invoice_id, p_actor_user_id, 'invoice.created',
+    'Repair invoice ' || invoice_number || ' created'
+  );
+
+  insert into public.audit_logs (
+    organisation_id, actor_user_id, action, entity_type, entity_id,
+    change_reason, new_values
+  ) values (
+    member_org, p_actor_user_id, 'invoice.created', 'invoice', invoice_id,
+    'Repair invoice ' || invoice_number || ' created',
+    jsonb_build_object('invoice_number', invoice_number, 'status', invoice_status, 'type', 'repair')
+  );
+
+  return invoice_id;
+end;
+$$;
+
+revoke all on function public.create_standalone_repair_invoice(uuid, jsonb) from public;
+grant execute on function public.create_standalone_repair_invoice(uuid, jsonb) to authenticated;
+
+commit;
+
+-- ===== 202607280003_standalone_sale_invoice.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS standalone vehicle-sale invoice
+--
+-- Adds:
+--  * sale_details jsonb column on invoices for sale-specific narrative and
+--    reference fields (part-exchange summary, payment method, warranty
+--    terms, vehicle snapshot when not linked to a stock vehicle row).
+--  * create_standalone_sale_invoice(actor, input) RPC that mirrors the
+--    existing create_sale_invoice but doesn't require a prior sales row.
+--    Accepts sale_price, deposit_paid, part_exchange allowance, warranty
+--    price, delivery/admin/prep fees and additional products, then builds
+--    invoice line items in the same shape as create_sale_invoice. Deposit
+--    is recorded as an invoice_payments row so the balance is correct.
+-- =============================================================================
+
+alter table public.invoices
+  add column if not exists sale_details jsonb;
+
+comment on column public.invoices.sale_details is
+  'Vehicle-sale invoice specific fields: warranty_terms, payment_method_note, part_exchange {description, allowance}, deposit_paid, vehicle {registration, vin, make, model, year, mileage}';
+
+create or replace function public.create_standalone_sale_invoice(
+  p_actor_user_id uuid,
+  p_input jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  member_org uuid;
+  cust public.customers%rowtype;
+  vehicle public.vehicles%rowtype;
+  settings public.dealership_settings%rowtype;
+  invoice_id uuid := gen_random_uuid();
+  invoice_number text;
+  invoice_status text := coalesce(p_input ->> 'status', 'draft');
+  vat_treatment text := coalesce(p_input ->> 'vat_treatment', 'margin');
+  vat_rate numeric(5,2);
+  sale_price numeric := coalesce((p_input ->> 'sale_price')::numeric, 0);
+  deposit_paid numeric := coalesce((p_input ->> 'deposit_paid')::numeric, 0);
+  warranty_price numeric := coalesce((p_input ->> 'warranty_price')::numeric, 0);
+  delivery_fee numeric := coalesce((p_input ->> 'delivery_fee')::numeric, 0);
+  admin_fee numeric := coalesce((p_input ->> 'admin_fee')::numeric, 0);
+  preparation_fee numeric := coalesce((p_input ->> 'preparation_fee')::numeric, 0);
+  part_exchange jsonb := coalesce(p_input -> 'part_exchange', '{}'::jsonb);
+  px_allowance numeric := coalesce((part_exchange ->> 'allowance')::numeric, 0);
+  extra_products jsonb := coalesce(p_input -> 'additional_products', '[]'::jsonb);
+  sort_cursor int := 0;
+  vehicle_snapshot jsonb := coalesce(p_input -> 'vehicle_snapshot', '{}'::jsonb);
+  vehicle_description text;
+  vehicle_registration text;
+  vehicle_line_title text;
+  payment_method text;
+begin
+  if p_actor_user_id is null then
+    raise exception 'Authentication is required' using errcode = '28000';
+  end if;
+
+  select organisation_id into member_org
+  from public.organisation_members
+  where user_id = p_actor_user_id
+    and is_active = true
+    and role in ('owner', 'manager', 'salesperson')
+  order by joined_at asc nulls last
+  limit 1;
+
+  if member_org is null then
+    raise exception 'Not authorised to create sale invoices' using errcode = '42501';
+  end if;
+  if invoice_status not in ('draft', 'sent') then
+    raise exception 'A new invoice must be draft or sent' using errcode = '22023';
+  end if;
+  if vat_treatment not in ('standard', 'margin', 'zero', 'exempt', 'not_registered') then
+    raise exception 'Unsupported VAT treatment' using errcode = '22023';
+  end if;
+  if sale_price <= 0 then
+    raise exception 'Sale price must be greater than zero' using errcode = '22023';
+  end if;
+
+  select * into cust
+  from public.customers
+  where id = (p_input ->> 'customer_id')::uuid
+    and organisation_id = member_org
+    and deleted_at is null;
+  if not found then
+    raise exception 'Customer not found' using errcode = 'P0002';
+  end if;
+
+  if nullif(p_input ->> 'vehicle_id', '') is not null then
+    select * into vehicle
+    from public.vehicles
+    where id = (p_input ->> 'vehicle_id')::uuid
+      and organisation_id = member_org
+      and deleted_at is null;
+    if not found then
+      raise exception 'Vehicle not found' using errcode = 'P0002';
+    end if;
+    vehicle_registration := vehicle.registration;
+    vehicle_description := nullif(
+      trim(concat_ws(' ', vehicle.year::text, vehicle.make, vehicle.model)), '');
+  else
+    vehicle_registration := nullif(trim(vehicle_snapshot ->> 'registration'), '');
+    vehicle_description := nullif(
+      trim(concat_ws(' ',
+        vehicle_snapshot ->> 'year',
+        vehicle_snapshot ->> 'make',
+        vehicle_snapshot ->> 'model')),
+      '');
+  end if;
+
+  vehicle_line_title := coalesce(vehicle_description, 'Vehicle sale');
+  if vehicle_registration is not null then
+    vehicle_line_title := vehicle_line_title || ' — ' || vehicle_registration;
+  end if;
+
+  vat_rate := case
+    when vat_treatment in ('zero', 'exempt', 'not_registered') then 0
+    else coalesce((p_input ->> 'vat_rate')::numeric, 20)
+  end;
+
+  select * into settings
+  from public.dealership_settings
+  where organisation_id = member_org;
+
+  invoice_number := public.allocate_invoice_number(member_org);
+  payment_method := nullif(trim(p_input ->> 'payment_method_note'), '');
+
+  insert into public.invoices (
+    id, organisation_id, invoice_number, invoice_title, type, status,
+    customer_id, customer_name_snapshot, customer_email_snapshot,
+    customer_phone_snapshot, billing_address_snapshot,
+    vehicle_id, vehicle_registration_snapshot, vehicle_description_snapshot,
+    issued_at, due_at, vat_treatment, vat_registration_snapshot,
+    show_vat, show_payment_details, notes, terms, sale_details,
+    created_by, issued_by
+  )
+  values (
+    invoice_id,
+    member_org,
+    invoice_number,
+    nullif(trim(p_input ->> 'title'), ''),
+    'vehicle_sale',
+    invoice_status,
+    cust.id,
+    coalesce(cust.full_name, trim(concat_ws(' ', cust.first_name, cust.last_name))),
+    cust.email,
+    cust.phone,
+    coalesce(cust.address, '{}'::jsonb),
+    vehicle.id,
+    vehicle_registration,
+    vehicle_description,
+    case
+      when invoice_status = 'sent'
+        then coalesce((p_input ->> 'issued_at')::timestamptz, now())
+      else null
+    end,
+    nullif(p_input ->> 'due_at', '')::timestamptz,
+    vat_treatment,
+    settings.vat_number,
+    coalesce((p_input ->> 'show_vat')::boolean, vat_treatment = 'standard'),
+    coalesce((p_input ->> 'show_payment_details')::boolean, true),
+    nullif(trim(p_input ->> 'notes'), ''),
+    nullif(trim(p_input ->> 'terms'), ''),
+    jsonb_strip_nulls(jsonb_build_object(
+      'warranty_terms', nullif(trim(p_input ->> 'warranty_terms'), ''),
+      'payment_method_note', payment_method,
+      'part_exchange', case
+        when part_exchange = '{}'::jsonb then null
+        else part_exchange
+      end,
+      'deposit_paid', case when deposit_paid > 0 then deposit_paid else null end,
+      'vehicle', case
+        when vehicle_snapshot = '{}'::jsonb then null
+        else vehicle_snapshot
+      end
+    )),
+    p_actor_user_id,
+    case when invoice_status = 'sent' then p_actor_user_id else null end
+  );
+
+  -- Line 1: vehicle sale price
+  sort_cursor := sort_cursor + 1;
+  insert into public.invoice_line_items (
+    organisation_id, invoice_id, sort_order, item_type, description,
+    quantity, unit_price, vat_rate, vat_treatment, source_type
+  )
+  values (
+    member_org, invoice_id, sort_cursor - 1, 'charge', vehicle_line_title,
+    1, sale_price,
+    case when vat_treatment = 'margin' then 0 else vat_rate end,
+    vat_treatment, 'vehicle'
+  );
+
+  if warranty_price > 0 then
+    sort_cursor := sort_cursor + 1;
+    insert into public.invoice_line_items (
+      organisation_id, invoice_id, sort_order, item_type, description,
+      quantity, unit_price, vat_rate, vat_treatment, source_type
+    )
+    values (
+      member_org, invoice_id, sort_cursor - 1, 'fee', 'Extended warranty',
+      1, warranty_price, vat_rate, vat_treatment, 'warranty'
+    );
+  end if;
+
+  if preparation_fee > 0 then
+    sort_cursor := sort_cursor + 1;
+    insert into public.invoice_line_items (
+      organisation_id, invoice_id, sort_order, item_type, description,
+      quantity, unit_price, vat_rate, vat_treatment, source_type
+    )
+    values (
+      member_org, invoice_id, sort_cursor - 1, 'fee', 'Vehicle preparation',
+      1, preparation_fee, vat_rate, vat_treatment, 'preparation'
+    );
+  end if;
+
+  if delivery_fee > 0 then
+    sort_cursor := sort_cursor + 1;
+    insert into public.invoice_line_items (
+      organisation_id, invoice_id, sort_order, item_type, description,
+      quantity, unit_price, vat_rate, vat_treatment, source_type
+    )
+    values (
+      member_org, invoice_id, sort_cursor - 1, 'fee', 'Delivery',
+      1, delivery_fee, vat_rate, vat_treatment, 'delivery'
+    );
+  end if;
+
+  if admin_fee > 0 then
+    sort_cursor := sort_cursor + 1;
+    insert into public.invoice_line_items (
+      organisation_id, invoice_id, sort_order, item_type, description,
+      quantity, unit_price, vat_rate, vat_treatment, source_type
+    )
+    values (
+      member_org, invoice_id, sort_cursor - 1, 'fee', 'Administration fee',
+      1, admin_fee, vat_rate, vat_treatment, 'admin_fee'
+    );
+  end if;
+
+  if jsonb_typeof(extra_products) = 'array' then
+    declare
+      product jsonb;
+      p_name text;
+      p_qty numeric;
+      p_price numeric;
+      p_vat numeric;
+    begin
+      for product in select value from jsonb_array_elements(extra_products)
+      loop
+        p_name := trim(product ->> 'name');
+        if p_name is null or p_name = '' then continue; end if;
+        p_qty := coalesce((product ->> 'quantity')::numeric, 1);
+        p_price := coalesce((product ->> 'price')::numeric, 0);
+        p_vat := coalesce((product ->> 'vat_rate')::numeric, vat_rate);
+        sort_cursor := sort_cursor + 1;
+        insert into public.invoice_line_items (
+          organisation_id, invoice_id, sort_order, item_type, description,
+          quantity, unit_price, vat_rate, vat_treatment, source_type
+        )
+        values (
+          member_org, invoice_id, sort_cursor - 1, 'fee', p_name,
+          p_qty, p_price, p_vat, vat_treatment, 'additional_product'
+        );
+      end loop;
+    end;
+  end if;
+
+  if px_allowance > 0 then
+    sort_cursor := sort_cursor + 1;
+    insert into public.invoice_line_items (
+      organisation_id, invoice_id, sort_order, item_type, description,
+      quantity, unit_price, vat_rate, vat_treatment, source_type
+    )
+    values (
+      member_org, invoice_id, sort_cursor - 1, 'discount',
+      coalesce(nullif(trim(part_exchange ->> 'description'), ''),
+               'Part-exchange allowance'),
+      1, px_allowance, 0, vat_treatment, 'part_exchange'
+    );
+  end if;
+
+  perform public.recompute_invoice_totals(invoice_id);
+
+  -- Record the deposit as a payment so the balance reflects it correctly.
+  if deposit_paid > 0 then
+    insert into public.invoice_payments (
+      organisation_id, invoice_id, amount, method, paid_at, notes,
+      recorded_by
+    )
+    values (
+      member_org, invoice_id, deposit_paid,
+      coalesce(nullif(trim(p_input ->> 'deposit_method'), ''), 'deposit_transfer'),
+      now(),
+      'Deposit received at sale creation',
+      p_actor_user_id
+    );
+    perform public.recompute_invoice_totals(invoice_id);
+  end if;
+
+  insert into public.invoice_activity (
+    organisation_id, invoice_id, actor_user_id, action, detail
+  ) values (
+    member_org, invoice_id, p_actor_user_id, 'invoice.created',
+    'Vehicle sale invoice ' || invoice_number || ' created'
+  );
+
+  insert into public.audit_logs (
+    organisation_id, actor_user_id, action, entity_type, entity_id,
+    change_reason, new_values
+  ) values (
+    member_org, p_actor_user_id, 'invoice.created', 'invoice', invoice_id,
+    'Vehicle sale invoice ' || invoice_number || ' created',
+    jsonb_build_object('invoice_number', invoice_number, 'status', invoice_status, 'type', 'vehicle_sale')
+  );
+
+  return invoice_id;
+end;
+$$;
+
+revoke all on function public.create_standalone_sale_invoice(uuid, jsonb) from public;
+grant execute on function public.create_standalone_sale_invoice(uuid, jsonb) to authenticated;
+
+commit;
+
+-- ===== 202607280004_duplicate_invoice.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS duplicate invoice
+--
+-- Copies a source invoice into a new draft: same customer, vehicle,
+-- type-specific detail blobs (repair_details / sale_details), line items,
+-- notes and terms. Allocates a fresh invoice number, resets payments,
+-- credit notes and issued/paid state. Returns the new invoice id.
+-- =============================================================================
+
+create or replace function public.duplicate_invoice(
+  p_actor_user_id uuid,
+  p_source_invoice_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  source public.invoices%rowtype;
+  new_invoice_id uuid := gen_random_uuid();
+  new_invoice_number text;
+begin
+  if p_actor_user_id is null then
+    raise exception 'Authentication is required' using errcode = '28000';
+  end if;
+
+  select * into source
+  from public.invoices
+  where id = p_source_invoice_id
+    and deleted_at is null;
+  if not found then
+    raise exception 'Source invoice not found' using errcode = 'P0002';
+  end if;
+
+  if not public.has_org_role(
+    source.organisation_id,
+    array['owner', 'manager', 'salesperson', 'service_advisor']
+  ) then
+    raise exception 'Not authorised to duplicate this invoice' using errcode = '42501';
+  end if;
+
+  new_invoice_number := public.allocate_invoice_number(source.organisation_id);
+
+  insert into public.invoices (
+    id, organisation_id, invoice_number, invoice_title, type, status,
+    customer_id, customer_name_snapshot, customer_email_snapshot,
+    customer_phone_snapshot, billing_address_snapshot,
+    vehicle_id, vehicle_registration_snapshot, vehicle_description_snapshot,
+    issued_at, due_at, vat_treatment, vat_registration_snapshot,
+    show_vat, show_payment_details, notes, terms,
+    repair_details, sale_details,
+    created_by
+  )
+  values (
+    new_invoice_id,
+    source.organisation_id,
+    new_invoice_number,
+    case
+      when source.invoice_title is not null
+        then source.invoice_title || ' (copy)'
+      else null
+    end,
+    source.type,
+    'draft',
+    source.customer_id,
+    source.customer_name_snapshot,
+    source.customer_email_snapshot,
+    source.customer_phone_snapshot,
+    source.billing_address_snapshot,
+    source.vehicle_id,
+    source.vehicle_registration_snapshot,
+    source.vehicle_description_snapshot,
+    null,
+    null,
+    source.vat_treatment,
+    source.vat_registration_snapshot,
+    source.show_vat,
+    source.show_payment_details,
+    source.notes,
+    source.terms,
+    source.repair_details,
+    source.sale_details,
+    p_actor_user_id
+  );
+
+  insert into public.invoice_line_items (
+    organisation_id, invoice_id, sort_order, item_type, description,
+    quantity, unit_price, vat_rate, discount_amount, vat_treatment,
+    source_type, source_id
+  )
+  select
+    organisation_id, new_invoice_id, sort_order, item_type, description,
+    quantity, unit_price, vat_rate, discount_amount, vat_treatment,
+    source_type, source_id
+  from public.invoice_line_items
+  where invoice_id = p_source_invoice_id
+    and deleted_at is null
+  order by sort_order;
+
+  perform public.recompute_invoice_totals(new_invoice_id);
+
+  insert into public.invoice_activity (
+    organisation_id, invoice_id, actor_user_id, action, detail
+  ) values (
+    source.organisation_id, new_invoice_id, p_actor_user_id,
+    'invoice.duplicated',
+    'Duplicated from ' || source.invoice_number ||
+      ' as ' || new_invoice_number
+  );
+
+  insert into public.audit_logs (
+    organisation_id, actor_user_id, action, entity_type, entity_id,
+    change_reason, new_values
+  ) values (
+    source.organisation_id, p_actor_user_id, 'invoice.duplicated',
+    'invoice', new_invoice_id,
+    'Duplicated invoice ' || source.invoice_number,
+    jsonb_build_object(
+      'source_invoice_id', p_source_invoice_id,
+      'new_invoice_id', new_invoice_id,
+      'new_invoice_number', new_invoice_number
+    )
+  );
+
+  return new_invoice_id;
+end;
+$$;
+
+revoke all on function public.duplicate_invoice(uuid, uuid) from public;
+grant execute on function public.duplicate_invoice(uuid, uuid) to authenticated;
+
+commit;
+
+-- ===== 202607280005_per_type_invoice_numbering.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS per-type invoice numbering
+--
+-- Each invoice type gets its own numbering sequence (prefix + counter),
+-- scoped to the organisation. The sequences live in a new table so staff
+-- can edit prefixes or reset counters from an admin UI. A BEFORE-INSERT
+-- trigger on public.invoices reassigns invoice_number using the correct
+-- sequence, so the existing invoice-creation RPCs (create_general_invoice,
+-- create_sale_invoice, create_repair_invoice, create_standalone_repair_invoice,
+-- create_standalone_sale_invoice, duplicate_invoice, credit-note flows) all
+-- pick this up without any code changes.
+--
+-- Types without a sequence row fall through to whatever number the RPC set
+-- (via allocate_invoice_number), so nothing breaks.
+-- =============================================================================
+
+create table if not exists public.invoice_number_sequences (
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  type text not null,
+  prefix text not null,
+  next_number bigint not null default 1 check (next_number >= 1),
+  digits smallint not null default 4 check (digits between 1 and 9),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (organisation_id, type)
+);
+
+alter table public.invoice_number_sequences enable row level security;
+
+create policy invoice_number_sequences_read on public.invoice_number_sequences
+  for select
+  using (
+    public.has_org_role(
+      organisation_id,
+      array['owner', 'manager', 'salesperson', 'service_advisor', 'accountant']
+    )
+  );
+
+create policy invoice_number_sequences_write on public.invoice_number_sequences
+  for all
+  using (public.has_org_role(organisation_id, array['owner', 'manager']))
+  with check (public.has_org_role(organisation_id, array['owner', 'manager']));
+
+-- Reasonable UK-dealership defaults.
+create or replace function public.seed_invoice_number_sequences(p_org uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.invoice_number_sequences (organisation_id, type, prefix, next_number, digits)
+  values
+    (p_org, 'repair',       'REP', 1, 4),
+    (p_org, 'vehicle_sale', 'SLE', 1, 4),
+    (p_org, 'general',      'GEN', 1, 4),
+    (p_org, 'pro_forma',    'PRO', 1, 4),
+    (p_org, 'vat',          'VAT', 1, 4),
+    (p_org, 'credit_note',  'CRN', 1, 4),
+    (p_org, 'sourcing',     'SRC', 1, 4),
+    (p_org, 'deposit',      'DEP', 1, 4)
+  on conflict (organisation_id, type) do nothing;
+end;
+$$;
+
+-- Seed sequences for every organisation that already exists.
+do $$
+declare
+  org record;
+begin
+  for org in select id from public.organisations loop
+    perform public.seed_invoice_number_sequences(org.id);
+  end loop;
+end;
+$$;
+
+-- Auto-seed when a new organisation is created.
+create or replace function public.on_organisation_created_seed_invoice_sequences()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.seed_invoice_number_sequences(new.id);
+  return new;
+end;
+$$;
+
+drop trigger if exists organisations_seed_invoice_sequences on public.organisations;
+create trigger organisations_seed_invoice_sequences
+  after insert on public.organisations
+  for each row
+  execute function public.on_organisation_created_seed_invoice_sequences();
+
+-- Reassign invoice_number using the correct per-type sequence.
+-- Runs BEFORE INSERT so the row is stored with the final number.
+create or replace function public.assign_typed_invoice_number()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  seq_prefix text;
+  seq_next bigint;
+  seq_digits smallint;
+begin
+  -- Fetch and lock the sequence row so concurrent inserts don't collide.
+  select prefix, next_number, digits
+    into seq_prefix, seq_next, seq_digits
+    from public.invoice_number_sequences
+   where organisation_id = new.organisation_id
+     and type = new.type
+   for update;
+
+  -- No sequence configured for this type: keep whatever the RPC set.
+  if seq_prefix is null then
+    return new;
+  end if;
+
+  new.invoice_number := seq_prefix || '-' || lpad(seq_next::text, seq_digits, '0');
+
+  update public.invoice_number_sequences
+     set next_number = seq_next + 1,
+         updated_at = now()
+   where organisation_id = new.organisation_id
+     and type = new.type;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists invoices_typed_number on public.invoices;
+create trigger invoices_typed_number
+  before insert on public.invoices
+  for each row
+  execute function public.assign_typed_invoice_number();
+
+commit;
+
+-- ===== 202607280006_invoice_narrative_edits.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS invoice narrative edits
+--
+-- Two RPCs that let staff correct the type-specific narrative on a repair or
+-- vehicle-sale invoice without opening the whole line-item flow. Totals,
+-- VAT, customer, vehicle links and line items are untouched — only the
+-- jsonb blobs (repair_details / sale_details) and the shared notes / terms
+-- fields are updated.
+--
+-- Allowed on any status except cancelled / void (edits are cosmetic and
+-- don't affect posted amounts). Both RPCs write to invoice_activity and
+-- audit_logs so the change is traceable.
+-- =============================================================================
+
+create or replace function public.update_repair_invoice_narrative(
+  p_actor_user_id uuid,
+  p_invoice_id uuid,
+  p_input jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  inv public.invoices%rowtype;
+  existing jsonb;
+  merged jsonb;
+begin
+  if p_actor_user_id is null then
+    raise exception 'Authentication is required' using errcode = '28000';
+  end if;
+
+  select * into inv
+  from public.invoices
+  where id = p_invoice_id and deleted_at is null;
+  if not found then
+    raise exception 'Invoice not found' using errcode = 'P0002';
+  end if;
+  if inv.type <> 'repair' then
+    raise exception 'Not a repair invoice' using errcode = '22023';
+  end if;
+  if inv.status in ('cancelled', 'void') then
+    raise exception 'Cancelled or void invoices cannot be edited'
+      using errcode = '22023';
+  end if;
+
+  if not public.has_org_role(
+    inv.organisation_id,
+    array['owner', 'manager', 'service_advisor']
+  ) then
+    raise exception 'Not authorised to edit this invoice' using errcode = '42501';
+  end if;
+
+  existing := coalesce(inv.repair_details, '{}'::jsonb);
+  merged := jsonb_strip_nulls(
+    existing || jsonb_build_object(
+      'reported_fault',    nullif(trim(p_input ->> 'reported_fault'), ''),
+      'diagnosis',         nullif(trim(p_input ->> 'diagnosis'), ''),
+      'work_completed',    nullif(trim(p_input ->> 'work_completed'), ''),
+      'technician_notes',  nullif(trim(p_input ->> 'technician_notes'), ''),
+      'recommendations',   nullif(trim(p_input ->> 'recommendations'), ''),
+      'warranty',          nullif(trim(p_input ->> 'warranty'), '')
+    )
+  );
+
+  update public.invoices
+  set repair_details = merged,
+      notes = nullif(trim(p_input ->> 'notes'), ''),
+      terms = nullif(trim(p_input ->> 'terms'), ''),
+      updated_at = now()
+  where id = p_invoice_id;
+
+  insert into public.invoice_activity (
+    organisation_id, invoice_id, actor_user_id, action, detail
+  ) values (
+    inv.organisation_id, p_invoice_id, p_actor_user_id,
+    'invoice.narrative_updated',
+    'Repair narrative updated on ' || inv.invoice_number
+  );
+
+  insert into public.audit_logs (
+    organisation_id, actor_user_id, action, entity_type, entity_id,
+    change_reason, new_values
+  ) values (
+    inv.organisation_id, p_actor_user_id, 'invoice.narrative_updated',
+    'invoice', p_invoice_id,
+    'Repair narrative updated on ' || inv.invoice_number,
+    jsonb_build_object('invoice_number', inv.invoice_number, 'type', 'repair')
+  );
+end;
+$$;
+
+revoke all on function public.update_repair_invoice_narrative(uuid, uuid, jsonb) from public;
+grant execute on function public.update_repair_invoice_narrative(uuid, uuid, jsonb) to authenticated;
+
+
+create or replace function public.update_sale_invoice_details(
+  p_actor_user_id uuid,
+  p_invoice_id uuid,
+  p_input jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  inv public.invoices%rowtype;
+  existing jsonb;
+  part_exchange jsonb;
+  merged jsonb;
+begin
+  if p_actor_user_id is null then
+    raise exception 'Authentication is required' using errcode = '28000';
+  end if;
+
+  select * into inv
+  from public.invoices
+  where id = p_invoice_id and deleted_at is null;
+  if not found then
+    raise exception 'Invoice not found' using errcode = 'P0002';
+  end if;
+  if inv.type <> 'vehicle_sale' then
+    raise exception 'Not a vehicle sale invoice' using errcode = '22023';
+  end if;
+  if inv.status in ('cancelled', 'void') then
+    raise exception 'Cancelled or void invoices cannot be edited'
+      using errcode = '22023';
+  end if;
+
+  if not public.has_org_role(
+    inv.organisation_id,
+    array['owner', 'manager', 'salesperson']
+  ) then
+    raise exception 'Not authorised to edit this invoice' using errcode = '42501';
+  end if;
+
+  existing := coalesce(inv.sale_details, '{}'::jsonb);
+
+  part_exchange := jsonb_strip_nulls(jsonb_build_object(
+    'description',   nullif(trim(p_input #>> '{part_exchange,description}'), ''),
+    'allowance',     nullif(p_input #>> '{part_exchange,allowance}', '')::numeric,
+    'registration',  nullif(trim(p_input #>> '{part_exchange,registration}'), ''),
+    'mileage',       nullif(p_input #>> '{part_exchange,mileage}', '')
+  ));
+
+  merged := jsonb_strip_nulls(
+    existing || jsonb_build_object(
+      'warranty_terms',      nullif(trim(p_input ->> 'warranty_terms'), ''),
+      'payment_method_note', nullif(trim(p_input ->> 'payment_method_note'), ''),
+      'part_exchange',       case when part_exchange = '{}'::jsonb then null else part_exchange end
+    )
+  );
+
+  update public.invoices
+  set sale_details = merged,
+      notes = nullif(trim(p_input ->> 'notes'), ''),
+      terms = nullif(trim(p_input ->> 'terms'), ''),
+      updated_at = now()
+  where id = p_invoice_id;
+
+  insert into public.invoice_activity (
+    organisation_id, invoice_id, actor_user_id, action, detail
+  ) values (
+    inv.organisation_id, p_invoice_id, p_actor_user_id,
+    'invoice.narrative_updated',
+    'Sale details updated on ' || inv.invoice_number
+  );
+
+  insert into public.audit_logs (
+    organisation_id, actor_user_id, action, entity_type, entity_id,
+    change_reason, new_values
+  ) values (
+    inv.organisation_id, p_actor_user_id, 'invoice.narrative_updated',
+    'invoice', p_invoice_id,
+    'Sale details updated on ' || inv.invoice_number,
+    jsonb_build_object('invoice_number', inv.invoice_number, 'type', 'vehicle_sale')
+  );
+end;
+$$;
+
+revoke all on function public.update_sale_invoice_details(uuid, uuid, jsonb) from public;
+grant execute on function public.update_sale_invoice_details(uuid, uuid, jsonb) to authenticated;
+
+commit;
+
+-- ===== 202607290001_security_invoker_public_views.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS · Address Supabase "Security Definer View" lint
+--
+-- The five public.* projection views (public_dealerships, public_safe_vehicles,
+-- public_vehicle_images, public_vehicle_features, public_vehicle_inventory)
+-- were created without `security_invoker = on`. In PostgreSQL a view without
+-- this setting runs with the view *owner's* privileges, which effectively
+-- bypasses RLS on the underlying tables — the whole reason those views could
+-- be read by `anon` today.
+--
+-- Fix: flip every view to `security_invoker = on` (so the caller's role and
+-- RLS apply), then add narrow public-read policies on the underlying tables
+-- that mirror the exact subset the views project. Read paths for `anon`
+-- (and any authenticated user) go through those policies; the existing
+-- authenticated / staff policies keep working unchanged.
+-- =============================================================================
+
+
+-- Public read on organisations: only ever the active ones the public views
+-- already exposed via the join. Reading other columns is still blocked by
+-- the fact that this policy grants SELECT on rows only — column-level access
+-- comes from the view definitions, which pick a public-safe projection.
+create policy organisations_public_read
+  on public.organisations
+  for select
+  to anon, authenticated
+  using (status = 'active' and deleted_at is null);
+
+-- Public read on dealership_settings: only for those whose organisation is
+-- active. Same public-safe columns come through the public_dealerships view.
+create policy dealership_settings_public_read
+  on public.dealership_settings
+  for select
+  to anon, authenticated
+  using (
+    exists (
+      select 1 from public.organisations o
+      where o.id = organisation_id
+        and o.status = 'active'
+        and o.deleted_at is null
+    )
+  );
+
+-- Public read on vehicles: mirrors the filter the public_safe_vehicles view
+-- already enforces (published, not soft-deleted, publishable status, and
+-- populated advert fields). Any authenticated non-member also sees only
+-- these rows via this policy.
+create policy vehicles_public_read
+  on public.vehicles
+  for select
+  to anon, authenticated
+  using (
+    is_public = true
+    and deleted_at is null
+    and status in ('ready_for_sale', 'on_forecourt', 'reserved', 'sold')
+    and slug is not null
+    and public_title is not null
+    and description is not null
+    and retail_price > 0
+    and exists (
+      select 1 from public.organisations o
+      where o.id = organisation_id
+        and o.status = 'active'
+        and o.deleted_at is null
+    )
+  );
+
+-- Public read on vehicle_images: only cover / gallery images whose parent
+-- vehicle satisfies the public read policy above.
+create policy vehicle_images_public_read
+  on public.vehicle_images
+  for select
+  to anon, authenticated
+  using (
+    is_public = true
+    and deleted_at is null
+    and exists (
+      select 1 from public.vehicles v
+      where v.id = vehicle_id
+        and v.is_public = true
+        and v.deleted_at is null
+        and v.status in ('ready_for_sale', 'on_forecourt', 'reserved', 'sold')
+    )
+  );
+
+-- Public read on vehicle_features: same story — features of a publishable
+-- vehicle only.
+create policy vehicle_features_public_read
+  on public.vehicle_features
+  for select
+  to anon, authenticated
+  using (
+    exists (
+      select 1 from public.vehicles v
+      where v.id = vehicle_id
+        and v.is_public = true
+        and v.deleted_at is null
+        and v.status in ('ready_for_sale', 'on_forecourt', 'reserved', 'sold')
+    )
+  );
+
+
+-- Recreate the five views with `security_invoker = on`. The projected
+-- columns and WHERE clauses are unchanged from the current definitions.
+
+create or replace view public.public_dealerships
+with (security_invoker = on, security_barrier = true)
+as
+select
+  o.id,
+  o.slug,
+  ds.dealership_name,
+  ds.logo_path,
+  ds.telephone,
+  ds.email,
+  ds.address,
+  ds.opening_hours,
+  ds.social_links,
+  ds.company_number,
+  ds.vat_number,
+  ds.brand_primary_colour,
+  ds.brand_accent_colour,
+  ds.homepage_wording,
+  ds.legal_wording,
+  ds.timezone
+from public.organisations o
+join public.dealership_settings ds on ds.organisation_id = o.id
+where o.status = 'active'
+  and o.deleted_at is null;
+
+create or replace view public.public_safe_vehicles
+with (security_invoker = on, security_barrier = true)
+as
+select
+  v.id,
+  v.organisation_id,
+  o.slug as organisation_slug,
+  v.slug,
+  v.public_title,
+  v.attention_grabber,
+  v.make,
+  v.model,
+  v.derivative,
+  v.trim_level,
+  v.body_type,
+  v.fuel_type,
+  v.transmission,
+  v.colour,
+  v.doors,
+  v.seats,
+  v.engine_size_cc,
+  v.power_bhp,
+  v.co2_emissions_g_km,
+  v.euro_emissions_standard,
+  v.ulez_status,
+  v.year,
+  v.registration_year,
+  v.mot_expiry,
+  v.mot_status,
+  v.mileage,
+  v.service_history,
+  v.warranty,
+  v.retail_price as price,
+  v.description,
+  v.standard_equipment,
+  v.optional_equipment,
+  v.finance_example_text,
+  v.warranty_wording,
+  v.video_url,
+  v.featured,
+  v.status,
+  v.created_at
+from public.vehicles v
+join public.organisations o on o.id = v.organisation_id
+where v.is_public = true
+  and v.deleted_at is null
+  and o.status = 'active'
+  and o.deleted_at is null
+  and v.status in ('ready_for_sale', 'on_forecourt', 'reserved', 'sold')
+  and v.slug is not null
+  and v.public_title is not null
+  and v.description is not null
+  and v.retail_price > 0;
+
+create or replace view public.public_vehicle_images
+with (security_invoker = on, security_barrier = true)
+as
+select
+  vi.id,
+  vi.vehicle_id,
+  vi.storage_bucket,
+  vi.storage_path,
+  vi.external_url,
+  vi.mime_type,
+  vi.width,
+  vi.height,
+  vi.sort_order,
+  vi.is_cover,
+  vi.alt_text,
+  vi.caption
+from public.vehicle_images vi
+join public.vehicles v on v.id = vi.vehicle_id
+join public.organisations o on o.id = vi.organisation_id
+where vi.is_public = true
+  and vi.deleted_at is null
+  and v.is_public = true
+  and v.deleted_at is null
+  and v.status in ('ready_for_sale', 'on_forecourt', 'reserved', 'sold')
+  and o.status = 'active'
+  and o.deleted_at is null;
+
+create or replace view public.public_vehicle_features
+with (security_invoker = on, security_barrier = true)
+as
+select
+  vf.id,
+  vf.vehicle_id,
+  vf.name,
+  vf.sort_order
+from public.vehicle_features vf
+join public.vehicles v on v.id = vf.vehicle_id
+join public.organisations o on o.id = v.organisation_id
+where v.is_public = true
+  and v.deleted_at is null
+  and v.status in ('ready_for_sale', 'on_forecourt', 'reserved', 'sold')
+  and o.status = 'active'
+  and o.deleted_at is null;
+
+create or replace view public.public_vehicle_inventory
+with (security_invoker = on, security_barrier = true)
+as
+select
+  safe_vehicle.*,
+  vehicle.features
+from public.public_safe_vehicles safe_vehicle
+join public.vehicles vehicle
+  on vehicle.id = safe_vehicle.id
+  and vehicle.organisation_id = safe_vehicle.organisation_id;
+
+-- Grant identical select privileges on the recreated views.
+revoke all on public.public_dealerships from public;
+grant select on public.public_dealerships to anon, authenticated;
+
+revoke all on public.public_safe_vehicles from public;
+grant select on public.public_safe_vehicles to anon, authenticated;
+
+revoke all on public.public_vehicle_images from public;
+grant select on public.public_vehicle_images to anon, authenticated;
+
+revoke all on public.public_vehicle_features from public;
+grant select on public.public_vehicle_features to anon, authenticated;
+
+revoke all on public.public_vehicle_inventory from public;
+grant select on public.public_vehicle_inventory to anon, authenticated;
+
+commit;
+
+-- ===== 202608140001_motoros_saas_foundation.sql =====
+
+begin;
+
+-- MOTOR.OS platform administrators are deliberately separate from dealership
+-- memberships. The email allow-list remains a read-only bootstrap mechanism in
+-- the application; mutating platform actions require a row in this table.
+create table public.platform_admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  status text not null default 'active'
+    check (status in ('active', 'suspended')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null
+);
+
+create or replace function public.is_platform_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.platform_admins pa
+    where pa.user_id = auth.uid()
+      and pa.status = 'active'
+  );
+$$;
+
+alter table public.organisations
+  drop constraint if exists organisations_status_check;
+alter table public.organisations
+  add constraint organisations_status_check
+  check (status in ('trial', 'active', 'suspended', 'cancelled', 'closed'));
+
+create table public.dealership_subscriptions (
+  organisation_id uuid primary key references public.organisations(id) on delete cascade,
+  plan_code text not null default 'starter'
+    check (plan_code in ('starter', 'professional', 'premium', 'custom')),
+  status text not null default 'trialing'
+    check (status in ('trialing', 'active', 'past_due', 'cancelled', 'suspended')),
+  trial_ends_at timestamptz,
+  current_period_starts_at timestamptz,
+  current_period_ends_at timestamptz,
+  provider text,
+  external_customer_id text,
+  external_subscription_id text,
+  monthly_amount_pence integer check (
+    monthly_amount_pence is null or monthly_amount_pence >= 0
+  ),
+  currency_code char(3) not null default 'GBP',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null
+);
+
+create index dealership_subscriptions_status_idx
+  on public.dealership_subscriptions (status, plan_code, updated_at desc);
+
+create table public.dealership_entitlements (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  feature_key text not null check (
+    feature_key ~ '^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$'
+  ),
+  enabled boolean not null,
+  limits jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(limits) = 'object'),
+  source text not null default 'override'
+    check (source in ('plan', 'override', 'trial')),
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null,
+  unique (organisation_id, feature_key)
+);
+
+create index dealership_entitlements_org_enabled_idx
+  on public.dealership_entitlements (organisation_id, enabled, feature_key);
+
+create table public.website_themes (
+  id text primary key check (id in ('modern', 'performance', 'classic', 'luxury')),
+  name text not null,
+  description text not null,
+  preview_tokens jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(preview_tokens) = 'object'),
+  required_entitlement text,
+  display_order integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.website_themes (
+  id,
+  name,
+  description,
+  preview_tokens,
+  required_entitlement,
+  display_order
+)
+values
+  (
+    'modern',
+    'Modern',
+    'Bright, minimal and conversion-focused with clean vehicle cards.',
+    '{"surface":"#ffffff","ink":"#172033","accent":"#2f6f60"}',
+    null,
+    10
+  ),
+  (
+    'performance',
+    'Performance',
+    'Dark, high-contrast presentation for sports and performance stock.',
+    '{"surface":"#111315","ink":"#f7f7f5","accent":"#ef3d32"}',
+    'website.themes.premium',
+    20
+  ),
+  (
+    'classic',
+    'Classic Dealer',
+    'Traditional, trustworthy styling with prominent contact actions.',
+    '{"surface":"#f6f1e7","ink":"#22354a","accent":"#b87a2c"}',
+    null,
+    30
+  ),
+  (
+    'luxury',
+    'Luxury',
+    'Editorial spacing, restrained colour and premium typography.',
+    '{"surface":"#f7f5f0","ink":"#161616","accent":"#9c7b45"}',
+    'website.themes.premium',
+    40
+  )
+on conflict (id) do update
+set
+  name = excluded.name,
+  description = excluded.description,
+  preview_tokens = excluded.preview_tokens,
+  required_entitlement = excluded.required_entitlement,
+  display_order = excluded.display_order,
+  is_active = true,
+  updated_at = now();
+
+-- Keep the database permission catalogue aligned with the application roles.
+-- Owner already has the wildcard grant.
+update public.roles
+set permissions = permissions || '["social:*","website:*"]'::jsonb,
+    updated_at = now()
+where code = 'manager';
+
+update public.roles
+set permissions = permissions || '["social:read"]'::jsonb,
+    updated_at = now()
+where code = 'salesperson';
+
+-- Composite uniqueness lets every new cross-entity foreign key prove that
+-- both sides belong to the same dealership, not merely that an ID exists.
+alter table public.customers
+  add constraint customers_org_id_unique unique (organisation_id, id);
+alter table public.vehicles
+  add constraint vehicles_org_id_unique unique (organisation_id, id);
+alter table public.leads
+  add constraint leads_org_id_unique unique (organisation_id, id);
+
+create table public.dealership_sites (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null unique references public.organisations(id) on delete cascade,
+  theme_id text not null default 'modern' references public.website_themes(id),
+  status text not null default 'draft'
+    check (status in ('disabled', 'draft', 'live', 'suspended')),
+  suspended_from_status text check (
+    suspended_from_status is null
+    or suspended_from_status in ('disabled', 'draft', 'live')
+  ),
+  hosted_subdomain text unique check (
+    hosted_subdomain is null
+    or hosted_subdomain ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+  ),
+  branding jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(branding) = 'object'),
+  homepage_settings jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(homepage_settings) = 'object'),
+  navigation jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(navigation) = 'array'),
+  seo_settings jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(seo_settings) = 'object'),
+  published_at timestamptz,
+  last_deployment_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id) on delete set null,
+  unique (organisation_id, id)
+);
+
+create index dealership_sites_status_idx
+  on public.dealership_sites (status, theme_id, updated_at desc);
+
+create table public.dealership_domains (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  site_id uuid not null,
+  hostname text not null unique check (
+    hostname = lower(hostname)
+    and hostname ~ '^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$'
+  ),
+  domain_type text not null check (domain_type in ('hosted', 'custom')),
+  status text not null default 'pending'
+    check (status in ('pending', 'verified', 'active', 'error', 'disabled')),
+  verification_token_hash text,
+  last_checked_at timestamptz,
+  verified_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null,
+  constraint dealership_domains_site_tenant_fk
+    foreign key (organisation_id, site_id)
+    references public.dealership_sites(organisation_id, id)
+    on delete cascade
+);
+
+create index dealership_domains_org_status_idx
+  on public.dealership_domains (organisation_id, status, domain_type);
+
+-- Reuse the existing integration_settings table as the single connection
+-- record rather than introducing a competing social-account model.
+alter table public.integration_settings
+  drop constraint if exists integration_settings_status_check;
+alter table public.integration_settings
+  add constraint integration_settings_status_check
+  check (
+    status in (
+      'not_configured',
+      'connecting',
+      'connected',
+      'token_expired',
+      'action_required',
+      'authentication_failed',
+      'permission_missing',
+      'syncing',
+      'error',
+      'disabled'
+    )
+  );
+alter table public.integration_settings
+  add column if not exists account_name text,
+  add column if not exists account_username text,
+  add column if not exists account_avatar_url text,
+  add column if not exists capabilities text[] not null default '{}',
+  add column if not exists credentials_updated_at timestamptz;
+alter table public.integration_settings
+  add constraint integration_settings_org_id_unique unique (organisation_id, id);
+
+create table public.social_posts (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  vehicle_id uuid,
+  caption text not null check (char_length(caption) between 1 and 5000),
+  call_to_action text,
+  media jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(media) = 'array'),
+  status text not null default 'draft'
+    check (status in ('draft', 'scheduled', 'publishing', 'published', 'failed', 'cancelled')),
+  scheduled_for timestamptz,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by uuid references auth.users(id) on delete set null,
+  unique (organisation_id, id),
+  constraint social_posts_vehicle_tenant_fk
+    foreign key (organisation_id, vehicle_id)
+    references public.vehicles(organisation_id, id)
+    on delete set null (vehicle_id)
+);
+
+create index social_posts_calendar_idx
+  on public.social_posts (organisation_id, scheduled_for, status)
+  where status in ('draft', 'scheduled', 'publishing', 'failed');
+
+create table public.social_post_targets (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  social_post_id uuid not null,
+  integration_setting_id uuid not null,
+  provider text not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'scheduled', 'publishing', 'published', 'failed', 'cancelled')),
+  external_post_id text,
+  error_code text,
+  error_message text,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (social_post_id, integration_setting_id),
+  constraint social_post_targets_post_tenant_fk
+    foreign key (organisation_id, social_post_id)
+    references public.social_posts(organisation_id, id)
+    on delete cascade,
+  constraint social_post_targets_connection_tenant_fk
+    foreign key (organisation_id, integration_setting_id)
+    references public.integration_settings(organisation_id, id)
+    on delete cascade
+);
+
+create index social_post_targets_delivery_idx
+  on public.social_post_targets (organisation_id, status, updated_at desc);
+
+create table public.social_conversations (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  integration_setting_id uuid,
+  provider text not null,
+  external_conversation_id text,
+  customer_id uuid,
+  vehicle_id uuid,
+  lead_id uuid,
+  assigned_user_id uuid references auth.users(id) on delete set null,
+  subject text,
+  status text not null default 'open'
+    check (status in ('open', 'pending', 'closed', 'spam')),
+  unread_count integer not null default 0 check (unread_count >= 0),
+  last_message_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organisation_id, provider, external_conversation_id),
+  unique (organisation_id, id),
+  constraint social_conversations_connection_tenant_fk
+    foreign key (organisation_id, integration_setting_id)
+    references public.integration_settings(organisation_id, id)
+    on delete restrict,
+  constraint social_conversations_customer_tenant_fk
+    foreign key (organisation_id, customer_id)
+    references public.customers(organisation_id, id)
+    on delete set null (customer_id),
+  constraint social_conversations_vehicle_tenant_fk
+    foreign key (organisation_id, vehicle_id)
+    references public.vehicles(organisation_id, id)
+    on delete set null (vehicle_id),
+  constraint social_conversations_lead_tenant_fk
+    foreign key (organisation_id, lead_id)
+    references public.leads(organisation_id, id)
+    on delete set null (lead_id)
+);
+
+create index social_conversations_inbox_idx
+  on public.social_conversations (organisation_id, status, last_message_at desc);
+
+create table public.social_messages (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references public.organisations(id) on delete cascade,
+  conversation_id uuid not null,
+  external_message_id text,
+  direction text not null check (direction in ('inbound', 'outbound', 'system')),
+  sender_display_name text,
+  body text,
+  media jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(media) = 'array'),
+  delivery_status text not null default 'received'
+    check (delivery_status in ('received', 'queued', 'sent', 'delivered', 'read', 'failed')),
+  sent_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  unique (organisation_id, conversation_id, external_message_id),
+  constraint social_messages_conversation_tenant_fk
+    foreign key (organisation_id, conversation_id)
+    references public.social_conversations(organisation_id, id)
+    on delete cascade
+);
+
+create index social_messages_conversation_idx
+  on public.social_messages (organisation_id, conversation_id, sent_at);
+
+alter table public.leads
+  add column if not exists source_campaign text,
+  add column if not exists source_external_id text,
+  add column if not exists originating_conversation_id uuid;
+alter table public.leads
+  add constraint leads_originating_conversation_tenant_fk
+  foreign key (organisation_id, originating_conversation_id)
+  references public.social_conversations(organisation_id, id)
+  on delete set null (originating_conversation_id);
+create index if not exists leads_source_attribution_idx
+  on public.leads (organisation_id, source, created_at desc)
+  where deleted_at is null;
+
+create or replace function public.convert_social_conversation_to_lead(
+  target_organisation_id uuid,
+  target_conversation_id uuid,
+  actor_user_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  conversation public.social_conversations%rowtype;
+  latest_message text;
+  created_lead_id uuid;
+  lead_title text;
+begin
+  select *
+  into strict conversation
+  from public.social_conversations
+  where organisation_id = target_organisation_id
+    and id = target_conversation_id
+  for update;
+
+  if conversation.lead_id is not null then
+    return conversation.lead_id;
+  end if;
+
+  select body
+  into latest_message
+  from public.social_messages
+  where organisation_id = target_organisation_id
+    and conversation_id = target_conversation_id
+    and direction = 'inbound'
+  order by sent_at desc
+  limit 1;
+
+  lead_title := coalesce(
+    nullif(trim(conversation.subject), ''),
+    initcap(replace(conversation.provider, '_', ' ')) || ' enquiry'
+  );
+
+  insert into public.leads (
+    organisation_id,
+    lead_type,
+    status,
+    customer_id,
+    vehicle_id,
+    assigned_user_id,
+    title,
+    subject,
+    message,
+    source,
+    source_detail,
+    source_external_id,
+    originating_conversation_id,
+    metadata,
+    created_by
+  )
+  values (
+    target_organisation_id,
+    'general_enquiry',
+    'new',
+    conversation.customer_id,
+    conversation.vehicle_id,
+    conversation.assigned_user_id,
+    lead_title,
+    lead_title,
+    latest_message,
+    conversation.provider,
+    conversation.provider || ' conversation',
+    conversation.external_conversation_id,
+    conversation.id,
+    jsonb_build_object(
+      'provider', conversation.provider,
+      'social_conversation_id', conversation.id
+    ),
+    actor_user_id
+  )
+  returning id into created_lead_id;
+
+  update public.social_conversations
+  set lead_id = created_lead_id,
+      updated_at = now()
+  where organisation_id = target_organisation_id
+    and id = target_conversation_id;
+
+  insert into public.audit_logs (
+    organisation_id,
+    actor_user_id,
+    table_name,
+    record_id,
+    action,
+    entity_type,
+    entity_id,
+    changed_fields,
+    new_values,
+    source
+  )
+  values (
+    target_organisation_id,
+    actor_user_id,
+    'leads',
+    created_lead_id,
+    'social_conversation.converted_to_lead',
+    'lead',
+    created_lead_id,
+    array['source', 'originating_conversation_id'],
+    jsonb_build_object(
+      'source', conversation.provider,
+      'originating_conversation_id', conversation.id
+    ),
+    'admin_api'
+  );
+
+  return created_lead_id;
+end;
+$$;
+
+create or replace function public.initialise_motoros_tenant()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.dealership_subscriptions (
+    organisation_id,
+    plan_code,
+    status,
+    trial_ends_at,
+    created_by
+  )
+  values (new.id, 'starter', 'trialing', now() + interval '14 days', new.created_by)
+  on conflict (organisation_id) do nothing;
+
+  insert into public.dealership_sites (
+    organisation_id,
+    theme_id,
+    status,
+    hosted_subdomain,
+    updated_by
+  )
+  values (new.id, 'modern', 'draft', new.slug, new.created_by)
+  on conflict (organisation_id) do nothing;
+
+  return new;
+end;
+$$;
+
+create trigger organisations_initialise_motoros_tenant
+after insert on public.organisations
+for each row execute function public.initialise_motoros_tenant();
+
+insert into public.dealership_subscriptions (
+  organisation_id,
+  plan_code,
+  status,
+  current_period_starts_at,
+  created_by
+)
+select o.id, 'starter', 'active', o.created_at, o.created_by
+from public.organisations o
+on conflict (organisation_id) do nothing;
+
+insert into public.dealership_sites (
+  organisation_id,
+  theme_id,
+  status,
+  hosted_subdomain,
+  updated_by
+)
+select o.id, 'modern', 'draft', o.slug, o.created_by
+from public.organisations o
+on conflict (organisation_id) do nothing;
+
+create or replace function public.platform_set_dealership_status(
+  target_organisation_id uuid,
+  next_status text,
+  reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  previous_status text;
+begin
+  if not public.is_platform_admin() then
+    raise exception 'Platform administrator access is required'
+      using errcode = '42501';
+  end if;
+
+  if next_status not in ('active', 'suspended') then
+    raise exception 'Unsupported dealership status transition'
+      using errcode = '22023';
+  end if;
+
+  select status
+  into strict previous_status
+  from public.organisations
+  where id = target_organisation_id
+    and deleted_at is null
+  for update;
+
+  if previous_status = next_status then
+    return;
+  end if;
+
+  update public.organisations
+  set status = next_status,
+      updated_at = now()
+  where id = target_organisation_id;
+
+  update public.dealership_sites
+  set suspended_from_status = case
+        when next_status = 'suspended' and status <> 'suspended' then status
+        when next_status = 'active' then null
+        else suspended_from_status
+      end,
+      status = case
+        when next_status = 'suspended' then 'suspended'
+        when status = 'suspended' then coalesce(suspended_from_status, 'draft')
+        else status
+      end,
+      updated_at = now(),
+      updated_by = auth.uid()
+  where organisation_id = target_organisation_id;
+
+  insert into public.audit_logs (
+    organisation_id,
+    actor_user_id,
+    table_name,
+    record_id,
+    action,
+    entity_type,
+    entity_id,
+    change_reason,
+    changed_fields,
+    old_values,
+    new_values,
+    source
+  )
+  values (
+    target_organisation_id,
+    auth.uid(),
+    'organisations',
+    target_organisation_id,
+    case
+      when next_status = 'suspended' then 'platform.dealership.suspended'
+      else 'platform.dealership.reactivated'
+    end,
+    'organisation',
+    target_organisation_id,
+    nullif(trim(reason), ''),
+    array['status'],
+    jsonb_build_object('status', previous_status),
+    jsonb_build_object('status', next_status),
+    'platform_admin'
+  );
+end;
+$$;
+
+create or replace view public.public_dealerships
+with (security_invoker = on, security_barrier = true)
+as
+select
+  o.id,
+  o.slug,
+  ds.dealership_name,
+  ds.logo_path,
+  ds.telephone,
+  ds.email,
+  ds.address,
+  ds.opening_hours,
+  ds.social_links,
+  ds.company_number,
+  ds.vat_number,
+  ds.brand_primary_colour,
+  ds.brand_accent_colour,
+  ds.homepage_wording,
+  ds.legal_wording,
+  ds.timezone,
+  coalesce(site.theme_id, 'modern') as website_theme_id,
+  coalesce(site.status, 'draft') as website_status
+from public.organisations o
+join public.dealership_settings ds on ds.organisation_id = o.id
+left join public.dealership_sites site on site.organisation_id = o.id
+where o.status = 'active'
+  and o.deleted_at is null
+  and (site.status is null or site.status in ('draft', 'live'));
+
+-- Pre-aggregate control-centre metrics in Postgres. The application reads one
+-- row per tenant instead of transferring every vehicle, invoice, lead and sale
+-- to the Next.js process. This view is service-role only.
+create or replace view public.platform_dealership_metrics
+with (security_invoker = on, security_barrier = true)
+as
+with member_metrics as (
+  select organisation_id, count(distinct user_id) as member_count
+  from public.organisation_members
+  where status = 'active' and deleted_at is null
+  group by organisation_id
+),
+vehicle_metrics as (
+  select
+    organisation_id,
+    count(*) as vehicle_count,
+    count(*) filter (where status <> 'sold') as vehicles_in_stock,
+    count(*) filter (where is_public) as advertised_vehicle_count,
+    count(*) filter (where status = 'sold') as sold_vehicle_count
+  from public.vehicles
+  where deleted_at is null
+  group by organisation_id
+),
+invoice_metrics as (
+  select
+    organisation_id,
+    count(*) filter (where status not in ('cancelled', 'void')) as active_invoice_count,
+    count(*) filter (
+      where status not in ('cancelled', 'void')
+        and created_at >= now() - interval '30 days'
+    ) as invoices_last_30_days,
+    coalesce(sum(total) filter (
+      where status not in ('cancelled', 'void')
+        and created_at >= now() - interval '30 days'
+    ), 0) as invoiced_value_last_30_days
+  from public.invoices
+  where deleted_at is null
+  group by organisation_id
+),
+lead_metrics as (
+  select organisation_id, count(*) as lead_count
+  from public.leads
+  where deleted_at is null
+  group by organisation_id
+),
+sale_metrics as (
+  select organisation_id, count(*) as sale_count
+  from public.sales
+  where deleted_at is null
+  group by organisation_id
+),
+activity_metrics as (
+  select organisation_id, max(occurred_at) as last_activity_at
+  from public.audit_logs
+  where organisation_id is not null
+  group by organisation_id
+)
+select
+  o.id as organisation_id,
+  o.name,
+  o.slug,
+  o.status,
+  o.created_at,
+  coalesce(mm.member_count, 0) as member_count,
+  coalesce(vm.vehicle_count, 0) as vehicle_count,
+  coalesce(vm.vehicles_in_stock, 0) as vehicles_in_stock,
+  coalesce(vm.advertised_vehicle_count, 0) as advertised_vehicle_count,
+  coalesce(vm.sold_vehicle_count, 0) as sold_vehicle_count,
+  coalesce(im.active_invoice_count, 0) as active_invoice_count,
+  coalesce(im.invoices_last_30_days, 0) as invoices_last_30_days,
+  coalesce(im.invoiced_value_last_30_days, 0) as invoiced_value_last_30_days,
+  coalesce(lm.lead_count, 0) as lead_count,
+  coalesce(sm.sale_count, 0) as sale_count,
+  am.last_activity_at
+from public.organisations o
+left join member_metrics mm on mm.organisation_id = o.id
+left join vehicle_metrics vm on vm.organisation_id = o.id
+left join invoice_metrics im on im.organisation_id = o.id
+left join lead_metrics lm on lm.organisation_id = o.id
+left join sale_metrics sm on sm.organisation_id = o.id
+left join activity_metrics am on am.organisation_id = o.id
+where o.deleted_at is null;
+
+create trigger platform_admins_touch_updated_at
+before update on public.platform_admins
+for each row execute function public.touch_updated_at();
+create trigger dealership_subscriptions_touch_updated_at
+before update on public.dealership_subscriptions
+for each row execute function public.touch_updated_at();
+create trigger dealership_entitlements_touch_updated_at
+before update on public.dealership_entitlements
+for each row execute function public.touch_updated_at();
+create trigger website_themes_touch_updated_at
+before update on public.website_themes
+for each row execute function public.touch_updated_at();
+create trigger dealership_sites_touch_updated_at
+before update on public.dealership_sites
+for each row execute function public.touch_updated_at();
+create trigger dealership_domains_touch_updated_at
+before update on public.dealership_domains
+for each row execute function public.touch_updated_at();
+create trigger social_posts_touch_updated_at
+before update on public.social_posts
+for each row execute function public.touch_updated_at();
+create trigger social_post_targets_touch_updated_at
+before update on public.social_post_targets
+for each row execute function public.touch_updated_at();
+create trigger social_conversations_touch_updated_at
+before update on public.social_conversations
+for each row execute function public.touch_updated_at();
+
+alter table public.platform_admins enable row level security;
+alter table public.dealership_subscriptions enable row level security;
+alter table public.dealership_entitlements enable row level security;
+alter table public.website_themes enable row level security;
+alter table public.dealership_sites enable row level security;
+alter table public.dealership_domains enable row level security;
+alter table public.social_posts enable row level security;
+alter table public.social_post_targets enable row level security;
+alter table public.social_conversations enable row level security;
+alter table public.social_messages enable row level security;
+
+create policy platform_admins_select_self
+on public.platform_admins for select to authenticated
+using (user_id = auth.uid());
+
+create policy dealership_subscriptions_read_owner
+on public.dealership_subscriptions for select to authenticated
+using (public.has_org_role(organisation_id, array['owner']));
+
+create policy dealership_entitlements_read_member
+on public.dealership_entitlements for select to authenticated
+using (public.is_org_member(organisation_id));
+
+create policy website_themes_read_active
+on public.website_themes for select to anon, authenticated
+using (is_active = true);
+
+create policy dealership_sites_read_content_staff
+on public.dealership_sites for select to authenticated
+using (
+  public.has_org_role(
+    organisation_id,
+    array['owner', 'manager', 'website_editor']
+  )
+);
+
+create policy dealership_sites_read_public_projection
+on public.dealership_sites for select to anon, authenticated
+using (
+  status in ('draft', 'live')
+  and exists (
+    select 1
+    from public.organisations o
+    where o.id = dealership_sites.organisation_id
+      and o.status = 'active'
+      and o.deleted_at is null
+  )
+);
+
+create policy dealership_domains_read_content_staff
+on public.dealership_domains for select to authenticated
+using (
+  public.has_org_role(
+    organisation_id,
+    array['owner', 'manager', 'website_editor']
+  )
+);
+
+create policy social_posts_read_engagement_staff
+on public.social_posts for select to authenticated
+using (
+  public.has_org_role(
+    organisation_id,
+    array['owner', 'manager', 'salesperson']
+  )
+);
+
+create policy social_post_targets_read_engagement_staff
+on public.social_post_targets for select to authenticated
+using (
+  public.has_org_role(
+    organisation_id,
+    array['owner', 'manager', 'salesperson']
+  )
+);
+
+create policy social_conversations_read_engagement_staff
+on public.social_conversations for select to authenticated
+using (
+  public.has_org_role(
+    organisation_id,
+    array['owner', 'manager', 'salesperson']
+  )
+);
+
+create policy social_messages_read_engagement_staff
+on public.social_messages for select to authenticated
+using (
+  public.has_org_role(
+    organisation_id,
+    array['owner', 'manager', 'salesperson']
+  )
+);
+
+revoke all on public.platform_admins from anon, authenticated;
+revoke all on public.dealership_subscriptions from anon, authenticated;
+revoke all on public.dealership_entitlements from anon, authenticated;
+revoke all on public.website_themes from anon, authenticated;
+revoke all on public.dealership_sites from anon, authenticated;
+revoke all on public.dealership_domains from anon, authenticated;
+revoke all on public.social_posts from anon, authenticated;
+revoke all on public.social_post_targets from anon, authenticated;
+revoke all on public.social_conversations from anon, authenticated;
+revoke all on public.social_messages from anon, authenticated;
+
+grant select on public.platform_admins to authenticated;
+grant select on public.dealership_subscriptions to authenticated;
+grant select on public.dealership_entitlements to authenticated;
+grant select on public.website_themes to anon, authenticated;
+grant select (
+  organisation_id,
+  theme_id,
+  status
+) on public.dealership_sites to anon, authenticated;
+grant select (
+  id,
+  organisation_id,
+  site_id,
+  hostname,
+  domain_type,
+  status,
+  last_checked_at,
+  verified_at,
+  created_at,
+  updated_at,
+  created_by
+) on public.dealership_domains to authenticated;
+grant select on public.social_posts to authenticated;
+grant select on public.social_post_targets to authenticated;
+grant select on public.social_conversations to authenticated;
+grant select on public.social_messages to authenticated;
+
+revoke all on public.platform_dealership_metrics from public, anon, authenticated;
+grant select on public.platform_dealership_metrics to service_role;
+
+-- security_invoker views require their callers to hold privileges on the
+-- referenced columns. Grant only the public projection—not registrations,
+-- VINs, costs, margins, internal notes or other commercial fields. The public
+-- RLS policies from 202607290001 still determine which rows are visible.
+grant select (
+  id,
+  slug,
+  status,
+  deleted_at
+) on public.organisations to anon;
+grant select (
+  organisation_id,
+  dealership_name,
+  logo_path,
+  telephone,
+  email,
+  address,
+  opening_hours,
+  social_links,
+  company_number,
+  vat_number,
+  brand_primary_colour,
+  brand_accent_colour,
+  homepage_wording,
+  legal_wording,
+  timezone
+) on public.dealership_settings to anon;
+grant select (
+  id,
+  organisation_id,
+  slug,
+  public_title,
+  attention_grabber,
+  make,
+  model,
+  derivative,
+  trim_level,
+  body_type,
+  fuel_type,
+  transmission,
+  colour,
+  doors,
+  seats,
+  engine_size_cc,
+  power_bhp,
+  co2_emissions_g_km,
+  euro_emissions_standard,
+  ulez_status,
+  year,
+  registration_year,
+  mot_expiry,
+  mot_status,
+  mileage,
+  service_history,
+  warranty,
+  retail_price,
+  description,
+  standard_equipment,
+  optional_equipment,
+  finance_example_text,
+  warranty_wording,
+  video_url,
+  featured,
+  features,
+  status,
+  created_at,
+  is_public,
+  deleted_at
+) on public.vehicles to anon, authenticated;
+grant select (
+  id,
+  organisation_id,
+  vehicle_id,
+  storage_bucket,
+  storage_path,
+  external_url,
+  mime_type,
+  width,
+  height,
+  sort_order,
+  is_cover,
+  alt_text,
+  caption,
+  is_public,
+  deleted_at
+) on public.vehicle_images to anon, authenticated;
+grant select (
+  id,
+  vehicle_id,
+  name,
+  sort_order
+) on public.vehicle_features to anon, authenticated;
+
+-- An authenticated browser can inspect connection state but never the
+-- server-side secret reference used by provider adapters.
+revoke select on public.integration_settings from authenticated;
+grant select (
+  id,
+  organisation_id,
+  provider,
+  status,
+  public_configuration,
+  last_connected_at,
+  last_successful_sync_at,
+  last_error_at,
+  last_error_code,
+  last_error_message,
+  created_at,
+  updated_at,
+  created_by,
+  account_name,
+  account_username,
+  account_avatar_url,
+  capabilities,
+  credentials_updated_at
+) on public.integration_settings to authenticated;
+
+revoke all on function public.is_platform_admin() from public, anon, authenticated;
+grant execute on function public.is_platform_admin() to authenticated;
+revoke all on function public.initialise_motoros_tenant() from public, anon, authenticated;
+revoke all on function public.platform_set_dealership_status(uuid, text, text)
+  from public, anon, authenticated;
+grant execute on function public.platform_set_dealership_status(uuid, text, text)
+  to authenticated;
+revoke all on function public.convert_social_conversation_to_lead(uuid, uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.convert_social_conversation_to_lead(uuid, uuid, uuid)
+  to service_role;
+
+commit;

@@ -10,6 +10,9 @@
   narrow service-role RPCs.
 - Organisation ID is derived from the authenticated membership, not accepted
   from an untrusted form.
+- Global platform access is separate from dealership membership. Environment
+  allow-list access is read-only; mutating platform actions require an active
+  `platform_admins` row and a database-enforced RPC check.
 
 ## Implemented controls
 
@@ -30,6 +33,10 @@
 - audit rows/triggers for sensitive changes;
 - CSP and common hardening response headers;
 - environment validation and no browser service keys.
+- composite tenant foreign keys for the new website/social relationships;
+- column-level grants that omit integration secret references and domain
+  verification hashes from authenticated browser sessions;
+- subscription/entitlement checks repeated in server mutation handlers.
 
 ## Required production additions
 
@@ -49,21 +56,22 @@ Before launch:
 - penetration-test public forms, storage policies, RLS and webhook endpoints;
 - review CSP after adding analytics or a finance-referral provider.
 
-## Deferred view hardening
+## View hardening
 
-Twelve API-facing views currently rely on PostgreSQL's owner-rights view
-behaviour. They have been reviewed as narrow projections, but they must not be
-changed mechanically to `security_invoker = true`: `anon` and `authenticated`
-do not have the required base-table privileges, and granting those privileges
-would expose the base tables through the Data API.
+`public_dealerships`, `public_safe_vehicles`, `public_vehicle_images`,
+`public_vehicle_features` and `public_vehicle_inventory` run as
+`security_invoker` views over narrow public-read policies. The SaaS migration
+preserves that setting while adding theme/status projection through a
+column-restricted `dealership_sites` grant. It also supplies the explicit base
+column grants required by security-invoker semantics; the vehicle grant omits
+registrations, VINs, acquisition costs, margins and internal notes. The
+platform aggregate is also security-invoker and service-role only.
 
-The public group is `public_dealerships`, `public_safe_vehicles`,
-`public_vehicle_images`, `public_vehicle_features`, `public_repair_services`,
-`public_website_pages`, `public_vehicle_inventory` and
-`public_appointment_types`. Move their consumers behind a server-only safe-data
-layer first; then revoke direct `anon`/`authenticated` view access and either
-set the views to security-invoker mode for the trusted server role or replace
-them with tightly scoped public RPCs.
+The remaining public projections (`public_repair_services`,
+`public_website_pages` and `public_appointment_types`) still require a staged
+consumer/privilege review before changing their execution mode. Move their
+consumers behind a server-only safe-data layer first; then revoke direct view
+access or replace them with tightly scoped public RPCs.
 
 The staff group is `vehicle_presentation_records`,
 `technician_repair_jobs`, `staff_vehicle_records` and `staff_sales_records`.
@@ -72,9 +80,8 @@ RLS/column-privilege design) before enabling security-invoker mode. Preserve the
 existing columns and organisation/role predicates during a staged cutover, and
 cover every staff role plus cross-organisation denial in integration tests.
 
-This redesign is intentionally deferred from migration 0007 because changing
-the view option alone would cause a production read outage. Treat it as a
-multi-tenant launch gate, not as permission to broaden base-table grants.
+Treat the remaining redesign as a multi-tenant launch gate, not as permission
+to broaden base-table grants.
 
 ## Privacy preparation
 

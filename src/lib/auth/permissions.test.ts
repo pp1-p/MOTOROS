@@ -27,4 +27,12 @@ describe("role permissions", () => {
     expect(hasPermission("salesperson", "sourcing:view")).toBe(true);
     expect(hasPermission("salesperson", "sourcing:manage")).toBe(false);
   });
+
+  it("separates social visibility from publishing authority", () => {
+    expect(hasPermission("owner", "social:publish")).toBe(true);
+    expect(hasPermission("manager", "social:publish")).toBe(true);
+    expect(hasPermission("salesperson", "social:view")).toBe(true);
+    expect(hasPermission("salesperson", "social:publish")).toBe(false);
+    expect(hasPermission("technician", "social:view")).toBe(false);
+  });
 });

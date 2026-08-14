@@ -1,5 +1,40 @@
 # External integrations
 
+## Social and messaging provider contract
+
+Social providers are described by stable IDs and explicit capabilities in
+`src/lib/integrations/social-provider.ts`. Provider implementations conform to
+the fail-closed contract in `src/lib/integrations/social-adapter.ts`, covering
+connection lifecycle, media, publishing, messages, account information and
+engagement. A connection is stored in the
+existing tenant-owned `integration_settings` record. OAuth tokens must live in
+the deployment secret store or provider vault; the database stores only a
+server-side `secret_reference` and non-secret account/status metadata.
+
+Supported catalogue entries are Instagram, Facebook Page, WhatsApp Business,
+Telegram, TikTok Business, Google Business Profile and Messenger. Catalogue
+support does **not** mean the account is connected. The connection screen uses
+these honest states: requires API configuration, connecting, connected, token
+expired, action required, authentication failed, permission missing, syncing,
+error and disabled.
+
+Required environment names are documented in `.env.example`. Do not populate
+them until the corresponding developer app, redirect URI, approved scopes,
+webhook signature rules and data-retention terms have been reviewed.
+
+The current vertical slice provides:
+
+- capability-aware connection status with no secret values in the browser;
+- tenant-scoped post drafts, publishing targets and schedule records;
+- a calendar and unified-inbox data model;
+- source attribution from provider conversation to lead;
+- per-target delivery and error state for future retry-safe workers.
+
+External OAuth callbacks, provider delivery workers, webhook ingestion and
+message sending remain adapter work. Until those are implemented, the UI says
+“Requires API configuration” or “Provider adapter required”; it never creates
+fake account data or claims to have published a post.
+
 ## Vehicle lookup provider contract
 
 All registration lookup is server-side behind:

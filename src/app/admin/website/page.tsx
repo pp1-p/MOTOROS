@@ -5,6 +5,7 @@ import {
   Eye,
   Globe2,
   ImageIcon,
+  LayoutTemplate,
 } from "lucide-react";
 
 import { AsyncForm } from "@/components/admin/async-form";
@@ -98,12 +99,20 @@ export default async function WebsiteEditorPage() {
         title="Website"
         description="Manage public content, featured vehicles, SEO and publishing without exposing private operational data."
         actions={
-          <Button asChild variant="outline" size="sm">
-            <Link href="/" target="_blank">
-              <Eye />
-              View live website
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/website/themes">
+                <LayoutTemplate />
+                Design templates
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/" target="_blank">
+                <Eye />
+                View live website
+              </Link>
+            </Button>
+          </>
         }
       />
 

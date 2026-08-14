@@ -10,10 +10,19 @@ import {
 import { isDevelopmentDemoMode } from "@/lib/demo/store";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { log } from "@/lib/security/logger";
+import {
+  getWebsiteTheme,
+  type WebsiteThemeId,
+} from "@/lib/website/themes";
 
-function environmentSiteConfig(): PublicSiteConfig {
+export type ThemedPublicSiteConfig = PublicSiteConfig & {
+  themeId: WebsiteThemeId;
+};
+
+function environmentSiteConfig(): ThemedPublicSiteConfig {
   return {
     ...publicSiteConfig,
+    themeId: "modern",
     name:
       process.env.NEXT_PUBLIC_DEALERSHIP_NAME?.trim() ||
       "Independent dealership",
@@ -105,10 +114,12 @@ function formatHours(
 }
 
 export const getPublicSiteConfig = cache(
-  async (): Promise<PublicSiteConfig> => {
+  async (): Promise<ThemedPublicSiteConfig> => {
     const safeFallback = environmentSiteConfig();
     if (!isSupabaseConfigured()) {
-      return isDevelopmentDemoMode() ? publicSiteConfig : safeFallback;
+      return isDevelopmentDemoMode()
+        ? { ...publicSiteConfig, themeId: "modern" }
+        : safeFallback;
     }
 
     try {
@@ -153,6 +164,7 @@ export const getPublicSiteConfig = cache(
         : null;
 
       return {
+        themeId: getWebsiteTheme(dealership.website_theme_id).id,
         name: configuredString(dealership.dealership_name, safeFallback.name),
         strapline:
           configuredString(
@@ -219,7 +231,9 @@ export const getPublicSiteConfig = cache(
             ? error.message
             : "Unknown public settings query failure",
       });
-      return isDevelopmentDemoMode() ? publicSiteConfig : safeFallback;
+      return isDevelopmentDemoMode()
+        ? { ...publicSiteConfig, themeId: "modern" }
+        : safeFallback;
     }
   },
 );

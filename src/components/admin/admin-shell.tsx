@@ -21,6 +21,7 @@ import {
   Plus,
   Search,
   Settings,
+  Share2,
   Users,
   UsersRound,
   WalletCards,
@@ -64,6 +65,7 @@ const management = [
   { label: "Diary", href: "/admin/diary", icon: CalendarDays },
   { label: "Documents", href: "/admin/documents", icon: FileText },
   { label: "Reports", href: "/admin/reports", icon: Activity },
+  { label: "Social hub", href: "/admin/social", icon: Share2 },
   { label: "Website", href: "/admin/website", icon: Globe2 },
   { label: "Team", href: "/admin/team", icon: Users },
   { label: "Integrations", href: "/admin/integrations", icon: Zap },
@@ -105,6 +107,7 @@ const roleAccess: Record<StaffRole, readonly string[]> = {
     "/admin/documents",
     "/admin/invoices",
     "/admin/reports",
+    "/admin/social",
     "/admin/settings",
   ],
   salesperson: [
@@ -118,6 +121,7 @@ const roleAccess: Record<StaffRole, readonly string[]> = {
     "/admin/tasks",
     "/admin/documents",
     "/admin/invoices",
+    "/admin/social",
   ],
   service_advisor: [
     "/admin",

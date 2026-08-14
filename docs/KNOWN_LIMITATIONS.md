@@ -20,6 +20,12 @@ These are deliberate, visible boundaries rather than fabricated integrations.
   added for high-volume dealerships.
 - Full Auto Trader stock/deal synchronisation requires the authorised API
   contract and provider sandbox.
+- Social provider OAuth callbacks, publishing workers, inbound webhooks and
+  outbound message adapters are not included. The product can persist honest
+  tenant-scoped drafts/schedules and connection state, but it does not claim
+  external delivery without those adapters.
+- Website template selection is live and audited. A separate visual staging
+  URL and atomic multi-page deployment pipeline remain future work.
 - Included legal-page copy is a code template and requires dealership-specific
   editing and professional review.
 - Advanced accounting, card payments, finance proposals, parts procurement,

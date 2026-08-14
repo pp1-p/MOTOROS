@@ -2,8 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  Cable,
   CarFront,
   ClipboardList,
+  CreditCard,
+  Globe2,
+  Handshake,
   Mail,
   MapPin,
   Phone,
@@ -11,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { DealershipStatusControl } from "@/components/platform/dealership-status-control";
 import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
 import {
   getPlatformDealership,
@@ -35,8 +40,9 @@ export default async function PlatformDealershipPage({
   const dealership = await getPlatformDealership(id);
   if (!dealership) notFound();
 
-  // Fire-and-forget audit trail: this is the sensitive action worth logging.
-  logPlatformAdminAccess({
+  // Complete the audit write before rendering; serverless work scheduled after
+  // a response is not guaranteed to finish.
+  await logPlatformAdminAccess({
     organisationId: dealership.id,
     actorUserId: admin.userId,
     actorEmail: admin.email,
@@ -51,10 +57,10 @@ export default async function PlatformDealershipPage({
       hint: `${dealership.vehicleCount} total records`,
     },
     {
-      icon: CarFront,
-      label: "Sold · 30d",
-      value: String(dealership.soldLast30Days),
-      hint: "Recent activity",
+      icon: Handshake,
+      label: "Leads",
+      value: String(dealership.leadCount),
+      hint: `${dealership.saleCount} recorded sales`,
     },
     {
       icon: Receipt,
@@ -109,6 +115,11 @@ export default async function PlatformDealershipPage({
               </span>
             </p>
           </div>
+          <DealershipStatusControl
+            dealershipId={dealership.id}
+            initialStatus={dealership.status}
+            canManage={admin.canManage}
+          />
         </header>
       </div>
 
@@ -243,6 +254,99 @@ export default async function PlatformDealershipPage({
 
         <aside className="space-y-5">
           <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <h2 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-[0.14em] text-slate-400">
+              <CreditCard className="size-4 text-cyan-300" aria-hidden />
+              Subscription
+            </h2>
+            {dealership.subscription ? (
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-[10px] uppercase text-slate-500">Plan</dt>
+                  <dd className="mt-1 font-extrabold capitalize">
+                    {dealership.subscription.planCode}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] uppercase text-slate-500">Status</dt>
+                  <dd className="mt-1 font-extrabold capitalize">
+                    {dealership.subscription.status.replaceAll("_", " ")}
+                  </dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-[10px] uppercase text-slate-500">Configured MRR</dt>
+                  <dd className="mt-1 font-extrabold">
+                    {dealership.subscription.monthlyAmountPence === null
+                      ? "Not configured"
+                      : money.format(dealership.subscription.monthlyAmountPence / 100)}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="mt-3 text-xs text-slate-500">
+                Apply the SaaS foundation migration to initialise subscription data.
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <h2 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-[0.14em] text-slate-400">
+              <Globe2 className="size-4 text-cyan-300" aria-hidden />
+              Website
+            </h2>
+            {dealership.website ? (
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Status</dt>
+                  <dd className="font-extrabold capitalize">{dealership.website.status}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-slate-500">Template</dt>
+                  <dd className="font-extrabold capitalize">{dealership.website.themeId}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Hosted domain</dt>
+                  <dd className="mt-1 break-all text-xs">
+                    {dealership.website.hostedSubdomain
+                      ? `${dealership.website.hostedSubdomain}.motoros.co.uk`
+                      : "Not allocated"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Custom domain</dt>
+                  <dd className="mt-1 break-all text-xs">
+                    {dealership.website.customDomain ?? "Not configured"}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="mt-3 text-xs text-slate-500">No website configuration.</p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <h2 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-[0.14em] text-slate-400">
+              <Cable className="size-4 text-cyan-300" aria-hidden />
+              Integrations
+            </h2>
+            {dealership.integrations.length ? (
+              <ul className="mt-4 space-y-2 text-xs">
+                {dealership.integrations.map((integration) => (
+                  <li key={integration.provider} className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
+                    <span className="capitalize">
+                      {integration.accountName ?? integration.provider.replaceAll("_", " ")}
+                    </span>
+                    <span className="capitalize text-slate-400">
+                      {integration.status.replaceAll("_", " ")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-xs text-slate-500">No integrations connected.</p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
             <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-400">
               Contact details
             </h2>
@@ -280,9 +384,9 @@ export default async function PlatformDealershipPage({
               Read-only view
             </h2>
             <p className="mt-3 text-xs leading-6 text-slate-400">
-              Platform admins can see these details but cannot edit them from
-              here. If you need to change something, log in as an authorised
-              member of this dealership from their own admin.
+              Platform admins can inspect operational totals without entering
+              customer records. Only dealership status can be changed here;
+              dealership content remains inside its isolated workspace.
             </p>
             <p className="mt-3 text-[11px] text-slate-500">
               Every visit to this page is recorded in the dealership&apos;s

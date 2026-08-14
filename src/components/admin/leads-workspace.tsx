@@ -45,7 +45,9 @@ export function LeadsWorkspace({
   const [quickFilter, setQuickFilter] = useState<
     "all" | "new" | "mine" | "due" | "priority"
   >("all");
-  const [selected, setSelected] = useState<AdminLeadListItem | null>(null);
+  const [selected, setSelected] = useState<AdminLeadListItem | null>(() =>
+    leads.find((lead) => lead.id === searchParams.get("lead")) ?? null,
+  );
   const [createOpen, setCreateOpen] = useState(searchParams.get("create") === "1");
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState("");

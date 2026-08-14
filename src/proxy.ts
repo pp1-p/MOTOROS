@@ -81,6 +81,10 @@ export async function proxy(request: NextRequest) {
       { prefix: "/admin/health", roles: ["owner"] },
       { prefix: "/admin/audit", roles: ["owner"] },
       { prefix: "/admin/reports", roles: ["owner", "manager"] },
+      {
+        prefix: "/admin/social",
+        roles: ["owner", "manager", "salesperson"],
+      },
       { prefix: "/admin/settings", roles: ["owner", "manager"] },
       { prefix: "/admin/website", roles: ["owner", "website_editor"] },
       {

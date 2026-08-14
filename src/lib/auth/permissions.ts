@@ -29,6 +29,8 @@ export type Permission =
   | "invoices:record_payment"
   | "invoices:issue_credit"
   | "reports:view"
+  | "social:view"
+  | "social:publish"
   | "website:manage"
   | "team:manage"
   | "settings:manage"
@@ -58,6 +60,8 @@ const allPermissions: Permission[] = [
   "invoices:record_payment",
   "invoices:issue_credit",
   "reports:view",
+  "social:view",
+  "social:publish",
   "website:manage",
   "team:manage",
   "settings:manage",
@@ -85,6 +89,7 @@ export const rolePermissions: Record<StaffRole, readonly Permission[]> = {
     "documents:manage",
     "invoices:view",
     "invoices:manage",
+    "social:view",
   ],
   service_advisor: [
     "dashboard:view",
