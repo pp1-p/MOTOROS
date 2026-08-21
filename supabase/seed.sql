@@ -1,4 +1,4 @@
--- DealerOS development seed.
+-- MOTOR.OS development seed.
 -- This file is intentionally idempotent and contains no Supabase Auth users.
 -- Create an Auth user separately, then claim the seeded organisation as described
 -- in docs/DATABASE.md.
@@ -9,21 +9,36 @@ insert into public.organisations (
   id,
   name,
   slug,
+  subdomain,
   status,
+  plan_code,
+  website_status,
+  onboarding_step,
+  onboarding_completed_at,
   default_timezone
 )
 values (
   '00000000-0000-4000-8000-000000000001',
-  'DealerOS',
-  'dealeros',
+  'Direct Motors',
+  'direct-motors',
+  'direct-motors',
   'active',
+  'growth',
+  'published',
+  'complete',
+  now(),
   'Europe/London'
 )
 on conflict (id) do update
 set
   name = excluded.name,
   slug = excluded.slug,
+  subdomain = excluded.subdomain,
   status = excluded.status,
+  plan_code = excluded.plan_code,
+  website_status = excluded.website_status,
+  onboarding_step = excluded.onboarding_step,
+  onboarding_completed_at = excluded.onboarding_completed_at,
   default_timezone = excluded.default_timezone,
   deleted_at = null;
 
@@ -41,19 +56,23 @@ insert into public.dealership_settings (
   brand_accent_colour,
   homepage_wording,
   legal_wording,
+  published_theme_id,
+  draft_theme_id,
+  font_preset,
+  theme_settings,
   timezone,
   data_retention_months
 )
 values (
   '00000000-0000-4000-8000-000000000001',
-  'DealerOS',
-  '01632 960 480',
-  'hello@dealeros.example',
+  'Direct Motors',
+  '01922 625925',
+  'sales@direct-motors.example',
   '{
-    "line1":"12 Market Road",
-    "town":"Exampleton",
-    "county":"Warwickshire",
-    "postcode":"EX4 2PL",
+    "line1":"Walsall Road",
+    "town":"Walsall",
+    "county":"West Midlands",
+    "postcode":"WS1 1AA",
     "country":"United Kingdom"
   }',
   '{
@@ -71,14 +90,18 @@ values (
   '#172033',
   '#D4A853',
   '{
-    "eyebrow":"Independent expertise, thoughtfully delivered",
-    "headline":"Better cars. Clearer advice. Proper aftercare.",
-    "summary":"Hand-picked used cars, personal vehicle sourcing and trusted workshop support."
+    "eyebrow":"Independent · Local · Straightforward",
+    "headline":"The right car, without the runaround.",
+    "summary":"Quality used cars, honest advice and trusted aftercare from Direct Motors."
   }',
   '{
     "review_required":true,
     "notice":"Example legal content must be reviewed by the dealership before launch."
   }',
+  'direct-motors-classic',
+  'direct-motors-classic',
+  'classic',
+  '{"radius":"medium","inventoryDensity":"comfortable"}',
   'Europe/London',
   84
 )
@@ -90,6 +113,10 @@ set
   address = excluded.address,
   opening_hours = excluded.opening_hours,
   homepage_wording = excluded.homepage_wording,
+  published_theme_id = excluded.published_theme_id,
+  draft_theme_id = excluded.draft_theme_id,
+  font_preset = excluded.font_preset,
+  theme_settings = excluded.theme_settings,
   updated_at = now();
 
 insert into public.vehicles (
@@ -1395,5 +1422,272 @@ set
   title = excluded.title,
   body = excluded.body,
   created_at = excluded.created_at;
+
+-- Two visually distinct public tenants exercise hostname routing, theme
+-- selection and inventory isolation without introducing Auth users.
+insert into public.organisations (
+  id,
+  name,
+  slug,
+  subdomain,
+  status,
+  plan_code,
+  website_status,
+  onboarding_step,
+  onboarding_completed_at,
+  default_timezone
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000002',
+    'Apex Performance Cars',
+    'apex-performance',
+    'apex-performance',
+    'trial',
+    'growth',
+    'published',
+    'complete',
+    now(),
+    'Europe/London'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000003',
+    'Hartwell Prestige',
+    'hartwell-prestige',
+    'hartwell-prestige',
+    'active',
+    'pro',
+    'published',
+    'complete',
+    now(),
+    'Europe/London'
+  )
+on conflict (id) do update
+set
+  name = excluded.name,
+  slug = excluded.slug,
+  subdomain = excluded.subdomain,
+  status = excluded.status,
+  plan_code = excluded.plan_code,
+  website_status = excluded.website_status,
+  onboarding_step = excluded.onboarding_step,
+  onboarding_completed_at = excluded.onboarding_completed_at,
+  default_timezone = excluded.default_timezone,
+  deleted_at = null;
+
+insert into public.dealership_settings (
+  organisation_id,
+  dealership_name,
+  telephone,
+  email,
+  address,
+  opening_hours,
+  social_links,
+  brand_primary_colour,
+  brand_accent_colour,
+  homepage_wording,
+  legal_wording,
+  published_theme_id,
+  draft_theme_id,
+  font_preset,
+  theme_settings,
+  timezone,
+  data_retention_months
+)
+values
+  (
+    '00000000-0000-4000-8000-000000000002',
+    'Apex Performance Cars',
+    '01632 960 502',
+    'hello@apex-performance.example',
+    '{"line1":"8 Circuit Way","town":"Coventry","county":"West Midlands","postcode":"CV1 2AA","country":"United Kingdom"}',
+    '{"monday":{"open":"09:00","close":"18:00"},"tuesday":{"open":"09:00","close":"18:00"},"wednesday":{"open":"09:00","close":"18:00"},"thursday":{"open":"09:00","close":"18:00"},"friday":{"open":"09:00","close":"18:00"},"saturday":{"open":"09:00","close":"17:00"},"sunday":null}',
+    '{"instagram":"https://instagram.com/"}',
+    '#D62F2F',
+    '#FFB000',
+    '{"eyebrow":"Engineered for the drive","headline":"Performance cars, selected without compromise.","summary":"Focused stock, technical detail and a straightforward buying experience for enthusiasts."}',
+    '{"review_required":true,"notice":"Demonstration legal content."}',
+    'performance',
+    'performance',
+    'condensed',
+    '{"radius":"small","inventoryDensity":"compact"}',
+    'Europe/London',
+    84
+  ),
+  (
+    '00000000-0000-4000-8000-000000000003',
+    'Hartwell Prestige',
+    '01632 960 503',
+    'concierge@hartwell-prestige.example',
+    '{"line1":"21 Regent Square","town":"Leamington Spa","county":"Warwickshire","postcode":"CV32 4AA","country":"United Kingdom"}',
+    '{"monday":{"open":"09:30","close":"17:30"},"tuesday":{"open":"09:30","close":"17:30"},"wednesday":{"open":"09:30","close":"17:30"},"thursday":{"open":"09:30","close":"17:30"},"friday":{"open":"09:30","close":"17:30"},"saturday":{"open":"10:00","close":"16:00"},"sunday":null}',
+    '{"instagram":"https://instagram.com/"}',
+    '#C8A66A',
+    '#EAD9B7',
+    '{"eyebrow":"An exceptional motor car deserves time","headline":"A considered collection of modern classics and luxury cars.","summary":"Private viewings, careful provenance and personal delivery from a specialist team."}',
+    '{"review_required":true,"notice":"Demonstration legal content."}',
+    'prestige',
+    'prestige',
+    'editorial',
+    '{"radius":"none","inventoryDensity":"comfortable"}',
+    'Europe/London',
+    84
+  )
+on conflict (organisation_id) do update
+set
+  dealership_name = excluded.dealership_name,
+  telephone = excluded.telephone,
+  email = excluded.email,
+  address = excluded.address,
+  opening_hours = excluded.opening_hours,
+  social_links = excluded.social_links,
+  brand_primary_colour = excluded.brand_primary_colour,
+  brand_accent_colour = excluded.brand_accent_colour,
+  homepage_wording = excluded.homepage_wording,
+  legal_wording = excluded.legal_wording,
+  published_theme_id = excluded.published_theme_id,
+  draft_theme_id = excluded.draft_theme_id,
+  font_preset = excluded.font_preset,
+  theme_settings = excluded.theme_settings,
+  updated_at = now();
+
+insert into public.dealership_domains (
+  id,
+  organisation_id,
+  hostname,
+  type,
+  status,
+  verified_at
+)
+values
+  ('10000000-0000-4000-9000-000000000001','00000000-0000-4000-8000-000000000001','direct-motors.localhost','subdomain','verified',now()),
+  ('10000000-0000-4000-9000-000000000002','00000000-0000-4000-8000-000000000002','apex-performance.localhost','subdomain','verified',now()),
+  ('10000000-0000-4000-9000-000000000003','00000000-0000-4000-8000-000000000003','hartwell-prestige.localhost','subdomain','verified',now())
+on conflict (id) do update
+set
+  organisation_id = excluded.organisation_id,
+  hostname = excluded.hostname,
+  type = excluded.type,
+  status = excluded.status,
+  verified_at = excluded.verified_at,
+  updated_at = now();
+
+insert into public.vehicles (
+  id,
+  organisation_id,
+  stock_number,
+  make,
+  model,
+  derivative,
+  body_type,
+  fuel_type,
+  transmission,
+  colour,
+  doors,
+  seats,
+  engine_size_cc,
+  year,
+  registration_year,
+  mileage,
+  service_history,
+  number_of_keys,
+  warranty,
+  retail_price,
+  public_title,
+  attention_grabber,
+  description,
+  features,
+  warranty_wording,
+  featured,
+  is_public,
+  slug,
+  status,
+  acquired_at,
+  published_at
+)
+values
+  (
+    '21000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','APX-001',
+    'Porsche','718 Cayman','GTS 4.0','Coupe','Petrol','Manual','Guards Red',2,2,3995,2021,'21',18400,
+    'Full Porsche service history',2,'Six-month specialist warranty',67995,
+    'Porsche 718 Cayman GTS 4.0','Manual · Sports exhaust · GTS interior',
+    'A focused, naturally aspirated driver’s car with exceptional history and specification.',
+    array['GTS interior package','Sports exhaust','PASM','Bose surround sound'],
+    'Six-month specialist warranty included. Terms apply.',true,true,
+    'porsche-718-cayman-gts-4-0','on_forecourt',current_date - 18,now() - interval '12 days'
+  ),
+  (
+    '21000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000002','APX-002',
+    'BMW','M2','Competition DCT','Coupe','Petrol','Automatic','Hockenheim Silver',2,4,2979,2020,'20',26800,
+    'Full BMW service history',2,'Six-month specialist warranty',42995,
+    'BMW M2 Competition DCT','M Performance exhaust · Harman Kardon',
+    'Compact proportions, serious pace and a carefully documented ownership history.',
+    array['M Performance exhaust','Harman Kardon audio','Adaptive LED headlights','Heated seats'],
+    'Six-month specialist warranty included. Terms apply.',true,true,
+    'bmw-m2-competition-dct','on_forecourt',current_date - 12,now() - interval '8 days'
+  ),
+  (
+    '22000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000003','HWP-001',
+    'Bentley','Continental GT','V8 Mulliner','Coupe','Petrol','Automatic','Beluga Black',2,4,3996,2022,'22',12600,
+    'Full Bentley service history',2,'Twelve-month comprehensive warranty',154950,
+    'Bentley Continental GT V8 Mulliner','Mulliner Driving Specification · Touring Specification',
+    'An elegant grand tourer presented to an exceptional standard and available for private viewing.',
+    array['Mulliner Driving Specification','Touring Specification','Naim audio','Rotating display'],
+    'Twelve-month comprehensive warranty included. Terms apply.',true,true,
+    'bentley-continental-gt-v8-mulliner','on_forecourt',current_date - 25,now() - interval '16 days'
+  ),
+  (
+    '22000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','HWP-002',
+    'Range Rover','Autobiography','P530','SUV','Petrol','Automatic','Santorini Black',5,5,4395,2023,'73',9800,
+    'Full main-dealer service history',2,'Balance of manufacturer warranty',139950,
+    'Range Rover P530 Autobiography','Executive Class Comfort · Meridian Signature',
+    'A beautifully specified flagship SUV combining quiet luxury with effortless performance.',
+    array['Executive Class Comfort rear seats','Meridian Signature audio','23-inch wheels','Deployable side steps'],
+    'Balance of manufacturer warranty. Terms apply.',false,true,
+    'range-rover-p530-autobiography','reserved',current_date - 9,now() - interval '5 days'
+  )
+on conflict (id) do update
+set
+  organisation_id = excluded.organisation_id,
+  stock_number = excluded.stock_number,
+  make = excluded.make,
+  model = excluded.model,
+  derivative = excluded.derivative,
+  retail_price = excluded.retail_price,
+  public_title = excluded.public_title,
+  attention_grabber = excluded.attention_grabber,
+  description = excluded.description,
+  features = excluded.features,
+  warranty_wording = excluded.warranty_wording,
+  featured = excluded.featured,
+  is_public = excluded.is_public,
+  slug = excluded.slug,
+  status = excluded.status,
+  published_at = excluded.published_at,
+  deleted_at = null;
+
+insert into public.vehicle_images (
+  id,
+  organisation_id,
+  vehicle_id,
+  external_url,
+  sort_order,
+  is_cover,
+  is_public,
+  alt_text
+)
+values
+  ('23000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','21000000-0000-4000-8000-000000000001','/images/hero-showroom.png',0,true,true,'Red Porsche 718 Cayman in the Apex showroom'),
+  ('23000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000002','21000000-0000-4000-8000-000000000002','/images/hero-showroom.png',0,true,true,'Silver BMW M2 in the Apex showroom'),
+  ('23000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000003','22000000-0000-4000-8000-000000000001','/images/hero-showroom.png',0,true,true,'Black Bentley Continental GT in the Hartwell showroom'),
+  ('23000000-0000-4000-8000-000000000004','00000000-0000-4000-8000-000000000003','22000000-0000-4000-8000-000000000002','/images/hero-showroom.png',0,true,true,'Black Range Rover in the Hartwell showroom')
+on conflict (id) do update
+set
+  organisation_id = excluded.organisation_id,
+  vehicle_id = excluded.vehicle_id,
+  external_url = excluded.external_url,
+  alt_text = excluded.alt_text,
+  is_public = true,
+  deleted_at = null;
 
 commit;

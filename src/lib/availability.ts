@@ -5,7 +5,7 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import { isSupabaseConfigured } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { getDefaultOrganisationId } from "@/lib/data/organisation";
+import { getPublicTenant } from "@/lib/tenancy/public-tenant";
 
 export type AvailableSlot = {
   start: string;
@@ -37,7 +37,10 @@ const defaultRule: Rule = {
   timezone: "Europe/London",
 };
 
-export async function getAvailableRepairCallSlots(date: string) {
+export async function getAvailableRepairCallSlots(
+  date: string,
+  organisationId?: string,
+) {
   const dateStart = parseISO(`${date}T00:00:00Z`);
   if (Number.isNaN(dateStart.getTime())) return [];
   const dayOfWeek = dateStart.getUTCDay();
@@ -48,7 +51,8 @@ export async function getAvailableRepairCallSlots(date: string) {
   let isClosed = false;
 
   if (isSupabaseConfigured()) {
-    const organisationId = await getDefaultOrganisationId();
+    const resolvedOrganisationId =
+      organisationId ?? (await getPublicTenant()).organisationId;
     const supabase = createAdminSupabaseClient();
 
     const [ruleResult, exceptionResult] = await Promise.all([
@@ -57,7 +61,7 @@ export async function getAvailableRepairCallSlots(date: string) {
         .select(
           "day_of_week,start_time,end_time,slot_duration_minutes,buffer_minutes,minimum_notice_hours,maximum_advance_days,maximum_simultaneous,timezone",
         )
-        .eq("organisation_id", organisationId)
+        .eq("organisation_id", resolvedOrganisationId)
         .eq("appointment_type", "repair_call")
         .eq("day_of_week", dayOfWeek)
         .eq("is_active", true)
@@ -66,7 +70,7 @@ export async function getAvailableRepairCallSlots(date: string) {
       supabase
         .from("availability_exceptions")
         .select("is_closed")
-        .eq("organisation_id", organisationId)
+        .eq("organisation_id", resolvedOrganisationId)
         .eq("exception_date", date)
         .limit(1)
         .maybeSingle(),
@@ -81,7 +85,7 @@ export async function getAvailableRepairCallSlots(date: string) {
     const bookings = await supabase
       .from("appointments")
       .select("starts_at,ends_at")
-      .eq("organisation_id", organisationId)
+      .eq("organisation_id", resolvedOrganisationId)
       .lt("starts_at", dayEnd.toISOString())
       .gt("ends_at", dayStart.toISOString())
       .not("status", "in", '("cancelled","no_show")');

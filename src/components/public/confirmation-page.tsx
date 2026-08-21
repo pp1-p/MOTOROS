@@ -30,7 +30,7 @@ export async function ConfirmationPage({
   const publicSiteConfig = await getPublicSiteConfig();
   const contact = getPublicContactDetails(publicSiteConfig);
   return (
-    <section className="relative overflow-hidden bg-[#15221d] py-16 text-white sm:py-24">
+    <section className="theme-standard-hero relative overflow-hidden bg-[#15221d] py-16 text-white sm:py-24">
       <div className="absolute top-0 right-0 size-[34rem] rounded-full bg-[#d7ad69]/10 blur-3xl" />
       <div className="container-shell relative max-w-4xl">
         <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 backdrop-blur sm:p-10 lg:p-14">

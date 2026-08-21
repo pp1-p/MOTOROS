@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 
 import {
@@ -8,17 +7,41 @@ import {
   type PublicSiteConfig,
 } from "@/components/public/site-config";
 import { isDevelopmentDemoMode } from "@/lib/demo/store";
-import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
+import { isSupabaseConfigured } from "@/lib/env";
 import { log } from "@/lib/security/logger";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getPublicTenant } from "@/lib/tenancy/public-tenant";
 
-function environmentSiteConfig(): PublicSiteConfig {
+function environmentSiteConfig(
+  tenant?: Awaited<ReturnType<typeof getPublicTenant>>,
+): PublicSiteConfig {
+  const mayUseLegacyContactFallback =
+    !tenant ||
+    (Boolean(process.env.DEALEROS_PUBLIC_ORGANISATION_ID) &&
+      tenant.organisationId === process.env.DEALEROS_PUBLIC_ORGANISATION_ID);
   return {
     ...publicSiteConfig,
+    organisationId: tenant?.organisationId ?? publicSiteConfig.organisationId,
+    organisationSlug:
+      tenant?.slug ?? publicSiteConfig.organisationSlug,
+    hostname: tenant?.hostname ?? publicSiteConfig.hostname,
+    baseUrl: tenant?.baseUrl ?? publicSiteConfig.baseUrl,
+    websiteStatus: tenant?.websiteStatus ?? publicSiteConfig.websiteStatus,
     name:
-      process.env.NEXT_PUBLIC_DEALERSHIP_NAME?.trim() ||
+      tenant?.name ??
+      process.env.NEXT_PUBLIC_DEALERSHIP_NAME?.trim() ??
       "Independent dealership",
-    email: process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL?.trim() ?? "",
-    address: process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS?.trim() ?? "",
+    phone: mayUseLegacyContactFallback ? publicSiteConfig.phone : "",
+    phoneHref: mayUseLegacyContactFallback
+      ? publicSiteConfig.phoneHref
+      : "/contact",
+    phones: mayUseLegacyContactFallback ? publicSiteConfig.phones : [],
+    email: mayUseLegacyContactFallback
+      ? process.env.NEXT_PUBLIC_DEALERSHIP_EMAIL?.trim() ?? ""
+      : "",
+    address: mayUseLegacyContactFallback
+      ? process.env.NEXT_PUBLIC_DEALERSHIP_ADDRESS?.trim() ?? ""
+      : "",
   };
 }
 
@@ -106,36 +129,32 @@ function formatHours(
 
 export const getPublicSiteConfig = cache(
   async (): Promise<PublicSiteConfig> => {
-    const safeFallback = environmentSiteConfig();
     if (!isSupabaseConfigured()) {
-      return isDevelopmentDemoMode() ? publicSiteConfig : safeFallback;
+      return isDevelopmentDemoMode()
+        ? publicSiteConfig
+        : environmentSiteConfig();
     }
 
+    // Resolve outside the fallback block. An unknown production hostname must
+    // not silently inherit the branding or data of another dealership.
+    const tenant = await getPublicTenant();
+    const safeFallback = environmentSiteConfig(tenant);
+
     try {
-      const env = getServerEnv();
-      const supabase = createClient(
-        env.NEXT_PUBLIC_SUPABASE_URL!,
-        env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { auth: { persistSession: false, autoRefreshToken: false } },
-      );
-      let query = supabase
-        .from("public_dealerships")
-        .select("*")
-        .limit(env.DEALEROS_PUBLIC_ORGANISATION_ID ? 1 : 2);
-      if (env.DEALEROS_PUBLIC_ORGANISATION_ID) {
-        query = query.eq("id", env.DEALEROS_PUBLIC_ORGANISATION_ID);
-      }
-      const result = await query;
+      const supabase = createAdminSupabaseClient();
+      const result = await supabase
+        .from("dealership_settings")
+        .select(
+          "organisation_id,dealership_name,logo_path,telephone,email,address,opening_hours,brand_primary_colour,brand_accent_colour,homepage_wording,published_theme_id,font_preset,theme_settings",
+        )
+        .eq("organisation_id", tenant.organisationId)
+        .limit(1)
+        .maybeSingle();
       if (result.error) throw result.error;
-      if (!result.data || result.data.length === 0) {
+      if (!result.data) {
         throw new Error("No public dealership is configured.");
       }
-      if (!env.DEALEROS_PUBLIC_ORGANISATION_ID && result.data.length > 1) {
-        throw new Error(
-          "Multiple public dealerships exist. Set DEALEROS_PUBLIC_ORGANISATION_ID.",
-        );
-      }
-      const dealership = result.data[0];
+      const dealership = result.data;
 
       const phone = configuredString(
         dealership.telephone,
@@ -153,6 +172,30 @@ export const getPublicSiteConfig = cache(
         : null;
 
       return {
+        organisationId: tenant.organisationId,
+        organisationSlug: tenant.slug,
+        hostname: tenant.hostname,
+        baseUrl: tenant.baseUrl,
+        websiteStatus: tenant.websiteStatus,
+        publishedThemeId: configuredString(
+          dealership.published_theme_id,
+          safeFallback.publishedThemeId,
+        ),
+        // Public requests never receive an unpublished theme selection.
+        draftThemeId: configuredString(
+          dealership.published_theme_id,
+          safeFallback.publishedThemeId,
+        ),
+        fontPreset: configuredString(
+          dealership.font_preset,
+          safeFallback.fontPreset,
+        ),
+        themeSettings:
+          dealership.theme_settings &&
+          typeof dealership.theme_settings === "object" &&
+          !Array.isArray(dealership.theme_settings)
+            ? (dealership.theme_settings as Record<string, unknown>)
+            : safeFallback.themeSettings,
         name: configuredString(dealership.dealership_name, safeFallback.name),
         strapline:
           configuredString(

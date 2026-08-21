@@ -11,6 +11,9 @@ import Link from "next/link";
 
 import { getPublicContactDetails } from "@/lib/public-contact";
 import { getSiteLogoInitial } from "@/lib/site-metadata";
+import { resolvePublishedThemeId } from "@/lib/themes";
+
+import { AlternateThemeFooter } from "./themes/theme-chrome";
 
 import {
   publicSiteConfig,
@@ -34,6 +37,10 @@ export function PublicFooter({
 }: {
   config?: PublicSiteConfig;
 }) {
+  const themeId = resolvePublishedThemeId(config);
+  if (themeId !== "direct-motors-classic") {
+    return <AlternateThemeFooter config={config} themeId={themeId} />;
+  }
   const contact = getPublicContactDetails(config);
 
   return (

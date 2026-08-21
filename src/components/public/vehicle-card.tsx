@@ -20,11 +20,11 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
 
   return (
     <article
-      className={`group overflow-hidden rounded-3xl border bg-white transition-[transform,box-shadow,border-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-[#d7ad69]/60 hover:shadow-[0_22px_60px_rgba(15,24,18,0.12)] ${priority ? "" : "reveal"}`}
+      className={`theme-vehicle-card group overflow-hidden rounded-3xl border bg-white transition-[transform,box-shadow,border-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-brand/60 hover:shadow-[0_22px_60px_rgba(15,24,18,0.12)] ${priority ? "" : "reveal"}`}
     >
       <Link
         href={`/cars/${vehicle.slug}`}
-        className="relative block aspect-[4/3] overflow-hidden bg-surface-muted"
+        className="theme-vehicle-media relative block aspect-[4/3] overflow-hidden bg-surface-muted"
         aria-label={`View ${vehicle.publicTitle}`}
       >
         {vehicle.imageUrl ? (
@@ -60,7 +60,7 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
         </div>
       </Link>
 
-      <div className="p-5 sm:p-6">
+      <div className="theme-vehicle-content p-5 sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="mb-1 text-xs font-bold tracking-[0.12em] text-brand uppercase">
@@ -80,7 +80,7 @@ export function VehicleCard({ vehicle, priority = false }: VehicleCardProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 border-y py-4 text-xs font-semibold text-foreground/60">
+        <div className="theme-vehicle-specs grid grid-cols-3 gap-2 border-y py-4 text-xs font-semibold text-foreground/70">
           <span className="flex min-w-0 items-center gap-1.5">
             <Milestone className="size-4 shrink-0 text-brand" aria-hidden />
             <span className="truncate">{formatMileage(vehicle.mileage)}</span>

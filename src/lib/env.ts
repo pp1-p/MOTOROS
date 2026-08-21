@@ -7,6 +7,19 @@ const optionalUrl = z.preprocess(
   z.url().optional(),
 );
 
+const optionalHostname = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^(?:localhost|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*)$/,
+      "Expected a hostname without a protocol, port or path",
+    )
+    .optional(),
+);
+
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: optionalUrl.default("http://localhost:3000"),
   NEXT_PUBLIC_SUPABASE_URL: optionalUrl,
@@ -14,6 +27,12 @@ const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   DEALEROS_DEMO_MODE: z.enum(["true", "false"]).default("false"),
   DEALEROS_PUBLIC_ORGANISATION_ID: z.uuid().optional(),
+  MOTOROS_BASE_DOMAIN: optionalHostname,
+  MOTOROS_LOCAL_ORGANISATION_SLUG: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .default("direct-motors"),
+  MOTOROS_TRUST_PROXY_HOST: z.enum(["true", "false"]).default("false"),
   VEHICLE_LOOKUP_PROVIDER: z.enum(["mock", "dvla", "autotrader", "manual"]).default("mock"),
   DVLA_VES_API_KEY: z.string().optional(),
   DVLA_VES_BASE_URL: optionalUrl.default(

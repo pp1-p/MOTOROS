@@ -1,11 +1,18 @@
 import type { MetadataRoute } from "next";
 
+import { getPublicSiteConfig } from "@/lib/data/site-config";
 import { getPublicVehicles } from "@/lib/data/vehicles";
 import { isSiteIndexable } from "@/lib/site-metadata";
+import { isWebsitePublished, resolvePublicBaseUrl } from "@/lib/themes";
 
 const publicRoutes = [
   "",
   "/cars",
+  "/about",
+  "/find-us",
+  "/part-exchange",
+  "/finance",
+  "/services",
   "/source-a-car",
   "/repairs",
   "/book-repair-call",
@@ -16,12 +23,12 @@ const publicRoutes = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  if (!isSiteIndexable()) return [];
-
-  const baseUrl = new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  );
-  const vehicles = await getPublicVehicles();
+  const [siteConfig, vehicles] = await Promise.all([
+    getPublicSiteConfig(),
+    getPublicVehicles(),
+  ]);
+  if (!isSiteIndexable() || !isWebsitePublished(siteConfig)) return [];
+  const baseUrl = resolvePublicBaseUrl(siteConfig);
 
   return [
     ...publicRoutes.map((route) => ({

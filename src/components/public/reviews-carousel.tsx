@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, Quote, Star } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -22,7 +22,9 @@ export function ReviewsCarousel({
   className?: string;
 }) {
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const [interactionPaused, setInteractionPaused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const goTo = useCallback(
@@ -36,6 +38,16 @@ export function ReviewsCarousel({
 
   const next = useCallback(() => goTo(index + 1), [goTo, index]);
   const prev = useCallback(() => goTo(index - 1), [goTo, index]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const paused = userPaused || interactionPaused || reducedMotion;
 
   useEffect(() => {
     if (paused || reviews.length < 2) return;
@@ -52,10 +64,10 @@ export function ReviewsCarousel({
   return (
     <div
       className={cn("relative", className)}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      onMouseEnter={() => setInteractionPaused(true)}
+      onMouseLeave={() => setInteractionPaused(false)}
+      onFocus={() => setInteractionPaused(true)}
+      onBlur={() => setInteractionPaused(false)}
     >
       <div
         className="relative overflow-hidden rounded-3xl border bg-white shadow-[0_18px_50px_rgba(15,24,18,0.06)]"
@@ -130,11 +142,8 @@ export function ReviewsCarousel({
       </div>
 
       {reviews.length > 1 ? (
-        <div
-          className="mt-5 flex items-center justify-center gap-2"
-          role="tablist"
-          aria-label="Choose review"
-        >
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-2" role="tablist" aria-label="Choose review">
           {reviews.map((_, i) => (
             <button
               key={i}
@@ -151,6 +160,16 @@ export function ReviewsCarousel({
               )}
             />
           ))}
+        </div>
+          <button
+            type="button"
+            onClick={() => setUserPaused((value) => !value)}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border bg-surface px-3 text-xs font-bold"
+            aria-label={userPaused ? "Resume rotating customer reviews" : "Pause rotating customer reviews"}
+          >
+            {userPaused ? <Play className="size-3.5" aria-hidden /> : <Pause className="size-3.5" aria-hidden />}
+            {userPaused ? "Play" : "Pause"}
+          </button>
         </div>
       ) : null}
     </div>

@@ -1,9 +1,16 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  ACTIVE_ORGANISATION_COOKIE,
+  chooseActiveMembership,
+  membershipOrganisation,
+  type MembershipCandidate,
+} from "@/lib/tenancy/membership";
 import type { StaffRole } from "@/lib/types";
 
 export type Permission =
@@ -130,7 +137,7 @@ export async function getStaffContext(): Promise<StaffContext | null> {
         userId: "00000000-0000-0000-0000-000000000001",
         email: "owner@dealeros.local",
         organisationId: "00000000-0000-0000-0000-000000000001",
-        organisationName: "DealerOS",
+        organisationName: "Direct Motors",
         role: "owner",
         displayName: "Alex Morgan",
       };
@@ -148,27 +155,32 @@ export async function getStaffContext(): Promise<StaffContext | null> {
   const { data, error } = await supabase
     .from("organisation_members")
     .select(
-      "organisation_id, role, organisations(name), profiles(display_name)",
+      "organisation_id,role,is_primary,created_at,organisations(id,name,status,deleted_at),profiles(display_name)",
     )
     .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+    .eq("is_active", true);
 
   if (error || !data) return null;
 
-  const organisation = Array.isArray(data.organisations)
-    ? data.organisations[0]
-    : data.organisations;
-  const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+  const cookieStore = await cookies();
+  const membership = chooseActiveMembership(
+    data as MembershipCandidate[],
+    cookieStore.get(ACTIVE_ORGANISATION_COOKIE)?.value,
+  );
+  if (!membership) return null;
+
+  const organisation = membershipOrganisation(membership);
+  const profile = Array.isArray(membership.profiles)
+    ? membership.profiles[0]
+    : membership.profiles;
 
   return {
     userId: user.id,
     email: user.email ?? null,
-    organisationId: data.organisation_id as string,
+    organisationId: membership.organisation_id,
     organisationName:
       (organisation as { name?: string } | null)?.name ?? "DealerOS",
-    role: data.role as StaffRole,
+    role: membership.role as StaffRole,
     displayName:
       (profile as { display_name?: string } | null)?.display_name ??
       user.email?.split("@")[0] ??

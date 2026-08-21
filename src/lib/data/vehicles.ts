@@ -1,10 +1,10 @@
 import "server-only";
 
-import { createClient } from "@supabase/supabase-js";
-
 import { isDevelopmentDemoMode } from "@/lib/demo/store";
-import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
+import { isSupabaseConfigured } from "@/lib/env";
 import { log } from "@/lib/security/logger";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getPublicTenant } from "@/lib/tenancy/public-tenant";
 import type { PublicVehicle } from "@/lib/types";
 
 export type PublicVehicleImage = {
@@ -660,35 +660,22 @@ export async function getPublicVehicles(): Promise<PublicVehicleRecord[]> {
   }
 
   try {
-    const env = getServerEnv();
-    const supabase = createClient(
-      env.NEXT_PUBLIC_SUPABASE_URL!,
-      env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: { persistSession: false, autoRefreshToken: false },
-      },
-    );
-    let organisationId = env.DEALEROS_PUBLIC_ORGANISATION_ID;
-    if (!organisationId) {
-      const dealerships = await supabase
-        .from("public_dealerships")
-        .select("id")
-        .limit(2);
-      if (dealerships.error) throw dealerships.error;
-      if ((dealerships.data ?? []).length !== 1) {
-        throw new Error(
-          (dealerships.data ?? []).length > 1
-            ? "Multiple public dealerships exist. Set DEALEROS_PUBLIC_ORGANISATION_ID."
-            : "No public dealership is configured.",
-        );
-      }
-      organisationId = dealerships.data![0]!.id as string;
-    }
+    const tenant = await getPublicTenant();
+    const supabase = createAdminSupabaseClient();
 
     const vehicles = await supabase
-      .from("public_vehicle_inventory")
-      .select("*")
-      .eq("organisation_id", organisationId)
+      .from("vehicles")
+      .select(
+        "id,organisation_id,slug,public_title,attention_grabber,make,model,derivative,body_type,fuel_type,transmission,colour,doors,seats,engine_size_cc,ulez_status,year,registration_year,mot_expiry,mileage,service_history,warranty,retail_price,description,features,featured,status,created_at",
+      )
+      .eq("organisation_id", tenant.organisationId)
+      .eq("is_public", true)
+      .is("deleted_at", null)
+      .in("status", ["ready_for_sale", "on_forecourt", "reserved", "sold"])
+      .not("slug", "is", null)
+      .not("public_title", "is", null)
+      .not("description", "is", null)
+      .gt("retail_price", 0)
       .order("created_at", { ascending: false });
     if (vehicles.error) throw vehicles.error;
 
@@ -697,13 +684,19 @@ export async function getPublicVehicles(): Promise<PublicVehicleRecord[]> {
       ids.length > 0
         ? await Promise.all([
             supabase
-              .from("public_vehicle_images")
-              .select("*")
+              .from("vehicle_images")
+              .select(
+                "id,organisation_id,vehicle_id,storage_bucket,storage_path,external_url,sort_order,alt_text",
+              )
+              .eq("organisation_id", tenant.organisationId)
+              .eq("is_public", true)
+              .is("deleted_at", null)
               .in("vehicle_id", ids)
               .order("sort_order", { ascending: true }),
             supabase
-              .from("public_vehicle_features")
-              .select("*")
+              .from("vehicle_features")
+              .select("id,organisation_id,vehicle_id,name,sort_order")
+              .eq("organisation_id", tenant.organisationId)
               .in("vehicle_id", ids)
               .order("sort_order", { ascending: true }),
           ])
@@ -766,7 +759,7 @@ export async function getPublicVehicles(): Promise<PublicVehicleRecord[]> {
         colour: row.colour,
         engineSizeCc:
           row.engine_size_cc == null ? null : Number(row.engine_size_cc),
-        price: Number(row.price),
+        price: Number(row.retail_price),
         status: row.status,
         registrationYear: row.registration_year ?? String(row.year),
         serviceHistory: row.service_history,

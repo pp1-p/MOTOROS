@@ -67,7 +67,7 @@ export default async function FindUsPage() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-[#0d1210] text-white">
+      <section className="theme-standard-hero relative isolate overflow-hidden bg-[#0d1210] text-white">
         <Image
           src={siteConfig.heroImageUrl}
           alt=""

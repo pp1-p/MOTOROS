@@ -1,19 +1,21 @@
-# DealerOS
+# MotorOS
 
-DealerOS is a Vercel-compatible UK dealership platform built as one Next.js
-application over one Supabase database:
+MotorOS is a Vercel-compatible, multi-tenant UK dealership platform built as
+one Next.js application over one Supabase database:
 
 - a premium public website for stock, enquiries, car sourcing and repair-call
   booking;
 - a permission-aware operating system for stock, leads, sourcing, repairs,
   diary, customers, tasks, reporting, website content, audit and integrations.
 
-The application is brand-neutral. Dealership identity, contact information,
-colours and published home-page content are database-backed and managed in
-DealerOS. Opening-hours data is supported by the schema/API but does not yet
-have a dedicated editing screen. The included privacy, cookie and terms pages
-are launch-ready templates in code and must be professionally reviewed and
-edited for the deploying dealership.
+Each dealership has an isolated organisation, staff memberships, stock, leads,
+website settings, domains and audit history. A shared theme registry supplies
+Direct Motors Classic, Modern Marketplace, Prestige and Performance without
+copying tenant data. The separately protected `/platform` area lets MotorOS
+owners operate all dealerships; platform support is audited and read-only.
+
+The included privacy, cookie and terms pages are templates and must be
+professionally reviewed for every deploying dealership.
 
 ## Stack
 
@@ -62,6 +64,10 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 DEALEROS_PUBLIC_ORGANISATION_ID=...
+MOTOROS_BASE_DOMAIN=localhost
+MOTOROS_LOCAL_ORGANISATION_SLUG=direct-motors
+MOTOROS_TRUST_PROXY_HOST=false
+PLATFORM_ADMIN_EMAILS=
 VEHICLE_LOOKUP_PROVIDER=mock
 ```
 
@@ -79,15 +85,23 @@ supabase start
 supabase db reset
 ```
 
-Then create the first Auth user and owner membership as described in
-`docs/DATABASE.md`. Start the application:
+Then create the first Auth user and dealership membership as described in
+`docs/DATABASE.md`. Assign the platform owner separately using
+`docs/PLATFORM_ADMIN.md`. Start the application:
 
 ```powershell
 npm run dev
 ```
 
 Open `http://localhost:3000` for the public site and
-`http://localhost:3000/admin` for DealerOS.
+`http://localhost:3000/admin` for the dealership workspace. Platform owners use
+`http://localhost:3000/platform`; owner-led dealership creation starts at
+`http://localhost:3000/onboarding`.
+
+Public tenant routing uses a verified custom domain or a subdomain beneath
+`MOTOROS_BASE_DOMAIN`. Localhost deliberately falls back to
+`MOTOROS_LOCAL_ORGANISATION_SLUG`. See `docs/MULTITENANCY.md` before enabling
+proxy-host trust or production wildcard DNS.
 
 ## Development seed
 
@@ -114,6 +128,7 @@ explicit seed guard is satisfied. `supabase db reset` also applies
 npm run typecheck
 npm run lint
 npm test
+npm run verify:supabase-security
 npm run build
 ```
 
@@ -139,7 +154,7 @@ Public:
 - `/contact`
 - `/privacy`, `/cookies`, `/terms`
 
-DealerOS:
+Dealership admin:
 
 - `/admin` overview
 - `/admin/stock`, `/admin/leads`, `/admin/sales`
@@ -148,6 +163,12 @@ DealerOS:
 - `/admin/reports`, `/admin/website`
 - `/admin/team`, `/admin/integrations`, `/admin/settings`
 - `/admin/audit`, `/admin/health`
+
+Platform operations:
+
+- `/platform` network overview and dealership directory
+- `/platform/dealerships/[id]` operational detail and audited controls
+- `/onboarding` owner-only dealership creation
 
 ## External integrations
 
@@ -165,6 +186,9 @@ as “connected” until the authorised integration is actually verified.
 
 See:
 
+- `docs/MULTITENANCY.md`
+- `docs/PLATFORM_ADMIN.md`
+- `docs/DIRECT_MOTORS_ROLLOUT.md`
 - `docs/INTEGRATIONS.md`
 - `docs/DEPLOYMENT.md`
 - `docs/SECURITY.md`

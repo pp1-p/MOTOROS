@@ -24,14 +24,22 @@ These are deliberate, visible boundaries rather than fabricated integrations.
   editing and professional review.
 - Advanced accounting, card payments, finance proposals, parts procurement,
   technician clocking and DMS migration are outside the first release.
-- Multi-dealership ownership is represented in the schema/RLS, but cross-site
-  group reporting and consolidated billing are not included.
+- Multi-dealership isolation and platform summaries are included, but cross-site
+  group accounting and consolidated billing are not. Plan codes are metadata.
+- Custom-domain ownership, DNS and certificate checks are operational launch
+  steps; MotorOS records pending/verified/failed/disabled state but does not
+  automate DNS-provider challenges in this release.
+- Platform onboarding creates the tenant, routing, contact/brand settings,
+  design and owner invitation. Logo upload, inventory import/entry, content
+  review and final website publication use the existing dealership admin after
+  creation rather than being embedded in the platform wizard.
 - Browser E2E tests that mutate Supabase require a dedicated seeded test project
   and credentials.
 - Labour and parts rows on repair jobs are currently live but read-only in the
   admin UI; dedicated item add/edit/delete operations are not included.
-- Website editing currently covers dealership branding and the homepage. Legal,
-  FAQ, testimonial and opening-hours editing screens are not included.
+- Website editing covers dealership branding, theme selection/preview/publication
+  and the homepage. Legal, FAQ, testimonial and opening-hours editing screens
+  are not included.
 - The monthly-budget control on inventory is intentionally disabled until a
   regulated finance/referral calculator is selected and approved.
 - Error-monitoring instrumentation such as Sentry is not bundled. Configure an

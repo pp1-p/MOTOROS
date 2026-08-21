@@ -21,7 +21,7 @@ export function LegalPage({
 }) {
   return (
     <>
-      <section className="border-b bg-[#15221d] py-14 text-white sm:py-20">
+      <section className="theme-standard-hero border-b bg-[#15221d] py-14 text-white sm:py-20">
         <div className="container-shell max-w-4xl">
           <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
             {eyebrow}

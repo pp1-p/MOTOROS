@@ -13,9 +13,11 @@ import { PublishHomepageButton } from "@/components/admin/publish-homepage-butto
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ThemeStudio } from "@/app/admin/website/theme-studio";
 import { getStaffContext } from "@/lib/auth/permissions";
 import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { isThemeId, type ThemeId } from "@/lib/themes";
 
 const defaults = {
   heroEyebrow: "Independent motoring, properly handled",
@@ -77,6 +79,30 @@ async function loadHomepage() {
   };
 }
 
+async function loadThemeState(): Promise<{
+  publishedThemeId: ThemeId;
+  draftThemeId: ThemeId;
+}> {
+  const fallback: ThemeId = "direct-motors-classic";
+  if (!isSupabaseConfigured() || !getServerEnv().SUPABASE_SERVICE_ROLE_KEY) {
+    return { publishedThemeId: fallback, draftThemeId: fallback };
+  }
+  const staff = await getStaffContext();
+  if (!staff) return { publishedThemeId: fallback, draftThemeId: fallback };
+  const result = await createAdminSupabaseClient()
+    .from("dealership_settings")
+    .select("published_theme_id,draft_theme_id")
+    .eq("organisation_id", staff.organisationId)
+    .single();
+  const publishedThemeId = isThemeId(result.data?.published_theme_id)
+    ? result.data.published_theme_id
+    : fallback;
+  const draftThemeId = isThemeId(result.data?.draft_theme_id)
+    ? result.data.draft_theme_id
+    : publishedThemeId;
+  return { publishedThemeId, draftThemeId };
+}
+
 function formatTimestamp(value: string | null) {
   if (!value) return "Not yet";
   return new Intl.DateTimeFormat("en-GB", {
@@ -87,7 +113,10 @@ function formatTimestamp(value: string | null) {
 }
 
 export default async function WebsiteEditorPage() {
-  const homepage = await loadHomepage();
+  const [homepage, themeState] = await Promise.all([
+    loadHomepage(),
+    loadThemeState(),
+  ]);
   const status =
     homepage.status === "published" ? "Published" : "Draft changes";
 
@@ -105,6 +134,11 @@ export default async function WebsiteEditorPage() {
             </Link>
           </Button>
         }
+      />
+
+      <ThemeStudio
+        initialPublishedThemeId={themeState.publishedThemeId}
+        initialDraftThemeId={themeState.draftThemeId}
       />
 
       <div className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
