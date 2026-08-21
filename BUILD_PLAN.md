@@ -48,3 +48,19 @@ environment verification remains in `docs/LAUNCH_CHECKLIST.md`.
 - [x] Deployment, provider, security and launch-readiness documentation
 - [ ] Authenticated Playwright journey against a seeded staging Supabase project
 - [ ] Apply and exercise all migrations against staging Postgres/Supabase
+
+## Phase 7 — MotorOS multi-tenancy and themes
+
+- [x] Stable tenant identity, lifecycle, plan, subdomain and website status
+- [x] Verified-domain resolver with safe localhost fallback and host validation
+- [x] Lifecycle-aware membership helpers, RLS and tenant-scoped public views
+- [x] Direct Motors backfill as the first normal tenant
+- [x] Shared four-design registry, protected previews and publication history
+- [x] Owner-only dealership onboarding with optional owner invitation
+- [x] Searchable/filterable/sortable platform directory and operational detail
+- [x] Database-backed platform owner/support roles and audited platform actions
+- [x] Targeted tenant, hostname, platform-role, onboarding and theme unit tests
+- [x] Architecture, platform operation, domain and rollout/rollback documentation
+- [ ] Exercise migrations and reciprocal tenant-denial tests against staging
+- [ ] Verify wildcard/custom-domain DNS and certificates in the target platform
+- [ ] Complete authenticated and four-theme visual/accessibility staging review

@@ -2,12 +2,23 @@ import { NextResponse } from "next/server";
 
 import { getAvailableRepairCallSlots } from "@/lib/availability";
 import {
+  assertSameOrigin,
   checkRateLimit,
   getClientFingerprint,
 } from "@/lib/security/request";
+import {
+  PublicTenantNotFoundError,
+  resolvePublicTenantForRequest,
+} from "@/lib/tenancy/public-tenant";
 import { availabilityRequestSchema } from "@/lib/validation/public";
 
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
+  }
+
   const rate = checkRateLimit(`availability:${getClientFingerprint(request)}`, {
     limit: 40,
     windowMs: 10 * 60_000,
@@ -30,9 +41,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const slots = await getAvailableRepairCallSlots(parsed.data.date);
+    const tenant = await resolvePublicTenantForRequest(request);
+    const slots = await getAvailableRepairCallSlots(
+      parsed.data.date,
+      tenant.organisationId,
+    );
     return NextResponse.json({ slots });
-  } catch {
+  } catch (error) {
+    if (error instanceof PublicTenantNotFoundError) {
+      return NextResponse.json(
+        { message: "This dealership website is not available.", slots: [] },
+        { status: 404 },
+      );
+    }
     return NextResponse.json(
       {
         message:

@@ -1,6 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import {
+  ACTIVE_ORGANISATION_COOKIE,
+  ACTIVE_ORGANISATION_COOKIE_OPTIONS,
+  chooseActiveMembership,
+  type MembershipCandidate,
+} from "@/lib/tenancy/membership";
+
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,6 +42,40 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let activeMembership: MembershipCandidate | null = null;
+  if (user && isAdminRoute) {
+    const memberships = await supabase
+      .from("organisation_members")
+      .select(
+        "organisation_id,role,is_primary,created_at,organisations(id,name,status,deleted_at)",
+      )
+      .eq("user_id", user.id)
+      .eq("is_active", true);
+    activeMembership = chooseActiveMembership(
+      (memberships.data ?? []) as MembershipCandidate[],
+      request.cookies.get(ACTIVE_ORGANISATION_COOKIE)?.value,
+    );
+
+    if (
+      activeMembership &&
+      request.cookies.get(ACTIVE_ORGANISATION_COOKIE)?.value !==
+        activeMembership.organisation_id
+    ) {
+      request.cookies.set(
+        ACTIVE_ORGANISATION_COOKIE,
+        activeMembership.organisation_id,
+      );
+      response.cookies.set(
+        ACTIVE_ORGANISATION_COOKIE,
+        activeMembership.organisation_id,
+        {
+          ...ACTIVE_ORGANISATION_COOKIE_OPTIONS,
+          secure: process.env.NODE_ENV === "production",
+        },
+      );
+    }
+  }
+
   if (isAdminRoute && !isSignIn && !user) {
     const destination = new URL("/admin/sign-in", request.url);
     destination.searchParams.set(
@@ -45,31 +86,19 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isSignIn && user) {
-    const membership = await supabase
-      .from("organisation_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
     const redirectPath =
-      membership.data?.role === "technician"
+      activeMembership?.role === "technician"
         ? "/admin/repairs"
-        : membership.data?.role === "website_editor"
+        : activeMembership?.role === "website_editor"
           ? "/admin/website"
-          : "/admin";
+          : activeMembership
+            ? "/admin"
+            : "/admin/forbidden";
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
   if (isAdminRoute && !isSignIn && !isAcceptInvite && user) {
-    const membership = await supabase
-      .from("organisation_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-    const role = membership.data?.role as string | undefined;
+    const role = activeMembership?.role;
     if (!role) {
       if (isForbidden) return response;
       return NextResponse.redirect(new URL("/admin/forbidden", request.url));
@@ -82,7 +111,10 @@ export async function proxy(request: NextRequest) {
       { prefix: "/admin/audit", roles: ["owner"] },
       { prefix: "/admin/reports", roles: ["owner", "manager"] },
       { prefix: "/admin/settings", roles: ["owner", "manager"] },
-      { prefix: "/admin/website", roles: ["owner", "website_editor"] },
+      {
+        prefix: "/admin/website",
+        roles: ["owner", "manager", "website_editor"],
+      },
       {
         prefix: "/admin/repairs",
         roles: ["owner", "manager", "service_advisor", "technician"],

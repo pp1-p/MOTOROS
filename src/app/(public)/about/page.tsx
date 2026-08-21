@@ -13,12 +13,21 @@ import {
 } from "lucide-react";
 
 import { getPublicSiteConfig } from "@/lib/data/site-config";
+import { ThemeAboutPage } from "@/components/public/themes";
+import { isDirectMotorsSite, resolvePublishedThemeId } from "@/lib/themes";
 
-export const metadata: Metadata = {
-  title: "About us",
-  description:
-    "Meet the family behind our independent dealership — Indijit and Rashpal — and the small team that looks after every car and every customer.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const siteConfig = await getPublicSiteConfig();
+  const description = isDirectMotorsSite(siteConfig)
+    ? "Meet the family behind our independent dealership — Indijit and Rashpal — and the small team that looks after every car and every customer."
+    : `Learn about ${siteConfig.name}, our approach to vehicle preparation, and the team ready to help with your next car.`;
+
+  return {
+    title: "About us",
+    description,
+    alternates: { canonical: new URL("/about", siteConfig.baseUrl).toString() },
+  };
+}
 
 type TeamMember = {
   name: string;
@@ -110,6 +119,10 @@ const testimonials = [
 
 export default async function AboutPage() {
   const siteConfig = await getPublicSiteConfig();
+  const themeId = resolvePublishedThemeId(siteConfig);
+  if (themeId !== "direct-motors-classic" || !isDirectMotorsSite(siteConfig)) {
+    return <ThemeAboutPage themeId={themeId} config={siteConfig} />;
+  }
 
   return (
     <>

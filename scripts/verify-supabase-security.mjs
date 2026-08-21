@@ -12,6 +12,10 @@ const technicianStatusGuardPath = join(
   migrationsDirectory,
   "202607180002_technician_status_guard.sql",
 );
+const multitenantPath = join(
+  migrationsDirectory,
+  "202608210001_multitenant_foundation.sql",
+);
 
 function read(path) {
   return readFileSync(path, "utf8").replaceAll("\r\n", "\n");
@@ -53,6 +57,114 @@ for (const [index, name] of migrationFiles.entries()) {
 const workflows = read(
   join(migrationsDirectory, "202607160004_security_workflows.sql"),
 );
+
+const multitenant = read(multitenantPath);
+const requiredMultitenantControls = [
+  "create table public.dealership_domains",
+  "create table public.platform_user_roles",
+  "create table public.website_theme_publications",
+  "alter table public.dealership_domains enable row level security;",
+  "alter table public.platform_user_roles enable row level security;",
+  "alter table public.website_theme_publications enable row level security;",
+  "using (user_id = auth.uid());",
+  "revoke update on public.organisations from authenticated;",
+  "create or replace function public.publish_website_theme(",
+  "grant execute on function public.publish_website_theme(uuid, text)",
+  "create unique index vehicles_org_slug_unique",
+  "on public.vehicles (organisation_id, slug)",
+];
+
+for (const control of requiredMultitenantControls) {
+  assert(
+    multitenant.includes(control),
+    `Multi-tenant migration is missing control: ${control}`,
+  );
+}
+
+for (const table of [
+  "dealership_domains",
+  "platform_user_roles",
+  "website_theme_publications",
+]) {
+  assert(
+    multitenant.includes(
+      `revoke all on public.${table} from public, anon, authenticated;`,
+    ),
+    `Multi-tenant migration does not revoke browser writes on ${table}`,
+  );
+}
+
+for (const helper of [
+  "is_org_member",
+  "has_org_role",
+  "has_org_permission",
+  "current_member_role",
+]) {
+  const start = multitenant.indexOf(`create or replace function public.${helper}`);
+  assert(start >= 0, `Multi-tenant migration is missing ${helper}`);
+  const end = multitenant.indexOf("\n$$;", start);
+  assert(end > start, `Multi-tenant helper ${helper} is incomplete`);
+  const body = multitenant.slice(start, end);
+  assert(
+    body.includes("o.status in ('trial', 'active')") &&
+      body.includes("o.deleted_at is null"),
+    `Multi-tenant helper ${helper} does not enforce dealership lifecycle`,
+  );
+}
+
+assert(
+  multitenant.includes("check (status <> 'verified' or verified_at is not null)"),
+  "Verified dealership domains do not require a verification timestamp",
+);
+const invitationConstraintStart = multitenant.indexOf(
+  "add constraint team_invitations_role_check check (",
+);
+const invitationConstraintEnd = multitenant.indexOf(
+  ");",
+  invitationConstraintStart,
+);
+assert(
+  invitationConstraintStart >= 0 &&
+    invitationConstraintEnd > invitationConstraintStart &&
+    multitenant
+      .slice(invitationConstraintStart, invitationConstraintEnd)
+      .includes("'owner'"),
+  "Team invitation constraint does not allow platform-provisioned owners",
+);
+const vehiclePolicyStart = multitenant.indexOf(
+  "create policy vehicles_public_read",
+);
+const vehiclePolicyEnd = multitenant.indexOf(
+  "create policy vehicle_images_public_read",
+  vehiclePolicyStart,
+);
+assert(
+  vehiclePolicyStart >= 0 && vehiclePolicyEnd > vehiclePolicyStart,
+  "Could not locate the public vehicle policy",
+);
+const vehiclePublicPolicy = multitenant.slice(
+  vehiclePolicyStart,
+  vehiclePolicyEnd,
+);
+assert(
+  vehiclePublicPolicy.includes("to anon") &&
+    !vehiclePublicPolicy.includes("to authenticated"),
+  "Public vehicle policy is not restricted to the anonymous role",
+);
+
+for (const view of [
+  "public_dealerships",
+  "public_safe_vehicles",
+  "public_vehicle_images",
+  "public_vehicle_features",
+  "public_vehicle_inventory",
+]) {
+  const signature = `create or replace view public.${view}\nwith (security_invoker = on, security_barrier = true)`;
+  assert(
+    multitenant.includes(signature),
+    `Public tenant view ${view} is not security-invoker/barrier protected`,
+  );
+}
 assert(
   !/(?<!extensions\.)\bdigest\(/u.test(workflows),
   "A public workflow still has an unqualified digest call",

@@ -1,9 +1,12 @@
 import type { MetadataRoute } from "next";
 
+import { getPublicSiteConfig } from "@/lib/data/site-config";
 import { isSiteIndexable } from "@/lib/site-metadata";
+import { isWebsitePublished, resolvePublicBaseUrl } from "@/lib/themes";
 
-export default function robots(): MetadataRoute.Robots {
-  if (!isSiteIndexable()) {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const siteConfig = await getPublicSiteConfig();
+  if (!isSiteIndexable() || !isWebsitePublished(siteConfig)) {
     return {
       rules: {
         userAgent: "*",
@@ -12,15 +15,13 @@ export default function robots(): MetadataRoute.Robots {
     };
   }
 
-  const baseUrl = new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  );
+  const baseUrl = resolvePublicBaseUrl(siteConfig);
 
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin/", "/api/", "/auth/"],
+      disallow: ["/admin/", "/api/", "/auth/", "/platform/"],
     },
     sitemap: new URL("/sitemap.xml", baseUrl).toString(),
   };

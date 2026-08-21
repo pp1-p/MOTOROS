@@ -28,13 +28,17 @@
 - [ ] Enable owner MFA and review session duration
 - [ ] Remove leavers and all seed/test accounts
 - [ ] Nominate data, security and integration owners
+- [ ] Assign the first UUID-backed platform owner and remove bootstrap emails
+- [ ] Verify platform support is read-only and every detail view is audited
 
 ## Supabase and security
 
 - [ ] Apply migrations to staging, then production
-- [ ] Set `DEALEROS_PUBLIC_ORGANISATION_ID` when more than one organisation exists
+- [ ] Configure `MOTOROS_BASE_DOMAIN`, wildcard DNS and the local fallback
+- [ ] Keep proxy-host trust disabled unless the edge overwrites forwarded hosts
 - [ ] Verify RLS using anonymous and each staff role
-- [ ] Test cross-organisation access denial
+- [ ] Test reciprocal cross-organisation read and mutation denial
+- [ ] Verify custom-domain ownership/DNS before changing it from pending
 - [ ] Test private document signed URLs and expiry
 - [ ] Rotate service, provider and webhook secrets
 - [ ] Configure backups and perform a restore rehearsal
@@ -70,8 +74,11 @@
 - [ ] `npm run typecheck`
 - [ ] `npm run lint`
 - [ ] `npm test`
+- [ ] `npm run verify:supabase-security`
 - [ ] `npm run build`
 - [ ] `npm run test:e2e` against staging
 - [ ] Desktop, iPad and mobile visual/accessibility review
 - [ ] Keyboard-only workflow review
 - [ ] Performance/Core Web Vitals review
+- [ ] All four designs reviewed on mobile and desktop with live tenant data
+- [ ] Direct Motors URLs, canonical metadata and Classic appearance compared

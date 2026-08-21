@@ -197,6 +197,23 @@ Broadcast notification read state is stored per user in
 `notification_receipts`; reading a dealership-wide notification never marks it
 read for another staff member.
 
+## Multi-tenant routing and platform control plane
+
+Migration `202608210001_multitenant_foundation.sql` adds organisation lifecycle,
+subdomain, plan and website-publication fields; verified dealership domains;
+database-backed platform roles; and immutable website-theme publication
+history. It also changes vehicle slug uniqueness to `(organisation_id, slug)`.
+
+Platform roles are not dealership memberships. Create the first platform owner
+only through the controlled procedure in `docs/PLATFORM_ADMIN.md`. Tenant and
+domain resolution, lifecycle gates and the required tenant keys for new data
+flows are documented in `docs/MULTITENANCY.md`.
+
+The migration is additive and forward-only. Existing organisations are
+backfilled as established published tenants using their current slug. Follow
+`docs/DIRECT_MOTORS_ROLLOUT.md` for production-like count comparison, staged
+release and compensating rollback guidance.
+
 ## Seed scope
 
 The seed includes:

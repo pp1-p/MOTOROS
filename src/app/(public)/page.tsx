@@ -21,18 +21,27 @@ import { ReviewsCarousel } from "@/components/public/reviews-carousel";
 import { SectionHeading } from "@/components/public/section-heading";
 import { SpotlightCard } from "@/components/public/spotlight-card";
 import { VehicleCard } from "@/components/public/vehicle-card";
+import { ThemeHomePage } from "@/components/public/themes";
 import { Button } from "@/components/ui/button";
 import { getPublicSiteConfig } from "@/lib/data/site-config";
 import { getFeaturedVehicles } from "@/lib/data/vehicles";
 import { buildPublicSeoTitle } from "@/lib/site-metadata";
+import {
+  isDirectMotorsSite,
+  resolvePublicBaseUrl,
+  resolvePublishedThemeId,
+} from "@/lib/themes";
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteConfig = await getPublicSiteConfig();
+  const canonical = new URL("/", resolvePublicBaseUrl(siteConfig)).toString();
   return {
     title: {
       absolute: buildPublicSeoTitle(siteConfig.seoTitle, siteConfig.name),
     },
     description: siteConfig.seoDescription,
+    alternates: { canonical },
+    openGraph: { url: canonical },
   };
 }
 
@@ -90,6 +99,17 @@ export default async function HomePage() {
     getFeaturedVehicles(4),
     getPublicSiteConfig(),
   ]);
+  const themeId = resolvePublishedThemeId(siteConfig);
+  if (themeId !== "direct-motors-classic") {
+    return (
+      <ThemeHomePage
+        themeId={themeId}
+        config={siteConfig}
+        featuredVehicles={featuredVehicles}
+      />
+    );
+  }
+  const showDirectMotorsTrust = isDirectMotorsSite(siteConfig);
 
   return (
     <>
@@ -169,6 +189,7 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {showDirectMotorsTrust ? (
       <section className="border-b bg-white py-16 sm:py-20">
         <div className="container-shell">
           <div className="mx-auto max-w-3xl text-center">
@@ -224,6 +245,7 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      ) : null}
 
       <section className="py-20 sm:py-28">
         <div className="container-shell">

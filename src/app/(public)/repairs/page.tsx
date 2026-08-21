@@ -71,7 +71,7 @@ const services = [
 export default function RepairsPage() {
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-[#101512] text-white">
+      <section className="theme-standard-hero relative isolate overflow-hidden bg-[#101512] text-white">
         <Image
           src="/images/hero-showroom.png"
           alt="Independent dealership vehicles presented in a clean showroom"

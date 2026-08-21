@@ -14,6 +14,8 @@ import {
   type VehicleSearchFilters,
 } from "@/lib/data/vehicles";
 import { cn } from "@/lib/utils";
+import { getPublicSiteConfig } from "@/lib/data/site-config";
+import { resolvePublicBaseUrl } from "@/lib/themes";
 
 // The public stock list must always reflect the newest published state.
 // Without this, Next.js can serve a statically cached version and a car
@@ -21,11 +23,17 @@ import { cn } from "@/lib/utils";
 // invalidates.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Used cars for sale",
-  description:
-    "Browse carefully selected used cars with clear specifications, preparation details and direct access to the dealership team.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const siteConfig = await getPublicSiteConfig();
+  const canonical = new URL("/cars", resolvePublicBaseUrl(siteConfig)).toString();
+  return {
+    title: "Used cars for sale",
+    description:
+      "Browse carefully selected used cars with clear specifications, preparation details and direct access to the dealership team.",
+    alternates: { canonical },
+    openGraph: { url: canonical },
+  };
+}
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -112,7 +120,7 @@ export default async function CarsPage({
 
   return (
     <>
-      <section className="border-b bg-[#15221d] py-14 text-white sm:py-20">
+      <section className="theme-inventory-hero border-b bg-[#15221d] py-14 text-white sm:py-20">
         <div className="container-shell">
           <p className="mb-4 text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
             Current stock
@@ -127,12 +135,12 @@ export default async function CarsPage({
         </div>
       </section>
 
-      <section className="border-b bg-white py-6 sm:py-8">
+      <section className="theme-inventory-filterbar border-b bg-white py-6 sm:py-8">
         <div className="container-shell">
           <form
             method="get"
             action="/cars"
-            className="flex flex-col gap-3 rounded-2xl border bg-white p-3 shadow-sm sm:p-4"
+            className="theme-inventory-search flex flex-col gap-3 rounded-2xl border bg-white p-3 shadow-sm sm:p-4"
           >
             <input
               type="hidden"
@@ -233,7 +241,7 @@ export default async function CarsPage({
         </div>
       </section>
 
-      <section className="border-b bg-white py-5">
+      <section className="theme-inventory-status border-b bg-white py-5">
         <div className="container-shell flex snap-x gap-2 overflow-x-auto pb-1">
           {availabilityOptions.map((option) => (
             <Link
@@ -256,7 +264,7 @@ export default async function CarsPage({
         </div>
       </section>
 
-      <section className="py-10 sm:py-14">
+      <section className="theme-inventory-results py-10 sm:py-14">
         <div className="container-shell">
           <div className="mb-10 flex flex-col-reverse gap-4 sm:flex-row sm:items-end sm:justify-between">
             <SectionHeading
@@ -317,7 +325,7 @@ export default async function CarsPage({
           ) : null}
 
           {filteredVehicles.length ? (
-            <div className="mt-9 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="theme-vehicle-grid mt-9 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {filteredVehicles.map((vehicle, index) => (
                 <VehicleCard
                   key={vehicle.id}

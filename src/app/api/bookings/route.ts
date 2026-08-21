@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 import { getAvailableRepairCallSlots } from "@/lib/availability";
 import { sendConfirmationEmail } from "@/lib/communications/email";
-import { getDefaultOrganisationId } from "@/lib/data/organisation";
 import { isDevelopmentDemoMode, saveDemoSubmission } from "@/lib/demo/store";
 import { isSupabaseConfigured } from "@/lib/env";
 import { log } from "@/lib/security/logger";
@@ -13,6 +12,10 @@ import {
   getClientFingerprint,
 } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import {
+  PublicTenantNotFoundError,
+  resolvePublicTenantForRequest,
+} from "@/lib/tenancy/public-tenant";
 import { bookingSchema } from "@/lib/validation/public";
 
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -108,7 +111,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const available = await getAvailableRepairCallSlots(parsed.data.preferredDate);
+    const tenant = await resolvePublicTenantForRequest(request);
+    const organisationId = tenant.organisationId;
+    const available = await getAvailableRepairCallSlots(
+      parsed.data.preferredDate,
+      organisationId,
+    );
     const selected = available.find((slot) => slot.start === parsed.data.timeSlot);
     if (!selected) {
       return NextResponse.json(
@@ -136,7 +144,6 @@ export async function POST(request: Request) {
       });
     }
 
-    const organisationId = await getDefaultOrganisationId();
     const supabase = createAdminSupabaseClient();
     const { data, error } = await supabase.rpc("book_repair_call", {
       p_organisation_id: organisationId,
@@ -219,6 +226,12 @@ export async function POST(request: Request) {
       attachmentWarning,
     });
   } catch (error) {
+    if (error instanceof PublicTenantNotFoundError) {
+      return NextResponse.json(
+        { message: "This dealership website is not available." },
+        { status: 404 },
+      );
+    }
     log("error", "repair_booking.failed", {
       message: error instanceof Error ? error.message : "Unknown failure",
     });
