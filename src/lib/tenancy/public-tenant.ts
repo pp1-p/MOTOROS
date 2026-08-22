@@ -38,11 +38,117 @@ type EligibleOrganisation = {
   website_status: "published";
 };
 
+type LegacyEligibleOrganisation = {
+  id: string;
+  name: string;
+  slug: string;
+  status: "trial" | "active";
+  deleted_at: null;
+};
+
 export class PublicTenantNotFoundError extends Error {
   constructor(message = "No published dealership is configured for this hostname.") {
     super(message);
     this.name = "PublicTenantNotFoundError";
   }
+}
+
+const TENANT_SCHEMA_UNAVAILABLE_CODES = new Set([
+  "42703", // PostgreSQL undefined_column
+  "42P01", // PostgreSQL undefined_table
+  "PGRST204", // PostgREST column missing from the schema cache
+  "PGRST205", // PostgREST table missing from the schema cache
+]);
+
+export function isTenantSchemaUnavailableError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown };
+  if (typeof candidate.message !== "string") return false;
+  const referencesExpectedTenancyObject =
+    /dealership_domains/i.test(candidate.message) ||
+    /organisations[^\n]*(?:subdomain|website_status)/i.test(candidate.message) ||
+    /(?:subdomain|website_status)[^\n]*organisations/i.test(candidate.message);
+  const isMissingSchemaError =
+    (typeof candidate.code === "string" &&
+      TENANT_SCHEMA_UNAVAILABLE_CODES.has(candidate.code)) ||
+    /(?:column|relation) .+ does not exist/i.test(candidate.message) ||
+    /could not find (?:the )?(?:column|table) .+ in the schema cache/i.test(
+      candidate.message,
+    );
+  return referencesExpectedTenancyObject && isMissingSchemaError;
+}
+
+function isProductionRuntime() {
+  return process.env.NODE_ENV === "production";
+}
+
+function legacyFallbackScope(hostname: string) {
+  const env = getServerEnv();
+  const appHostname = fallbackHostname();
+  const isConfiguredHost = appHostname !== null && hostname === appHostname;
+
+  if (isProductionRuntime()) {
+    return env.DEALEROS_PUBLIC_ORGANISATION_ID && isConfiguredHost
+      ? ("configured" as const)
+      : null;
+  }
+
+  if (isConfiguredHost && env.DEALEROS_PUBLIC_ORGANISATION_ID) {
+    return "configured" as const;
+  }
+  return isBareLocalHostname(hostname) ? ("local" as const) : null;
+}
+
+async function legacySchemaFallback(
+  hostname: string,
+  baseUrl: string,
+): Promise<PublicTenantContext | null> {
+  const env = getServerEnv();
+  const scope = legacyFallbackScope(hostname);
+  if (!scope) return null;
+
+  const supabase = createAdminSupabaseClient();
+  const field = scope === "configured" ? "id" : "slug";
+  const value =
+    scope === "configured"
+      ? env.DEALEROS_PUBLIC_ORGANISATION_ID
+      : env.MOTOROS_LOCAL_ORGANISATION_SLUG;
+  if (!value) return null;
+
+  const result = await supabase
+    .from("organisations")
+    .select("id,name,slug,status,deleted_at")
+    .eq(field, value)
+    .in("status", ["trial", "active"])
+    .is("deleted_at", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (result.error) throw result.error;
+  const organisation = result.data as LegacyEligibleOrganisation | null;
+  if (
+    !organisation ||
+    organisation.deleted_at !== null ||
+    !["trial", "active"].includes(organisation.status)
+  ) {
+    return null;
+  }
+
+  return {
+    organisationId: organisation.id,
+    name: organisation.name,
+    slug: organisation.slug,
+    subdomain: organisation.slug,
+    hostname,
+    baseUrl,
+    websiteStatus: "published",
+    lifecycleStatus: organisation.status,
+    domainType: scope,
+  };
+}
+
+function mayUseLegacyConfiguration(hostname: string) {
+  return legacyFallbackScope(hostname) !== null;
 }
 
 function trustProxyHost() {
@@ -133,11 +239,7 @@ async function organisationForVerifiedDomain(hostname: string) {
 
 async function configuredFallback(hostname: string) {
   const env = getServerEnv();
-  const appHostname = fallbackHostname();
-  const mayUseLegacyConfiguration =
-    isBareLocalHostname(hostname) ||
-    (appHostname !== null && hostname === appHostname);
-  if (!mayUseLegacyConfiguration) return null;
+  if (!mayUseLegacyConfiguration(hostname)) return null;
 
   if (env.DEALEROS_PUBLIC_ORGANISATION_ID) {
     const organisation = await eligibleOrganisation(
@@ -164,8 +266,7 @@ export async function resolvePublicTenantFromHeaders(
   requestHeaders: HeaderReader,
 ): Promise<PublicTenantContext> {
   const trustForwardedHost = trustProxyHost();
-  const hostname =
-    requestHostname(requestHeaders, { trustForwardedHost }) ?? fallbackHostname();
+  const hostname = requestHostname(requestHeaders, { trustForwardedHost });
   if (!hostname) throw new PublicTenantNotFoundError("The request hostname is invalid.");
 
   const baseUrl = requestOrigin(requestHeaders, hostname, { trustForwardedHost });
@@ -183,13 +284,27 @@ export async function resolvePublicTenantFromHeaders(
       }
     | null = null;
 
-  if (subdomain) {
-    const organisation = await eligibleOrganisation("subdomain", subdomain);
-    if (organisation) resolved = { organisation, domainType: "subdomain" };
-  }
+  try {
+    if (subdomain) {
+      const organisation = await eligibleOrganisation("subdomain", subdomain);
+      if (organisation) resolved = { organisation, domainType: "subdomain" };
+    }
 
-  resolved ??= await organisationForVerifiedDomain(hostname);
-  resolved ??= await configuredFallback(hostname);
+    resolved ??= await organisationForVerifiedDomain(hostname);
+    resolved ??= await configuredFallback(hostname);
+  } catch (error) {
+    // A deployment can be built immediately before the forward-only tenancy
+    // migration is applied. Keep only the explicitly configured legacy host
+    // buildable; arbitrary or custom hostnames must continue to fail closed.
+    if (
+      mayUseLegacyConfiguration(hostname) &&
+      isTenantSchemaUnavailableError(error)
+    ) {
+      const legacyTenant = await legacySchemaFallback(hostname, baseUrl);
+      if (legacyTenant) return legacyTenant;
+    }
+    throw error;
+  }
 
   if (!resolved) throw new PublicTenantNotFoundError();
   const { organisation } = resolved;
