@@ -11,7 +11,7 @@ import { PageHeader, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
 import { getStaffContext } from "@/lib/auth/permissions";
 import { getEnvironmentHealth } from "@/lib/env";
-import { getAutoTraderConfigurationStatus } from "@/lib/integrations/autotrader";
+import { getAutoTraderConnectionStatus } from "@/lib/integrations/autotrader/state";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 type Check = {
@@ -24,6 +24,13 @@ type Check = {
 
 async function runChecks(): Promise<Check[]> {
   const configuration = getEnvironmentHealth();
+  const staff = await getStaffContext();
+  const autoTrader = staff
+    ? await getAutoTraderConnectionStatus(staff.organisationId)
+    : {
+        status: "not_configured",
+        message: "Sign in to inspect the dealership integration state.",
+      };
   const checks: Check[] = [
     {
       name: "Application API",
@@ -48,8 +55,8 @@ async function runChecks(): Promise<Check[]> {
     },
     {
       name: "Auto Trader",
-      status: getAutoTraderConfigurationStatus().status.replaceAll("_", " "),
-      detail: getAutoTraderConfigurationStatus().message,
+      status: autoTrader.status.replaceAll("_", " "),
+      detail: autoTrader.message,
       response: "Configuration",
       icon: Cloud,
     },
@@ -74,7 +81,6 @@ async function runChecks(): Promise<Check[]> {
     ];
   }
 
-  const staff = await getStaffContext();
   const supabase = createAdminSupabaseClient();
   const databaseStarted = performance.now();
   const database = staff

@@ -44,59 +44,132 @@ produce a visible manual fallback. No provider failure creates invented data.
 
 ## Auto Trader Connect
 
-DealerOS never scrapes Auto Trader.
+MOTOR.OS never scrapes Auto Trader. This adapter is deliberately locked to the
+documented sandbox origin, `https://api-sandbox.autotrader.co.uk`; the base URL
+cannot be changed by an environment variable.
 
-The integration is optional and requires:
+### Prerequisites and secure configuration
 
-- an authorised Auto Trader Connect agreement;
-- a client ID and secret;
-- the dealership advertiser ID;
-- the actual products and scopes enabled for that agreement;
-- webhook/signature documentation applicable to the account.
+The dealership must have an authorised Auto Trader Connect sandbox agreement
+with the Stock Sync capability and, for writes, the applicable Stock Updates,
+Availability Updates, Price Updates and Media Updates capabilities.
 
-Environment:
+Copy `.env.example` to the ignored `.env.local` file and set these variables
+locally. Never put their real values in a committed file, ticket, screenshot,
+test fixture or log.
 
 ```env
-AUTOTRADER_CLIENT_ID=
-AUTOTRADER_CLIENT_SECRET=
-AUTOTRADER_ADVERTISER_ID=
-AUTOTRADER_API_BASE_URL=
-AUTOTRADER_WEBHOOK_SECRET=
+AUTOTRADER_API_KEY=replace-with-sandbox-api-key
+AUTOTRADER_API_SECRET=replace-with-sandbox-api-secret
+AUTOTRADER_ADVERTISER_ID=replace-with-sandbox-advertiser-id
 ```
 
-The current adapter distinguishes:
+For a deployment, add the same names as encrypted server-side environment
+variables in the hosting project and redeploy. They must not be prefixed with
+`NEXT_PUBLIC_`. An optional Stock Notification endpoint also requires the
+separately issued `AUTOTRADER_WEBHOOK_SECRET`.
 
-- not configured;
-- incomplete/authentication failed;
-- configured but unverified;
-- permission missing;
-- syncing;
-- last synced;
-- recorded error.
+Credentials being present produces `configured_unverified`, never
+`connected`. An owner or staff member with integration-management permission
+must open `/admin/integrations` and choose **Verify read access**. This performs
+only authentication and `GET /stock` page 1 with a page size of 1. Successful
+verification binds the credential set to that dealership using a one-way HMAC
+fingerprint. The key, secret and advertiser ID remain environment-only, and a
+database uniqueness guard prevents another MOTOR.OS tenant from claiming the
+same credential set.
 
-Credentials alone are not represented as a successful connection. The
-registration taxonomy adapter deliberately refuses to guess a contract-specific
-endpoint. Map it against the authorised Connect documentation during onboarding.
+### Stock mapping and lifecycle policy
 
-The webhook receiver provides:
+The local vehicle UUID is sent as `metadata.externalStockId`, making it the
+stable idempotency key. MOTOR.OS first downloads the complete sandbox baseline
+and matches by saved `stockId`, local UUID, then a unique registration or VIN.
+A documented `409` duplicate response is resolved using its existing
+`stockId`; the create request is never repeated automatically.
 
-- timestamp replay window;
-- HMAC verification using the configured secret;
-- unique provider/event IDs for idempotency;
-- payload recording before processing;
-- retry-safe status and error capture;
-- limited reserved/sold lifecycle mapping.
+Only Auto Trader channel states `ready`, `published`, `paused` and `removed`
+participate:
 
-Confirm Auto Trader’s exact signature headers and payload schema for the
-dealership’s agreement before enabling the endpoint.
+| MOTOR.OS state | Sandbox effect |
+| --- | --- |
+| `ready` | Create or update stock with the Auto Trader advert `NOT_PUBLISHED` |
+| `published` | Create or update and explicitly request `PUBLISHED` |
+| `paused` | Set only the Auto Trader advert to `NOT_PUBLISHED` |
+| local `sold` | Unpublish all five retail destinations, then set `SOLD` |
+| removed, returned, archived or soft-deleted | Unpublish all five destinations, then set `WASTEBIN` |
 
-Without Auto Trader, staff can still:
+MOTOR.OS never automatically sends `DELETED`. New records default to
+unpublished unless the channel explicitly says `published`. Invalid vehicles
+are skipped individually so one bad stock record does not stop the batch.
+Authentication, permission, exhausted rate-limit and provider-availability
+errors halt the advertiser batch predictably.
 
-- create and update stock manually;
-- use DVLA or manual registration entry;
-- import/export CSV;
-- store manual Auto Trader stock IDs and advert URLs;
-- manage reserved and sold states inside DealerOS.
+The current model syncs registered cars. New unregistered stock is skipped
+rather than guessed. Existing image URLs are not sent because the Stock API
+requires image IDs created through the Auto Trader Images API. YouTube and
+Vimeo video URLs are supported. A derivative ID can be stored in the vehicle's
+Auto Trader channel; stock without one is allowed with a warning because its
+specification, valuation and price indicator may be incomplete.
+
+### Running a sync
+
+Full stock sync:
+
+1. Open `/admin/integrations`.
+2. Select **Verify read access**.
+3. Select **Preview**. This performs GET requests only.
+4. Review the created, updated, unchanged, skipped and failed totals and every
+   internal stock number/UUID/effect.
+5. Select **Apply preview to sandbox** and approve the confirmation that names
+   the exact records. This is the first step that can write sandbox stock.
+
+Single vehicle sync:
+
+1. Open the vehicle and choose **Sales channels**.
+2. Save its Auto Trader channel as `ready`, `published`, `paused` or `removed`.
+3. Use the vehicle's **Preview**, review its one-record result, then select
+   **Apply preview to sandbox**.
+
+The sync is operator-controlled and is not scheduled automatically. This
+prevents an unreviewed channel-state change from publishing or withdrawing
+stock. Every applied record writes a `vehicle_sync_records` audit row and a
+secret-safe outcome.
+
+### Retries, limits and troubleshooting
+
+Requests time out after 15 seconds. GET and field-setting PATCH operations use
+at most three attempts. A `429` waits at least one second; `503`/`504` waits at
+least two seconds, with bounded exponential backoff. POST stock creation is
+never retried automatically because an interrupted create may already have
+succeeded.
+
+- **Configuration incomplete:** set all three required names in `.env.local`
+  or the hosting environment, then restart/redeploy. Do not paste the values
+  into chat or a tracked file.
+- **401 authentication:** confirm the sandbox key and secret belong together
+  and have not expired or been rotated.
+- **403 permission missing:** stop sync and ask Auto Trader to confirm the
+  advertiser and required service capabilities. Repeating the request will not
+  grant access.
+- **400 validation:** fix the named local record. Check registration, make,
+  model, vehicle type, derivative length, advert text and the minimum £75
+  price. The rest of the batch continues.
+- **409 duplicate:** MOTOR.OS reads the returned stock ID and updates that
+  record; it does not create a second advert.
+- **429 rate limit:** the client pauses and retries within its fixed attempt
+  limit. If it remains exhausted, the batch halts and can be previewed later.
+- **503/504 server error or timeout:** wait and preview again. Give Auto Trader
+  support the recorded `CF-RAY` request identifier if one is available; it is
+  safe diagnostic metadata, not a credential.
+
+Stock Notifications use HTTPS `PUT` at
+`https://YOUR_DOMAIN/api/webhooks/autotrader` and the documented
+`AutoTrader-Signature: t=...,v1=...` header. MOTOR.OS verifies HMAC-SHA256 over
+`timestamp.rawBody`, rejects stale deliveries, records each stock ID/time pair
+idempotently and ignores notifications older than the last processed event.
+
+Without Auto Trader, staff can still create and update stock manually, use
+DVLA or manual registration entry, store manual stock IDs and manage reserved
+and sold states inside MOTOR.OS.
 
 ## Email
 

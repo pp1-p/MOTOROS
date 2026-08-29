@@ -178,8 +178,9 @@ The core system works without paid providers:
   review/entry.
 - Email defaults to a structured console adapter.
 - SMS defaults to disabled; notifications remain visible inside DealerOS.
-- Auto Trader remains manual/CSV until authorised credentials and endpoint
-  permissions are verified.
+- Auto Trader stock sync is available through the documented sandbox API after
+  authorised credentials and capabilities are verified. Every write requires a
+  read-only preview and explicit operator confirmation.
 
 No Auto Trader pages are scraped. A configured credential set is not displayed
 as “connected” until the authorised integration is actually verified.

@@ -16,8 +16,9 @@ import {
   StatusPill,
 } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
+import { getStaffContext } from "@/lib/auth/permissions";
 import { getAdminVehicleInventory } from "@/lib/data/admin-vehicles";
-import { getAutoTraderConfigurationStatus } from "@/lib/integrations/autotrader";
+import { getAutoTraderConnectionStatus } from "@/lib/integrations/autotrader/state";
 
 const inactiveStatuses = new Set(["Sold", "Returned", "Archived"]);
 
@@ -52,7 +53,13 @@ function advertIssues(
 
 export default async function StockAdvertisingPage() {
   const { vehicles, photosByVehicle } = await getAdminVehicleInventory();
-  const autoTrader = getAutoTraderConfigurationStatus();
+  const staff = await getStaffContext();
+  const autoTrader = staff
+    ? await getAutoTraderConnectionStatus(staff.organisationId)
+    : {
+        status: "not_configured",
+        message: "Sign in to inspect the dealership integration state.",
+      };
   const activeVehicles = vehicles.filter(
     (vehicle) => !inactiveStatuses.has(vehicle.status),
   );
@@ -118,7 +125,7 @@ export default async function StockAdvertisingPage() {
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-extrabold">Auto Trader Connect</h2>
+                <h2 className="font-extrabold">Auto Trader Connect sandbox</h2>
                 <StatusPill status={autoTrader.status.replaceAll("_", " ")} />
               </div>
               <p className="mt-2 text-xs leading-5 text-foreground/48">
@@ -127,11 +134,11 @@ export default async function StockAdvertisingPage() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button asChild variant="outline" size="sm">
                   <a
-                    href="https://portal.autotrader.co.uk/"
+                    href="https://developers.autotrader.co.uk/documentation#authentication"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Open Auto Trader Portal
+                    Open developer documentation
                   </a>
                 </Button>
                 <Button asChild variant="ghost" size="sm">

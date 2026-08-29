@@ -100,8 +100,10 @@ Point authorised Auto Trader webhooks to:
 
 `https://YOUR_DOMAIN/api/webhooks/autotrader`
 
-Configure its secret only after confirming the provider’s signing convention.
-Do not expose a webhook endpoint without a replay test and duplicate event test.
+Configure `AUTOTRADER_WEBHOOK_SECRET` from the sandbox notification setup. The
+endpoint accepts the documented HTTPS `PUT` request and
+`AutoTrader-Signature: t=...,v1=...` header. Do not expose it without the replay,
+duplicate-delivery and out-of-order tests described in `docs/INTEGRATIONS.md`.
 
 `vercel.json` schedules `/api/cron/storage-cleanup` daily at 03:17 (Vercel
 Hobby rejects sub-daily schedules; increase the cadence on paid plans if
