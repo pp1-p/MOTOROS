@@ -59,8 +59,11 @@
 ## Providers and operations
 
 - [ ] Verify DVLA key, quota, timeout and manual fallback
-- [ ] Verify authorised Auto Trader scopes before enabling sync
-- [ ] Confirm webhook signature/replay/idempotency in provider sandbox
+- [ ] Verify Auto Trader sandbox authentication and Stock Sync read access
+- [ ] Run and review a zero-write Auto Trader stock preview
+- [ ] Obtain approval for the named sandbox records before the first write
+- [ ] Verify Stock Updates, Availability, Price and Media capabilities as used
+- [ ] Confirm PUT notification signature/replay/duplicate/out-of-order handling
 - [ ] Verify email domain, delivery and bounce handling
 - [ ] Verify SMS sender/templates or leave SMS disabled
 - [ ] Configure monitoring, alerting and error triage

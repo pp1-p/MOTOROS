@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import type { AdminVehicle } from "@/components/admin/admin-data";
+import { AutoTraderSyncControls } from "@/components/admin/autotrader-sync-controls";
 import { DocumentUploadForm } from "@/components/admin/document-upload-form";
 import { StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
@@ -520,6 +521,7 @@ export function VehicleWorkspaceSections({
             })}
           </div>
         </section>
+        <AutoTraderSyncControls vehicleId={vehicle.id} compact />
         <form onSubmit={(event) => mutate(event, "save_channel")} className="grid gap-4 rounded-2xl border bg-white p-5 md:grid-cols-2 xl:grid-cols-4">
           <label className="text-[11px] font-extrabold">Channel<select name="channel" className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm"><option value="website">Website</option><option value="autotrader">AutoTrader</option><option value="ebay">eBay Motors</option><option value="carwow">Carwow</option><option value="other">Other</option></select></label>
           <label className="text-[11px] font-extrabold">Status<select name="status" className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3 text-sm"><option value="not_configured">Not configured</option><option value="draft">Draft</option><option value="ready">Ready</option><option value="pending">Pending</option><option value="published">Published</option><option value="paused">Paused</option><option value="failed">Failed</option><option value="removed">Removed</option><option value="over_contracted">Over contracted</option></select></label>

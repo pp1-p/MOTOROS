@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { Notice, PageHeader, StatusPill } from "@/components/admin/page-kit";
+import { AutoTraderSyncControls } from "@/components/admin/autotrader-sync-controls";
 import { Button } from "@/components/ui/button";
 import { getStaffContext } from "@/lib/auth/permissions";
 import {
@@ -17,6 +18,7 @@ import {
   isSupabaseConfigured,
 } from "@/lib/env";
 import { getAutoTraderConfigurationStatus } from "@/lib/integrations/autotrader";
+import { getAutoTraderConnectionStatus } from "@/lib/integrations/autotrader/state";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 type IntegrationEvent = {
@@ -52,7 +54,10 @@ async function loadIntegrationEvents(): Promise<IntegrationEvent[]> {
 export default async function IntegrationsPage() {
   const env = getServerEnv();
   const health = getEnvironmentHealth();
-  const autoTrader = getAutoTraderConfigurationStatus();
+  const staff = await getStaffContext();
+  const autoTrader = staff
+    ? await getAutoTraderConnectionStatus(staff.organisationId)
+    : getAutoTraderConfigurationStatus();
   const events = await loadIntegrationEvents();
   const cards = [
     {
@@ -70,7 +75,7 @@ export default async function IntegrationsPage() {
     {
       icon: Cloud,
       name: "Auto Trader Connect",
-      provider: "Stock & Deal Sync",
+      provider: "Sandbox Stock Sync",
       status: autoTrader.status.replaceAll("_", " "),
       detail: autoTrader.message,
     },
@@ -116,6 +121,7 @@ export default async function IntegrationsPage() {
         Provider secrets are protected environment variables. They are never returned to the browser
         or written into logs. Change configuration through the deployment environment, then refresh.
       </Notice>
+      <AutoTraderSyncControls />
       <div className="grid gap-4 lg:grid-cols-2">
         {cards.map((integration) => {
           const Icon = integration.icon;

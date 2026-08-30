@@ -13746,3 +13746,19 @@ create unique index vehicles_org_slug_unique
   where slug is not null and deleted_at is null;
 
 commit;
+
+-- ===== 202608290001_autotrader_credential_binding.sql =====
+
+begin;
+
+-- The Auto Trader credentials live only in the server environment. This
+-- unique HMAC fingerprint binds that credential set to one dealership without
+-- storing the API key, secret or advertiser ID in Postgres.
+create unique index if not exists integration_settings_autotrader_binding_unique
+  on public.integration_settings (
+    (btrim(public_configuration ->> 'credential_binding'))
+  )
+  where provider = 'autotrader'
+    and nullif(btrim(public_configuration ->> 'credential_binding'), '') is not null;
+
+commit;

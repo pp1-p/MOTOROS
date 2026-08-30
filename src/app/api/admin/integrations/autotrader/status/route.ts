@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
-import { getAutoTraderConfigurationStatus } from "@/lib/integrations/autotrader";
+import { getAutoTraderConnectionStatus } from "@/lib/integrations/autotrader/state";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export async function GET() {
@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ message: "Integration access is required." }, { status: 403 });
   }
 
-  const configuration = getAutoTraderConfigurationStatus();
+  const configuration = await getAutoTraderConnectionStatus(staff.organisationId);
   const supabase = createAdminSupabaseClient();
   const latest = await supabase
     .from("vehicle_sync_records")
@@ -34,6 +34,6 @@ export async function GET() {
         }
       : null,
     disclaimer:
-      "DealerOS does not scrape Auto Trader and does not claim a connection until authorised API access is verified.",
+      "MOTOR.OS uses only the documented Auto Trader sandbox API and does not claim a connection until authentication and stock-read access are verified.",
   });
 }

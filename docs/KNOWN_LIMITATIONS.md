@@ -4,8 +4,10 @@ These are deliberate, visible boundaries rather than fabricated integrations.
 
 - A Supabase project is required for durable production writes. Development
   demo mode is process memory only.
-- Auto Trader Connect cannot be declared connected until account-specific
-  credentials, scopes, endpoints and signature conventions are supplied.
+- Auto Trader stock sync is sandbox-only and remains unverified until
+  account-specific credentials and capabilities pass the read-only check.
+  Images require the separate Images API flow, and automated scheduling is
+  deliberately disabled in favour of an operator-reviewed preview.
 - DVLA VES does not provide exact model/trim/equipment/valuation.
 - Finance is an enquiry/referral only. DealerOS implements no lending,
   underwriting, approval or credit-broking logic.
@@ -18,8 +20,8 @@ These are deliberate, visible boundaries rather than fabricated integrations.
 - Images are validated and delivered through Next/Supabase optimisation, but a
   dedicated ingestion worker for aggressive resizing/virus scanning can be
   added for high-volume dealerships.
-- Full Auto Trader stock/deal synchronisation requires the authorised API
-  contract and provider sandbox.
+- Auto Trader deal workflows are not included; the integration covers stock
+  baseline, updates, availability, pricing and signed Stock Notifications.
 - Included legal-page copy is a code template and requires dealership-specific
   editing and professional review.
 - Advanced accounting, card payments, finance proposals, parts procurement,
