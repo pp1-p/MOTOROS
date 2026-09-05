@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -33,6 +33,8 @@ import {
 
 import type { StaffRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+import { DealershipSwitcher } from "./dealership-switcher";
 
 const navigation = [
   { label: "Today", href: "/admin", icon: LayoutDashboard, matches: ["/admin"] },
@@ -199,6 +201,7 @@ export function AdminShell({
   isPlatformAdmin?: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -382,7 +385,8 @@ export function AdminShell({
     try {
       await fetch("/api/auth/sign-out", { method: "POST" });
     } finally {
-      window.location.assign("/admin/sign-in");
+      router.push("/admin/sign-in");
+      router.refresh();
     }
   }
 
@@ -436,6 +440,8 @@ export function AdminShell({
             <X className="size-5" />
           </button>
         </div>
+
+        <DealershipSwitcher />
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <p className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/30">

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -24,7 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
+    command: "npm run dev -- --webpack --hostname 127.0.0.1 --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
@@ -32,6 +33,10 @@ export default defineConfig({
       ...process.env,
       DEALEROS_DEMO_MODE: "true",
       NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
+      NEXT_FONT_GOOGLE_MOCKED_RESPONSES: path.resolve(
+        process.cwd(),
+        "tests/e2e/next-font-mocks.cjs",
+      ),
     },
   },
 });

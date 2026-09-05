@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, Home, LogOut, ShieldCheck } from "lucide-react";
+import { Building2, Home, LogOut, Plus, ShieldCheck } from "lucide-react";
 
-import { requirePlatformAdmin } from "@/lib/auth/platform-admin";
+import {
+  canMutatePlatform,
+  requirePlatformAdmin,
+} from "@/lib/auth/platform-admin";
 
 export const metadata: Metadata = {
   title: {
@@ -52,13 +55,25 @@ export default async function PlatformLayout({
               <Building2 className="mr-1.5 inline size-3.5" aria-hidden />
               Dealerships
             </Link>
+            {canMutatePlatform(admin.role) ? (
+              <Link
+                href="/onboarding"
+                className="rounded-lg px-3 py-2 hover:bg-white/10"
+              >
+                <Plus className="mr-1.5 inline size-3.5" aria-hidden />
+                Add dealership
+              </Link>
+            ) : null}
           </nav>
           <div className="flex items-center gap-3">
-            <span
-              className="rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-[10px] font-extrabold text-slate-300"
-              title={admin.email}
-            >
-              {admin.email}
+            <span className="hidden text-right sm:block" title={admin.email}>
+              <span className="block text-[10px] font-extrabold text-slate-300">
+                {admin.email}
+              </span>
+              <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-300">
+                Platform {admin.role}
+                {admin.source === "bootstrap_email" ? " · bootstrap" : ""}
+              </span>
             </span>
             <Link
               href="/admin"

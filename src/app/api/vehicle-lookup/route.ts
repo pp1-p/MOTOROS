@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getStaffContext, hasPermission } from "@/lib/auth/permissions";
-import { isSupabaseConfigured } from "@/lib/env";
+import { getServerEnv, isSupabaseConfigured } from "@/lib/env";
+import { assertAutoTraderOrganisationBinding } from "@/lib/integrations/autotrader/state";
 import { log } from "@/lib/security/logger";
 import {
   assertSameOrigin,
@@ -94,6 +95,11 @@ export async function POST(request: Request) {
       }
     }
 
+    if (getServerEnv().VEHICLE_LOOKUP_PROVIDER === "autotrader") {
+      await assertAutoTraderOrganisationBinding({
+        organisationId: staff.organisationId,
+      });
+    }
     const provider = getVehicleLookupProvider();
     providerName = provider.name;
     const data = await provider.lookupByRegistration(registration);

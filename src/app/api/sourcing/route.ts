@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { sendConfirmationEmail } from "@/lib/communications/email";
-import { getDefaultOrganisationId } from "@/lib/data/organisation";
 import { isDevelopmentDemoMode, saveDemoSubmission } from "@/lib/demo/store";
 import { isSupabaseConfigured } from "@/lib/env";
 import { log } from "@/lib/security/logger";
@@ -11,6 +10,10 @@ import {
   getClientFingerprint,
 } from "@/lib/security/request";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import {
+  PublicTenantNotFoundError,
+  resolvePublicTenantForRequest,
+} from "@/lib/tenancy/public-tenant";
 import { sourcingSchema } from "@/lib/validation/public";
 
 export async function POST(request: Request) {
@@ -47,6 +50,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const tenant = await resolvePublicTenantForRequest(request);
     if (!isSupabaseConfigured() && isDevelopmentDemoMode()) {
       const saved = saveDemoSubmission("sourcing", parsed.data);
       return NextResponse.json({
@@ -56,10 +60,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const organisationId = await getDefaultOrganisationId();
     const supabase = createAdminSupabaseClient();
     const submission = await supabase.rpc("submit_public_sourcing_request", {
-      p_organisation_id: organisationId,
+      p_organisation_id: tenant.organisationId,
       p_payload: parsed.data,
     });
     if (submission.error || !submission.data) {
@@ -84,6 +87,12 @@ export async function POST(request: Request) {
       reference: sourcingId.slice(0, 8).toUpperCase(),
     });
   } catch (error) {
+    if (error instanceof PublicTenantNotFoundError) {
+      return NextResponse.json(
+        { message: "This dealership website is not available." },
+        { status: 404 },
+      );
+    }
     log("error", "public_sourcing.failed", {
       message: error instanceof Error ? error.message : "Unknown failure",
     });

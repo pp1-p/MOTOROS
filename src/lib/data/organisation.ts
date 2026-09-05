@@ -1,49 +1,11 @@
 import "server-only";
 
-import { getServerEnv } from "@/lib/env";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getPublicTenant } from "@/lib/tenancy/public-tenant";
 import { splitCustomerName } from "@/lib/utils";
 
 export async function getDefaultOrganisationId() {
-  const supabase = createAdminSupabaseClient();
-  const configuredOrganisationId =
-    getServerEnv().DEALEROS_PUBLIC_ORGANISATION_ID;
-
-  if (configuredOrganisationId) {
-    const { data, error } = await supabase
-      .from("organisations")
-      .select("id")
-      .eq("id", configuredOrganisationId)
-      .eq("status", "active")
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    if (error || !data) {
-      throw new Error(
-        "DEALEROS_PUBLIC_ORGANISATION_ID does not identify an active dealership.",
-      );
-    }
-    return data.id as string;
-  }
-
-  const { data, error } = await supabase
-    .from("organisations")
-    .select("id")
-    .eq("status", "active")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-    .limit(2);
-
-  if (error || !data || data.length === 0) {
-    throw new Error("No active dealership organisation has been configured.");
-  }
-  if (data.length > 1) {
-    throw new Error(
-      "Multiple active dealerships exist. Set DEALEROS_PUBLIC_ORGANISATION_ID before accepting public submissions.",
-    );
-  }
-
-  return data[0]!.id as string;
+  return (await getPublicTenant()).organisationId;
 }
 
 export async function findOrCreateCustomer(input: {

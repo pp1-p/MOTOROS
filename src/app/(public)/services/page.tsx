@@ -64,7 +64,7 @@ const promises = [
 export default function ServicesPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-[#10231f] py-16 text-white sm:py-24">
+      <section className="theme-standard-hero relative overflow-hidden bg-[#10231f] py-16 text-white sm:py-24">
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.05] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:22px_22px]"

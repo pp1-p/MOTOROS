@@ -1,13 +1,5 @@
 import { defaultPublicSiteName } from "@/lib/site-metadata";
 
-// Direct Motors defaults. Any dealership deployment can override by
-// setting NEXT_PUBLIC_DEALERSHIP_PHONES (comma-separated) in env.
-const directMotorsDefaultPhones = [
-  "01922 625925",
-  "07904 268149",
-  "07957 597444",
-];
-
 function parsePhonesFromEnv(): string[] {
   const listed = process.env.NEXT_PUBLIC_DEALERSHIP_PHONES?.trim();
   if (listed) {
@@ -17,13 +9,58 @@ function parsePhonesFromEnv(): string[] {
       .filter(Boolean);
   }
   const single = process.env.NEXT_PUBLIC_DEALERSHIP_PHONE?.trim();
-  return single ? [single] : directMotorsDefaultPhones;
+  // Tenant contact details belong in dealership_settings. An empty fallback is
+  // safer than ever showing one dealership's phone number on another site.
+  return single ? [single] : [];
 }
 
 const configuredPhones = parsePhonesFromEnv();
 const primaryPhone = configuredPhones[0] ?? "";
 
-export const publicSiteConfig = {
+export type PublicSiteConfig = {
+  organisationId: string;
+  organisationSlug: string;
+  hostname: string;
+  baseUrl: string;
+  websiteStatus: "draft" | "published" | "unpublished";
+  publishedThemeId: string;
+  draftThemeId: string;
+  fontPreset: string;
+  themeSettings: Record<string, unknown>;
+  name: string;
+  strapline: string;
+  heroEyebrow: string;
+  heroHeadline: string;
+  heroSummary: string;
+  primaryLabel: string;
+  primaryHref: string;
+  heroImageUrl: string;
+  heroImageAlt: string;
+  seoTitle: string;
+  seoDescription: string;
+  phone: string;
+  phoneHref: string;
+  phones: string[];
+  email: string;
+  address: string;
+  hours: Array<{ days: string; times: string }>;
+  logoUrl: string | null;
+  primaryColour: string;
+  accentColour: string;
+};
+
+export const publicSiteConfig: PublicSiteConfig = {
+  organisationId:
+    process.env.DEALEROS_PUBLIC_ORGANISATION_ID ??
+    "00000000-0000-4000-8000-000000000001",
+  organisationSlug: "direct-motors",
+  hostname: "localhost",
+  baseUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  websiteStatus: "published",
+  publishedThemeId: "direct-motors-classic",
+  draftThemeId: "direct-motors-classic",
+  fontPreset: "classic",
+  themeSettings: {},
   name: process.env.NEXT_PUBLIC_DEALERSHIP_NAME ?? defaultPublicSiteName,
   strapline: "Quality cars, honest advice, trusted workshop.",
   heroEyebrow: "Independent · Local · Straightforward",
@@ -57,5 +94,3 @@ export const publicSiteConfig = {
   primaryColour: "#172033",
   accentColour: "#D4A853",
 };
-
-export type PublicSiteConfig = typeof publicSiteConfig;

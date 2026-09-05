@@ -279,3 +279,420 @@ select {
       text-decoration-color, fill, stroke, opacity, box-shadow !important;
   }
 }
+
+/* Public website themes ----------------------------------------------------
+   Business data and page models stay shared. These selectors provide the
+   visual systems and structural treatment selected by the tenant. */
+.theme-root {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.theme-root .bg-brand {
+  color: var(--text-on-brand, white);
+}
+
+.theme-root[data-public-theme="modern-marketplace"] {
+  --radius: 0.75rem;
+  font-family: var(--font-sans-web, "Aptos"), "Segoe UI", Arial, sans-serif;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .font-display {
+  font-family: var(--font-sans-web, "Aptos"), "Segoe UI", Arial, sans-serif;
+  font-weight: 800;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .tracking-display,
+.theme-root[data-public-theme="modern-marketplace"] .tracking-display-lg {
+  letter-spacing: -0.052em;
+  line-height: 0.98;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-vehicle-card {
+  border-radius: 1rem;
+  box-shadow: 0 8px 28px rgba(16, 32, 59, 0.06);
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-vehicle-media {
+  aspect-ratio: 16 / 10;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-inventory-hero {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  padding-block: clamp(3rem, 7vw, 6rem);
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-inventory-hero p:first-child {
+  color: var(--brand) !important;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-inventory-hero p:last-child {
+  color: color-mix(in srgb, var(--foreground) 74%, transparent) !important;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-inventory-filterbar {
+  position: sticky;
+  top: 5rem;
+  z-index: 30;
+  background: color-mix(in srgb, var(--surface) 94%, transparent) !important;
+  backdrop-filter: blur(18px);
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-inventory-search {
+  border-radius: 1rem;
+  background: var(--background) !important;
+  box-shadow: none;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-vehicle-detail {
+  background: var(--background);
+  padding-block: clamp(2rem, 5vw, 4.5rem);
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-vehicle-aside > div {
+  border-radius: 1rem;
+  box-shadow: 0 16px 50px rgba(16, 32, 59, 0.1);
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-standard-hero {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-standard-hero p {
+  color: color-mix(in srgb, var(--foreground) 74%, transparent) !important;
+}
+
+.theme-root[data-public-theme="modern-marketplace"] .theme-standard-hero p:first-of-type {
+  color: var(--brand) !important;
+}
+
+.theme-root[data-public-theme="prestige"] {
+  --radius: 0.25rem;
+  color-scheme: dark;
+  font-family: var(--font-sans-web, "Aptos"), "Segoe UI", Arial, sans-serif;
+}
+
+.theme-root[data-public-theme="prestige"] .font-display {
+  font-family: var(--font-display-web, "Iowan Old Style"), Baskerville, Georgia, serif;
+  font-weight: 450;
+}
+
+.theme-root[data-public-theme="prestige"] .bg-white,
+.theme-root[data-public-theme="prestige"] .theme-vehicle-card,
+.theme-root[data-public-theme="prestige"] .theme-vehicle-content {
+  background-color: var(--surface) !important;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-card {
+  border-radius: 0;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-card:hover {
+  transform: none;
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-media {
+  aspect-ratio: 16 / 10;
+  border-bottom: 1px solid var(--border);
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-content {
+  padding: 1.75rem;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-inventory-hero {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  padding-block: clamp(5rem, 11vw, 9rem);
+  text-align: center;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-inventory-hero > div > * {
+  margin-inline: auto;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-inventory-hero p:first-child {
+  color: var(--accent) !important;
+  letter-spacing: 0.3em;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-inventory-filterbar,
+.theme-root[data-public-theme="prestige"] .theme-inventory-status {
+  background: var(--surface) !important;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-inventory-search {
+  border-radius: 0;
+  background: var(--background) !important;
+  box-shadow: none;
+}
+
+.theme-root[data-public-theme="prestige"] input,
+.theme-root[data-public-theme="prestige"] select,
+.theme-root[data-public-theme="prestige"] textarea {
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.theme-root[data-public-theme="prestige"] .theme-about-principle {
+  border-radius: 0;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-breadcrumb,
+.theme-root[data-public-theme="prestige"] .theme-vehicle-key-specs {
+  background: var(--surface) !important;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-detail {
+  padding-block: clamp(3rem, 8vw, 7rem);
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-primary {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-aside {
+  position: static;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-aside > div {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-vehicle-enquire {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-standard-hero {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  padding-block: clamp(5rem, 10vw, 8rem);
+  text-align: center;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-standard-hero > div {
+  margin-inline: auto;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-standard-hero p {
+  color: color-mix(in srgb, var(--foreground) 74%, transparent) !important;
+}
+
+.theme-root[data-public-theme="prestige"] .theme-standard-hero p:first-of-type {
+  color: var(--accent) !important;
+  letter-spacing: 0.28em;
+}
+
+.theme-root[data-public-theme="performance"] {
+  --radius: 0.125rem;
+  font-family: "Arial Narrow", "Roboto Condensed", var(--font-sans-web, Arial), sans-serif;
+}
+
+.theme-root[data-public-theme="performance"] .font-display {
+  font-family: "Arial Narrow", "Roboto Condensed", var(--font-sans-web, Arial), sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-root[data-public-theme="performance"] .tracking-display,
+.theme-root[data-public-theme="performance"] .tracking-display-lg {
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-card {
+  border-radius: 0;
+  border-top: 4px solid var(--brand);
+  box-shadow: 8px 8px 0 var(--surface-muted);
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 12px 12px 0 color-mix(in srgb, var(--brand) 24%, var(--surface-muted));
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-media {
+  aspect-ratio: 16 / 9;
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-card h3,
+.theme-root[data-public-theme="performance"] .theme-section-heading h2 {
+  text-transform: uppercase;
+}
+
+.theme-root[data-public-theme="performance"] .theme-inventory-hero {
+  position: relative;
+  overflow: hidden;
+  background: #111214 !important;
+  color: white !important;
+  padding-block: clamp(4.5rem, 9vw, 8rem);
+}
+
+.theme-root[data-public-theme="performance"] .theme-inventory-hero::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  right: -8%;
+  width: 38%;
+  transform: skewX(-14deg);
+  background: color-mix(in srgb, var(--brand) 38%, transparent);
+  pointer-events: none;
+}
+
+.theme-root[data-public-theme="performance"] .theme-inventory-hero > div {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-root[data-public-theme="performance"] .theme-inventory-filterbar {
+  border-bottom: 4px solid var(--foreground);
+  background: var(--background) !important;
+}
+
+.theme-root[data-public-theme="performance"] .theme-inventory-search {
+  border-radius: 0;
+  border-width: 2px;
+  box-shadow: 6px 6px 0 var(--surface-muted);
+}
+
+.theme-root[data-public-theme="performance"] .theme-performance-slash {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-root[data-public-theme="performance"] .theme-performance-slash::after {
+  content: "";
+  position: absolute;
+  inset-block: -30%;
+  right: 8%;
+  width: 4rem;
+  transform: rotate(18deg);
+  background: color-mix(in srgb, var(--accent) 46%, transparent);
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-heading {
+  border-bottom: 4px solid var(--foreground);
+  padding-bottom: 1.5rem;
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-heading h1 {
+  font-family: "Arial Narrow", "Roboto Condensed", var(--font-sans-web, Arial), sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-gallery > div > div:first-child,
+.theme-root[data-public-theme="performance"] .theme-vehicle-aside > div,
+.theme-root[data-public-theme="performance"] .theme-vehicle-story article,
+.theme-root[data-public-theme="performance"] .theme-vehicle-story div {
+  border-radius: 0;
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-aside > div {
+  border-width: 2px;
+  border-top: 5px solid var(--brand);
+  box-shadow: 8px 8px 0 var(--surface-muted);
+}
+
+.theme-root[data-public-theme="performance"] .theme-vehicle-enquire {
+  position: relative;
+  overflow: hidden;
+  background: #111214 !important;
+}
+
+.theme-root[data-public-theme="performance"] .theme-standard-hero {
+  position: relative;
+  overflow: hidden;
+  background: #111214 !important;
+  color: white !important;
+  border-bottom: 5px solid var(--brand);
+}
+
+.theme-root[data-public-theme="performance"] .theme-standard-hero::after {
+  content: "";
+  position: absolute;
+  inset-block: -20%;
+  right: 5%;
+  width: 24%;
+  transform: skewX(-14deg);
+  background: color-mix(in srgb, var(--brand) 34%, transparent);
+  pointer-events: none;
+}
+
+.theme-root[data-public-theme="performance"] .theme-standard-hero > div {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-root[data-public-theme="performance"] .theme-standard-hero h1 {
+  font-family: "Arial Narrow", "Roboto Condensed", var(--font-sans-web, Arial), sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-preview-classic {
+  --preview-bg: #15221d;
+  --preview-accent: #d7ad69;
+  --preview-radius: 1rem;
+}
+
+.theme-preview-marketplace {
+  --preview-bg: #eef4fc;
+  --preview-accent: #155eef;
+  --preview-radius: 0.65rem;
+}
+
+.theme-preview-prestige {
+  --preview-bg: #0d0e10;
+  --preview-accent: #c8a66a;
+  --preview-radius: 0;
+}
+
+.theme-preview-performance {
+  --preview-bg: #111214;
+  --preview-accent: #d62f2f;
+  --preview-radius: 0;
+}
+
+@media (min-width: 1280px) {
+  .theme-root[data-public-theme="modern-marketplace"] .theme-vehicle-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .theme-root[data-public-theme="prestige"] .theme-vehicle-grid,
+  .theme-root[data-public-theme="performance"] .theme-vehicle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .theme-root[data-public-theme="prestige"] .theme-vehicle-aside > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.6fr);
+    gap: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-root .theme-vehicle-card,
+  .theme-root .theme-vehicle-card:hover {
+    transform: none !important;
+  }
+}

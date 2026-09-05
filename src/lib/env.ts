@@ -7,6 +7,25 @@ const optionalUrl = z.preprocess(
   z.url().optional(),
 );
 
+const optionalHostname = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^(?:localhost|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*)$/,
+      "Expected a hostname without a protocol, port or path",
+    )
+    .optional(),
+);
+
+const optionalNonEmptyString = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().min(1).optional(),
+);
+
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: optionalUrl.default("http://localhost:3000"),
   NEXT_PUBLIC_SUPABASE_URL: optionalUrl,
@@ -14,16 +33,21 @@ const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   DEALEROS_DEMO_MODE: z.enum(["true", "false"]).default("false"),
   DEALEROS_PUBLIC_ORGANISATION_ID: z.uuid().optional(),
+  MOTOROS_BASE_DOMAIN: optionalHostname,
+  MOTOROS_LOCAL_ORGANISATION_SLUG: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .default("direct-motors"),
+  MOTOROS_TRUST_PROXY_HOST: z.enum(["true", "false"]).default("false"),
   VEHICLE_LOOKUP_PROVIDER: z.enum(["mock", "dvla", "autotrader", "manual"]).default("mock"),
   DVLA_VES_API_KEY: z.string().optional(),
   DVLA_VES_BASE_URL: optionalUrl.default(
     "https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles",
   ),
-  AUTOTRADER_CLIENT_ID: z.string().optional(),
-  AUTOTRADER_CLIENT_SECRET: z.string().optional(),
-  AUTOTRADER_ADVERTISER_ID: z.string().optional(),
-  AUTOTRADER_API_BASE_URL: optionalUrl,
-  AUTOTRADER_WEBHOOK_SECRET: z.string().optional(),
+  AUTOTRADER_API_KEY: optionalNonEmptyString,
+  AUTOTRADER_API_SECRET: optionalNonEmptyString,
+  AUTOTRADER_ADVERTISER_ID: optionalNonEmptyString,
+  AUTOTRADER_WEBHOOK_SECRET: optionalNonEmptyString,
   EMAIL_PROVIDER: z.enum(["console", "resend"]).default("console"),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
@@ -73,7 +97,11 @@ export function getEnvironmentHealth() {
       env.VEHICLE_LOOKUP_PROVIDER === "manual" ||
       (env.VEHICLE_LOOKUP_PROVIDER === "dvla" && Boolean(env.DVLA_VES_API_KEY)) ||
       (env.VEHICLE_LOOKUP_PROVIDER === "autotrader" &&
-        Boolean(env.AUTOTRADER_CLIENT_ID && env.AUTOTRADER_CLIENT_SECRET)),
+        Boolean(
+          env.AUTOTRADER_API_KEY &&
+            env.AUTOTRADER_API_SECRET &&
+            env.AUTOTRADER_ADVERTISER_ID,
+        )),
     email: env.EMAIL_PROVIDER === "console" || Boolean(env.RESEND_API_KEY && env.EMAIL_FROM),
     sms: false,
   };

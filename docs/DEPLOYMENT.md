@@ -74,6 +74,22 @@ server-only—never prefix them with `NEXT_PUBLIC_`.
 Set `NEXT_PUBLIC_APP_URL` to the canonical HTTPS URL and add that URL to
 Supabase Auth redirect allow-lists.
 
+For a shared MotorOS deployment also set:
+
+- `MOTOROS_BASE_DOMAIN` to the parent used for dealership subdomains, without a
+  protocol or path;
+- `MOTOROS_LOCAL_ORGANISATION_SLUG` only for the explicit localhost fallback;
+- `MOTOROS_TRUST_PROXY_HOST=false` unless the deployed edge overwrites forwarded
+  host/protocol headers;
+- `PLATFORM_ADMIN_EMAILS` only during controlled bootstrap, then remove it after
+  assigning `platform_user_roles` by Auth UUID.
+
+Route the base domain and its wildcard to the application. Add each custom
+domain individually and keep its database status pending until ownership, DNS
+and certificate provisioning have been checked. A syntactically valid hostname
+is not proof of ownership. See `docs/MULTITENANCY.md` and
+`docs/PLATFORM_ADMIN.md`.
+
 Keep `SITE_INDEXABLE=false` until the contact details and professionally reviewed
 legal wording are complete. Set it to `true` only at launch; this enables search
 indexing and publishes the sitemap while continuing to block admin and API routes.
@@ -84,8 +100,10 @@ Point authorised Auto Trader webhooks to:
 
 `https://YOUR_DOMAIN/api/webhooks/autotrader`
 
-Configure its secret only after confirming the provider’s signing convention.
-Do not expose a webhook endpoint without a replay test and duplicate event test.
+Configure `AUTOTRADER_WEBHOOK_SECRET` from the sandbox notification setup. The
+endpoint accepts the documented HTTPS `PUT` request and
+`AutoTrader-Signature: t=...,v1=...` header. Do not expose it without the replay,
+duplicate-delivery and out-of-order tests described in `docs/INTEGRATIONS.md`.
 
 `vercel.json` schedules `/api/cron/storage-cleanup` daily at 03:17 (Vercel
 Hobby rejects sub-daily schedules; increase the cadence on paid plans if
@@ -111,6 +129,7 @@ Run against staging:
 npm run typecheck
 npm run lint
 npm test
+npm run verify:supabase-security
 npm run build
 npm run test:e2e
 ```
@@ -129,6 +148,11 @@ Then manually verify:
 10. Audit records exist for price, status, booking, repair and role changes.
 11. Anonymous and authenticated roles cannot execute server-only RPCs.
 12. Customer audit JSON contains only the approved metadata allow-list.
+13. Direct Motors and two test dealerships resolve through distinct hosts.
+14. Reciprocal cross-tenant reads and mutations are denied.
+15. Platform owner can operate `/platform`, support is read-only, and a normal
+    dealership user receives no platform access.
+16. All four themes preview and publish without changing tenant stock or leads.
 
 ## Rollback
 

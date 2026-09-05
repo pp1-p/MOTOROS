@@ -11,10 +11,12 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AlternateThemeHeader } from "@/components/public/themes/theme-chrome";
 import { getPublicContactDetails } from "@/lib/public-contact";
+import { resolvePublishedThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
 import {
@@ -38,15 +40,35 @@ export function PublicHeader({
 }: {
   config?: PublicSiteConfig;
 }) {
+  const themeId = resolvePublishedThemeId(config);
+  if (themeId !== "direct-motors-classic") {
+    return <AlternateThemeHeader config={config} themeId={themeId} />;
+  }
+  return <ClassicPublicHeader config={config} />;
+}
+
+function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
   const contact = getPublicContactDetails(config);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
+    if (open) {
+      menuPanelRef.current?.querySelector<HTMLAnchorElement>("a")?.focus();
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !open) return;
+      setOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
@@ -131,6 +153,7 @@ export function PublicHeader({
             </Button>
           )}
           <button
+            ref={menuButtonRef}
             type="button"
             className="grid size-11 place-items-center rounded-xl border border-white/20 text-white transition hover:bg-white/10 lg:hidden"
             onClick={() => setOpen((value) => !value)}
@@ -171,7 +194,11 @@ export function PublicHeader({
 
       {open ? (
         <div
+          ref={menuPanelRef}
           id="mobile-navigation"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Main navigation menu"
           className="material-dark absolute inset-x-0 top-full h-[calc(100dvh-5rem)] overflow-y-auto px-4 pb-8 lg:hidden"
         >
           <nav

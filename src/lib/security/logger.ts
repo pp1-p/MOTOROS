@@ -10,7 +10,13 @@ const sensitiveKeys = new Set([
   "vin",
   "password",
   "token",
+  "access_token",
   "secret",
+  "apikey",
+  "api_key",
+  "advertiserid",
+  "advertiser_id",
+  "authorization",
   "address",
 ]);
 

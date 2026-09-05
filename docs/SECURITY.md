@@ -10,6 +10,11 @@
   narrow service-role RPCs.
 - Organisation ID is derived from the authenticated membership, not accepted
   from an untrusted form.
+- Public organisation ID is resolved from a validated verified hostname or an
+  explicit localhost fallback. Forwarded host headers are ignored unless the
+  trusted-proxy deployment switch is deliberately enabled.
+- Platform access is derived independently from the Auth user UUID and
+  `platform_user_roles`; a tenant role never grants platform access.
 
 ## Implemented controls
 
@@ -30,6 +35,11 @@
 - audit rows/triggers for sensitive changes;
 - CSP and common hardening response headers;
 - environment validation and no browser service keys.
+- lifecycle-aware membership checks that deny suspended/cancelled dealerships;
+- owner-only platform mutations with same-origin checks, confirmation, reasons,
+  awaited audits and best-effort compensation;
+- read-only, audited platform support access;
+- verified-domain-only public resolution and unpublished-site denial.
 
 ## Required production additions
 
@@ -48,6 +58,11 @@ Before launch:
 - configure backup, recovery and incident contacts;
 - penetration-test public forms, storage policies, RLS and webhook endpoints;
 - review CSP after adding analytics or a finance-referral provider.
+- remove `PLATFORM_ADMIN_EMAILS` after the first UUID-backed platform owner is
+  confirmed, then review platform roles quarterly;
+- verify custom-domain ownership outside the application before marking a
+  hostname verified;
+- test reciprocal tenant denial with two real authenticated staging users.
 
 ## Deferred view hardening
 

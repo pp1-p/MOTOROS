@@ -36,7 +36,7 @@ const process = [
 export default function SourceACarPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-[#15221d] py-16 text-white sm:py-24">
+      <section className="theme-standard-hero relative overflow-hidden bg-[#15221d] py-16 text-white sm:py-24">
         <div className="absolute -top-40 right-0 size-[36rem] rounded-full bg-[#d7ad69]/10 blur-3xl" />
         <div className="container-shell relative grid gap-12 lg:grid-cols-[1fr_0.75fr] lg:items-end">
           <div>

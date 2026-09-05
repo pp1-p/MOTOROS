@@ -37,6 +37,7 @@ import {
 import { getPublicSiteConfig } from "@/lib/data/site-config";
 import { getPublicContactDetails } from "@/lib/public-contact";
 import { formatCurrency, formatMileage } from "@/lib/utils";
+import { resolvePublicBaseUrl } from "@/lib/themes";
 
 // The public vehicle page must reflect the latest published state so a
 // newly-published car (or a status change from Reserved to Sold) appears
@@ -66,19 +67,29 @@ export async function generateMetadata({
   params,
 }: Pick<PageProps, "params">): Promise<Metadata> {
   const { slug } = await params;
-  const vehicle = await getPublicVehicleBySlug(slug);
+  const [vehicle, siteConfig] = await Promise.all([
+    getPublicVehicleBySlug(slug),
+    getPublicSiteConfig(),
+  ]);
   if (!vehicle) return { title: "Vehicle not found" };
 
   const description = `${vehicle.registrationYear} ${vehicle.publicTitle}, ${formatMileage(
     vehicle.mileage,
   )}, ${vehicle.fuelType}, ${vehicle.transmission}. ${vehicle.attentionGrabber ?? ""}`;
 
+  const canonical = new URL(
+    `/cars/${encodeURIComponent(vehicle.slug)}`,
+    resolvePublicBaseUrl(siteConfig),
+  ).toString();
+
   return {
     title: `${vehicle.publicTitle} for sale`,
     description,
+    alternates: { canonical },
     openGraph: {
       title: `${vehicle.publicTitle} | ${formatCurrency(vehicle.price)}`,
       description,
+      url: canonical,
       images: vehicle.imageUrl
         ? [{ url: vehicle.imageUrl, alt: vehicle.imageAlt ?? vehicle.publicTitle }]
         : undefined,
@@ -149,7 +160,10 @@ export default async function VehicleDetailPage({
       priceCurrency: "GBP",
       price: vehicle.price,
       availability,
-      url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/cars/${vehicle.slug}`,
+      url: new URL(
+        `/cars/${encodeURIComponent(vehicle.slug)}`,
+        resolvePublicBaseUrl(publicSiteConfig),
+      ).toString(),
       itemCondition: "https://schema.org/UsedCondition",
     },
   };
@@ -178,7 +192,7 @@ export default async function VehicleDetailPage({
         }}
       />
 
-      <section className="border-b bg-white">
+      <section className="theme-vehicle-breadcrumb border-b bg-white">
         <div className="container-shell py-4">
           <nav
             aria-label="Breadcrumb"
@@ -197,9 +211,9 @@ export default async function VehicleDetailPage({
         </div>
       </section>
 
-      <section className="py-7 sm:py-10">
+      <section className="theme-vehicle-detail py-7 sm:py-10">
         <div className="container-shell">
-          <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="theme-vehicle-heading mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <Badge variant={presentation.tone}>{presentation.label}</Badge>
@@ -224,12 +238,12 @@ export default async function VehicleDetailPage({
             </div>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px]">
-            <div className="min-w-0">
+          <div className="theme-vehicle-primary grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px]">
+            <div className="theme-vehicle-gallery min-w-0">
               <VehicleGallery images={vehicle.images} title={vehicle.publicTitle} />
             </div>
 
-            <aside className="lg:sticky lg:top-5 lg:self-start">
+            <aside className="theme-vehicle-aside lg:sticky lg:top-5 lg:self-start">
               <div className="rounded-3xl border bg-white p-6 shadow-[0_20px_55px_rgba(15,24,18,0.09)]">
                 <div className="grid grid-cols-2 gap-x-5 gap-y-4">
                   {primarySpecs.slice(0, 4).map((spec) => (
@@ -319,7 +333,7 @@ export default async function VehicleDetailPage({
         </div>
       </section>
 
-      <section className="border-y bg-white py-12 sm:py-16">
+      <section className="theme-vehicle-key-specs border-y bg-white py-12 sm:py-16">
         <div className="container-shell">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
             {primarySpecs.map((spec) => (
@@ -335,7 +349,7 @@ export default async function VehicleDetailPage({
         </div>
       </section>
 
-      <section className="py-16 sm:py-24">
+      <section className="theme-vehicle-story py-16 sm:py-24">
         <div className="container-shell grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
           <div>
             <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
@@ -441,7 +455,7 @@ export default async function VehicleDetailPage({
         </div>
       </section>
 
-      <section id="enquire" className="scroll-mt-5 bg-[#15221d] py-16 text-white sm:py-24">
+      <section id="enquire" className="theme-vehicle-enquire scroll-mt-5 bg-[#15221d] py-16 text-white sm:py-24">
         <div className="container-shell grid gap-12 lg:grid-cols-[0.8fr_1.1fr] lg:gap-20">
           <div>
             <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">

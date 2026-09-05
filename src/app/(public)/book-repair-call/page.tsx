@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function BookRepairCallPage() {
   return (
     <>
-      <section className="border-b bg-[#15221d] py-14 text-white sm:py-20">
+      <section className="theme-standard-hero border-b bg-[#15221d] py-14 text-white sm:py-20">
         <div className="container-shell grid gap-10 lg:grid-cols-[1fr_0.7fr] lg:items-end">
           <div>
             <p className="text-xs font-extrabold tracking-[0.18em] text-[#d7ad69] uppercase">
