@@ -12,6 +12,12 @@ import {
 import { FinanceEnquiryForm } from "@/components/forms/finance-enquiry-form";
 import { FinanceCalculator } from "@/components/public/finance-calculator";
 
+// The enquiry form reads useSearchParams() to pre-fill from the finance
+// calculator's CTA (?monthly=&deposit=&term=&vehicle=&type=). App Router
+// requires the page to be dynamic (or suspense-wrapped) for that hook to
+// work at build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Car finance made simple",
   description:
@@ -143,8 +149,9 @@ export default function FinancePage() {
             </div>
             <p className="mt-6 text-xs leading-6 text-foreground/45">
               Finance is subject to status, affordability checks and lender
-              approval. Terms apply. We are a credit broker, not a lender, and
-              may receive a fee from the finance provider.
+              approval. Terms apply. Finance is arranged through
+              FCA-authorised broker partners; the dealership may receive a fee
+              from the finance provider.
             </p>
           </div>
           <div className="rounded-3xl border bg-white p-5 shadow-sm sm:p-8 lg:p-10">

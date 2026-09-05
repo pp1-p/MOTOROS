@@ -230,7 +230,7 @@ export function FinanceCalculator({
         Illustration only. Figures assume monthly repayments in arrears and no
         arrangement fees. Actual APR and — for PCP — the guaranteed future
         value depend on lender underwriting, mileage and vehicle age. Subject
-        to status. We are a credit broker, not a lender.
+        to status. Finance is arranged through FCA-authorised partners.
       </p>
     </div>
   );
