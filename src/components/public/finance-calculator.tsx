@@ -4,6 +4,7 @@ import { Calculator } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { buildFinanceEnquiryHref } from "@/lib/finance-handoff";
 import {
   DEFAULT_REPRESENTATIVE_APR,
   DEFAULT_TERM_MONTHS,
@@ -67,9 +68,15 @@ export function FinanceCalculator({
     [safeCashPrice, deposit, termMonths, apr, type],
   );
 
-  const quoteHref = vehicleReference
-    ? `/finance?vehicle=${encodeURIComponent(vehicleReference)}&monthly=${Math.round(quote.monthlyPayment)}&deposit=${Math.round(deposit)}&term=${termMonths}&type=${type}`
-    : `/finance?monthly=${Math.round(quote.monthlyPayment)}&deposit=${Math.round(deposit)}&term=${termMonths}&type=${type}`;
+  const quoteHref = buildFinanceEnquiryHref({
+    vehicleReference,
+    monthlyPayment: quote.monthlyPayment,
+    deposit,
+    cashPrice: safeCashPrice,
+    termMonths,
+    productType: type,
+    apr,
+  });
 
   return (
     <div
