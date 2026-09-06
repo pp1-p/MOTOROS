@@ -20,7 +20,9 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function toIntegerString(raw: string | null, allowZero = false): string {
   if (!raw) return "";
-  const parsed = Number.parseInt(raw.replace(/[^\d]/g, ""), 10);
+  const normalised = raw.trim().replace(/^£/, "").replaceAll(",", "");
+  if (!/^\d+$/.test(normalised)) return "";
+  const parsed = Number.parseInt(normalised, 10);
   if (!Number.isFinite(parsed)) return "";
   if (allowZero ? parsed < 0 : parsed <= 0) return "";
   return String(parsed);
@@ -28,7 +30,9 @@ function toIntegerString(raw: string | null, allowZero = false): string {
 
 function toAprString(raw: string | null): string | null {
   if (!raw) return null;
-  const parsed = Number.parseFloat(raw.replace(/[^\d.]/g, ""));
+  const normalised = raw.trim().replace(/%$/, "");
+  if (!/^\d+(?:\.\d+)?$/.test(normalised)) return null;
+  const parsed = Number.parseFloat(normalised);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 24.9) return null;
   return parsed.toFixed(1);
 }
