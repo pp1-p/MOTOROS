@@ -13,7 +13,7 @@ import { FinanceEnquiryForm } from "@/components/forms/finance-enquiry-form";
 import { FinanceCalculator } from "@/components/public/finance-calculator";
 
 // The enquiry form reads useSearchParams() to pre-fill from the finance
-// calculator's CTA (?monthly=&deposit=&term=&vehicle=&type=). App Router
+// calculator's CTA (?monthly=&deposit=&term=&vehicle=&type=&apr=). App Router
 // requires the page to be dynamic (or suspense-wrapped) for that hook to
 // work at build time.
 export const dynamic = "force-dynamic";
