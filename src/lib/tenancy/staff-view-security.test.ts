@@ -45,7 +45,7 @@ describe("staff security-invoker migration contract", () => {
 
   it("keeps gross profit and internal finance fields out of the sales grant", () => {
     const salesGrant = migration.match(
-      /grant select \(([\s\S]*?)\) on public\.sales to authenticated;/,
+      /-- public\.sales:[\s\S]*?grant select \(([\s\S]*?)\) on public\.sales to authenticated;/,
     )?.[1];
 
     expect(salesGrant).toBeTruthy();
