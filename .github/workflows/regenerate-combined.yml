@@ -1,0 +1,40 @@
+name: Regenerate Supabase bundle
+
+on:
+  push:
+    branches:
+      - claude/code-to-github-zn0nab
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+
+      - name: Rebuild combined migration bundle
+        run: node scripts/build-combined-migrations.mjs
+
+      - name: Commit regenerated bundle
+        shell: bash
+        run: |
+          if git diff --quiet -- supabase/deploy/combined_migrations.sql; then
+            echo "Bundle already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/deploy/combined_migrations.sql
+          git commit -m "Regenerate combined Supabase migrations"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
