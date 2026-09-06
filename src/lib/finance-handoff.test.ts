@@ -76,7 +76,7 @@ describe("finance enquiry handoff", () => {
     );
 
     expect(prefill.budgetMonthly).toBe("");
-    expect(prefill.deposit).toBe("£25");
+    expect(prefill.deposit).toBe("");
     expect(prefill.term).toBe("unsure");
     expect(prefill.product).toBeNull();
     expect(prefill.apr).toBeNull();
