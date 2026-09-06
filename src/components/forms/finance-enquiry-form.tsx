@@ -3,13 +3,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  financeCalculatorMessage,
+  parseFinanceEnquiryPrefill,
+} from "@/lib/finance-handoff";
 
 import {
   ConsentField,
@@ -30,16 +34,8 @@ const financeSchema = z.object({
     .min(7, "Enter a valid telephone number")
     .max(30)
     .regex(/^[+()\d\s-]+$/, "Enter a valid telephone number"),
-  budgetMonthly: z
-    .string()
-    .trim()
-    .max(40)
-    .optional(),
-  deposit: z
-    .string()
-    .trim()
-    .max(40)
-    .optional(),
+  budgetMonthly: z.string().trim().max(40).optional(),
+  deposit: z.string().trim().max(40).optional(),
   term: z.enum(["24", "36", "48", "60", "unsure"]),
   employmentStatus: z.enum([
     "employed",
@@ -47,16 +43,8 @@ const financeSchema = z.object({
     "retired",
     "other",
   ]),
-  vehicleOfInterest: z
-    .string()
-    .trim()
-    .max(200)
-    .optional(),
-  message: z
-    .string()
-    .trim()
-    .max(2000)
-    .optional(),
+  vehicleOfInterest: z.string().trim().max(200).optional(),
+  message: z.string().trim().max(2000).optional(),
   consent: z.boolean().refine(Boolean, {
     message: "Please agree so we can respond to your finance enquiry",
   }),
@@ -65,42 +53,22 @@ const financeSchema = z.object({
 
 type FinanceValues = z.infer<typeof financeSchema>;
 
-const allowedTerms = new Set(["24", "36", "48", "60"]);
-
-function toIntegerString(raw: string | null): string {
-  if (!raw) return "";
-  const parsed = Number.parseInt(raw.replace(/[^\d]/g, ""), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? String(parsed) : "";
-}
-
 export function FinanceEnquiryForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const prefill = useMemo(() => {
-    const monthly = toIntegerString(searchParams.get("monthly"));
-    const deposit = toIntegerString(searchParams.get("deposit"));
-    const rawTerm = searchParams.get("term")?.trim() ?? "";
-    const term = allowedTerms.has(rawTerm)
-      ? (rawTerm as FinanceValues["term"])
-      : "unsure";
-    const productParam = searchParams.get("type")?.trim().toLowerCase();
-    const product = productParam === "pcp" ? "PCP" : productParam === "hp" ? "Hire Purchase" : null;
-    const vehicle = searchParams.get("vehicle")?.trim() ?? "";
-    return {
-      budgetMonthly: monthly ? `£${monthly}` : "",
-      deposit: deposit ? `£${deposit}` : "",
-      term,
-      vehicleOfInterest: vehicle,
-      product,
-      hasAnyPrefill: Boolean(monthly || deposit || vehicle || rawTerm || productParam),
-    };
-  }, [searchParams]);
+  const prefill = useMemo(
+    () => parseFinanceEnquiryPrefill(searchParams),
+    [searchParams],
+  );
+  const calculatorMessage = financeCalculatorMessage(prefill);
 
   const {
     register,
     handleSubmit,
+    reset,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FinanceValues>({
     resolver: zodResolver(financeSchema),
@@ -113,13 +81,29 @@ export function FinanceEnquiryForm() {
       term: prefill.term,
       employmentStatus: "employed",
       vehicleOfInterest: prefill.vehicleOfInterest,
-      message: prefill.product
-        ? `From the online calculator: ${prefill.product} illustration.`
-        : "",
+      message: calculatorMessage,
       consent: false,
       website: "",
     },
   });
+
+  useEffect(() => {
+    const current = getValues();
+    const currentMessage = current.message ?? "";
+    const shouldRefreshCalculatorMessage =
+      !currentMessage || currentMessage.startsWith("From the online calculator:");
+
+    reset({
+      ...current,
+      budgetMonthly: prefill.budgetMonthly,
+      deposit: prefill.deposit,
+      term: prefill.term,
+      vehicleOfInterest: prefill.vehicleOfInterest,
+      message: shouldRefreshCalculatorMessage
+        ? calculatorMessage
+        : currentMessage,
+    });
+  }, [calculatorMessage, getValues, prefill, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -141,6 +125,8 @@ export function FinanceEnquiryForm() {
       values.vehicleOfInterest
         ? `Vehicle of interest: ${values.vehicleOfInterest}`
         : null,
+      prefill.product ? `Calculator product: ${prefill.product}` : null,
+      prefill.apr ? `Calculator APR: ${prefill.apr}%` : null,
       values.budgetMonthly
         ? `Comfortable monthly budget: ${values.budgetMonthly}`
         : null,
@@ -184,23 +170,47 @@ export function FinanceEnquiryForm() {
           </p>
           <ul className="mt-1.5 grid gap-0.5 sm:grid-cols-2">
             {prefill.vehicleOfInterest ? (
-              <li>Vehicle · <span className="font-extrabold">{prefill.vehicleOfInterest}</span></li>
+              <li>
+                Vehicle ·{" "}
+                <span className="font-extrabold">
+                  {prefill.vehicleOfInterest}
+                </span>
+              </li>
             ) : null}
             {prefill.product ? (
-              <li>Product · <span className="font-extrabold">{prefill.product}</span></li>
+              <li>
+                Product ·{" "}
+                <span className="font-extrabold">{prefill.product}</span>
+              </li>
             ) : null}
             {prefill.budgetMonthly ? (
-              <li>Illustrative monthly · <span className="font-extrabold">{prefill.budgetMonthly}</span></li>
+              <li>
+                Illustrative monthly ·{" "}
+                <span className="font-extrabold">{prefill.budgetMonthly}</span>
+              </li>
             ) : null}
             {prefill.deposit ? (
-              <li>Deposit · <span className="font-extrabold">{prefill.deposit}</span></li>
+              <li>
+                Deposit ·{" "}
+                <span className="font-extrabold">{prefill.deposit}</span>
+              </li>
             ) : null}
             {prefill.term !== "unsure" ? (
-              <li>Term · <span className="font-extrabold">{prefill.term} months</span></li>
+              <li>
+                Term ·{" "}
+                <span className="font-extrabold">{prefill.term} months</span>
+              </li>
+            ) : null}
+            {prefill.apr ? (
+              <li>
+                Illustrative APR ·{" "}
+                <span className="font-extrabold">{prefill.apr}%</span>
+              </li>
             ) : null}
           </ul>
           <p className="mt-2 text-[10px] text-brand-strong/70">
-            Tweak anything below before you send — we&apos;ll only quote against the numbers you confirm here.
+            Tweak anything below before you send — we&apos;ll only quote against
+            the numbers you confirm here.
           </p>
         </div>
       ) : null}
@@ -245,14 +255,22 @@ export function FinanceEnquiryForm() {
             Comfortable monthly budget{" "}
             <span className="font-semibold text-foreground/45">(optional)</span>
           </FieldLabel>
-          <Input id="finBudget" placeholder="£250" {...register("budgetMonthly")} />
+          <Input
+            id="finBudget"
+            placeholder="£250"
+            {...register("budgetMonthly")}
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="finDeposit">
             Deposit available{" "}
             <span className="font-semibold text-foreground/45">(optional)</span>
           </FieldLabel>
-          <Input id="finDeposit" placeholder="£1,500" {...register("deposit")} />
+          <Input
+            id="finDeposit"
+            placeholder="£1,500"
+            {...register("deposit")}
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="finTerm">Preferred term</FieldLabel>
