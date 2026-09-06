@@ -1,0 +1,111 @@
+name: PR 39 Supabase live gate
+
+on:
+  push:
+    branches:
+      - claude/code-to-github-zn0nab
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-supabase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Verify migrations and advisors on the MOTOR.OS project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "SUPABASE_ACCESS_TOKEN secret is not configured in this GitHub repository."
+            exit 3
+          fi
+
+          auth_header="Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
+          api="https://api.supabase.com/v1"
+
+          projects="$(curl -fsS "${api}/projects" -H "${auth_header}")"
+          project_ref=""
+
+          for ref in $(printf '%s' "$projects" | jq -r '.[].ref'); do
+            body=$(jq -nc --arg q "select to_regclass('public.organisations') is not null as organisations, to_regclass('public.vehicles') is not null as vehicles, to_regclass('public.platform_user_roles') is not null as platform_user_roles" '{query:$q}')
+            response=$(curl -fsS -X POST "${api}/projects/${ref}/database/query/read-only" \
+              -H "${auth_header}" -H 'Content-Type: application/json' -d "$body" || true)
+            if printf '%s' "$response" | jq -e '.[0].organisations == true and .[0].vehicles == true and .[0].platform_user_roles == true' >/dev/null 2>&1; then
+              project_ref="$ref"
+              break
+            fi
+          done
+
+          if [ -z "$project_ref" ]; then
+            echo "No Supabase project visible to this token matches the MOTOR.OS schema identity."
+            exit 4
+          fi
+
+          echo "Located MOTOR.OS Supabase project: ${project_ref}"
+
+          migration_query="select version from supabase_migrations.schema_migrations where version in ('202608010001','202608010002','202609060001') order by version"
+          migration_body=$(jq -nc --arg q "$migration_query" '{query:$q}')
+          migration_rows=$(curl -fsS -X POST "${api}/projects/${project_ref}/database/query/read-only" \
+            -H "${auth_header}" -H 'Content-Type: application/json' -d "$migration_body")
+          printf 'Target migration history: %s\n' "$(printf '%s' "$migration_rows" | jq -c '.')"
+
+          for version in 202608010001 202608010002 202609060001; do
+            if ! printf '%s' "$migration_rows" | jq -e --arg v "$version" 'any(.[]; (.version|tostring) == $v)' >/dev/null; then
+              echo "Missing target migration: ${version}"
+              exit 5
+            fi
+          done
+
+          view_query="select c.relname, coalesce(c.reloptions, array[]::text[]) as reloptions from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relname in ('vehicle_presentation_records','technician_repair_jobs','staff_vehicle_records','staff_sales_records') order by c.relname"
+          view_body=$(jq -nc --arg q "$view_query" '{query:$q}')
+          view_rows=$(curl -fsS -X POST "${api}/projects/${project_ref}/database/query/read-only" \
+            -H "${auth_header}" -H 'Content-Type: application/json' -d "$view_body")
+          printf 'Staff view options: %s\n' "$(printf '%s' "$view_rows" | jq -c '.')"
+
+          if [ "$(printf '%s' "$view_rows" | jq '[.[] | select((.reloptions | map(ascii_downcase) | any(. == "security_invoker=on" or . == "security_invoker=true")))] | length')" -ne 4 ]; then
+            echo "One or more staff views are not security_invoker."
+            exit 6
+          fi
+
+          owner_query="select count(*)::int as active_owner_count from public.platform_user_roles where role = 'owner' and status = 'active'"
+          owner_body=$(jq -nc --arg q "$owner_query" '{query:$q}')
+          owner_rows=$(curl -fsS -X POST "${api}/projects/${project_ref}/database/query/read-only" \
+            -H "${auth_header}" -H 'Content-Type: application/json' -d "$owner_body")
+          active_owners=$(printf '%s' "$owner_rows" | jq -r '.[0].active_owner_count // 0')
+          echo "Active platform owners: ${active_owners}"
+
+          if [ "$active_owners" -lt 1 ]; then
+            echo "No active database-backed platform owner is configured."
+            exit 7
+          fi
+
+          security=$(curl -fsS "${api}/projects/${project_ref}/advisors/security" -H "${auth_header}")
+          performance=$(curl -fsS "${api}/projects/${project_ref}/advisors/performance" -H "${auth_header}")
+
+          security_definer_targets=$(printf '%s' "$security" | jq '[.lints[]? | select(.name == "security_definer_view") | select((.metadata.name // .metadata.entity // "") as $n | ["vehicle_presentation_records","technician_repair_jobs","staff_vehicle_records","staff_sales_records"] | index($n))] | length')
+          unindexed_public=$(printf '%s' "$performance" | jq '[.lints[]? | select(.name == "unindexed_foreign_keys") | select((.metadata.schema // "public") == "public")] | length')
+
+          echo "Target security_definer_view warnings: ${security_definer_targets}"
+          echo "Public unindexed_foreign_keys warnings: ${unindexed_public}"
+          echo "All remaining security advisor lint names: $(printf '%s' "$security" | jq -r '[.lints[]?.name] | unique | join(", ")')"
+          echo "All remaining performance advisor lint names: $(printf '%s' "$performance" | jq -r '[.lints[]?.name] | unique | join(", ")')"
+
+          if [ "$security_definer_targets" -ne 0 ]; then
+            echo "Target staff-view security advisor warnings remain."
+            exit 8
+          fi
+
+          if [ "$unindexed_public" -ne 0 ]; then
+            echo "Unindexed public foreign-key advisor warnings remain."
+            exit 9
+          fi
+
+          echo "MOTOR.OS Supabase PR #39 live release gates passed."
