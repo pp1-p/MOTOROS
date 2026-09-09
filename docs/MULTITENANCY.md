@@ -67,9 +67,19 @@ suspended database assignment cannot be bypassed with that email fallback.
 ## Domains
 
 `dealership_domains` stores MotorOS subdomains and optional custom hostnames.
-Custom domains start in `pending`. Only change them to `verified` after an
-external ownership and DNS check; hostname syntax alone is not ownership
-verification. Public tenant resolution only consumes verified records.
+Custom domains start in `pending`; hostname syntax alone is never treated as
+ownership evidence. A platform owner can attach/check a custom hostname through
+MotorOS, which uses a server-only Vercel token to add the hostname to the shared
+MotorOS project, attempt Vercel's ownership challenge, and inspect the current
+DNS/TLS configuration. The platform UI surfaces the provider's current TXT, A
+or CNAME instructions without storing the provider token or challenge in the
+database.
+
+A custom domain changes to `verified` only when Vercel reports both ownership
+verification and a non-misconfigured DNS/TLS state. Pending, failed and disabled
+custom domains continue to fail closed in public tenant resolution. The normal
+platform status endpoint is not allowed to promote a custom hostname manually
+to `verified`.
 
 Recommended production DNS:
 
@@ -77,6 +87,11 @@ Recommended production DNS:
 - wildcard `*.motoros.example` routed to the same deployment;
 - individually verified customer domains routed to the same deployment;
 - `MOTOROS_BASE_DOMAIN=motoros.example`.
+
+If a dealership wants both its apex and `www` hostname to resolve directly,
+register and verify both hostnames. The dealership should remain the registrant
+and owner of its domain; MotorOS only requires the agreed DNS records to point
+the hostnames at the shared platform.
 
 ## Themes
 
@@ -115,6 +130,8 @@ discarding an otherwise valid dealership.
 The dealership then uses its normal `/admin` area for branding uploads,
 inventory import/entry, content review and website publication. Platform owners
 can monitor progress, plan/lifecycle, domain and theme status in `/platform`.
+They can also add additional custom hostnames after onboarding and run the
+provider verification check from the dealership platform controls.
 
 ## Data and cache rules
 
