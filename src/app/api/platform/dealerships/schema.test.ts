@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   createPlatformDealershipSchema,
+  platformCustomDomainCreateSchema,
+  platformCustomDomainProvisionSchema,
   platformDealershipActionSchema,
   platformDomainActionSchema,
 } from "./schema";
@@ -61,13 +63,40 @@ describe("platform mutation validation", () => {
     ).toBe(false);
   });
 
-  it("accepts an evidenced verified-domain action", () => {
+  it("still validates low-level domain status actions", () => {
     expect(
       platformDomainActionSchema.safeParse({
-        status: "verified",
-        reason: "DNS ownership check passed.",
+        status: "disabled",
+        reason: "Dealer requested the hostname be disabled.",
         confirmation: "CONFIRM",
       }).success,
     ).toBe(true);
+  });
+
+  it("validates a post-onboarding custom hostname without accepting URLs", () => {
+    expect(
+      platformCustomDomainCreateSchema.safeParse({
+        hostname: "WWW.Dealer.co.uk",
+        reason: "Dealer requested their production hostname.",
+        confirmation: "CONFIRM",
+      }).success,
+    ).toBe(true);
+    expect(
+      platformCustomDomainCreateSchema.safeParse({
+        hostname: "https://dealer.co.uk",
+        reason: "Dealer requested their production hostname.",
+        confirmation: "CONFIRM",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires explicit confirmation before contacting Vercel", () => {
+    expect(
+      platformCustomDomainProvisionSchema.safeParse({ confirmation: "CONFIRM" })
+        .success,
+    ).toBe(true);
+    expect(
+      platformCustomDomainProvisionSchema.safeParse({ confirmation: "yes" }).success,
+    ).toBe(false);
   });
 });
