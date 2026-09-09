@@ -89,7 +89,7 @@ describe("Vercel custom-domain provisioning", () => {
     ]);
   });
 
-  it("returns Vercel ownership challenges while verification is pending", async () => {
+  it("re-reads and returns Vercel ownership challenges while verification is pending", async () => {
     const challenge = {
       type: "TXT",
       domain: "_vercel.dealer.example",
@@ -102,6 +102,11 @@ describe("Vercel custom-domain provisioning", () => {
         projectId: "project",
         verified: false,
         verification: [challenge],
+      }),
+      json({
+        name: "dealer.example",
+        projectId: "project",
+        verified: false,
       }),
       json({
         name: "dealer.example",
