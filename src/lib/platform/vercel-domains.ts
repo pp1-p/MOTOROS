@@ -134,13 +134,12 @@ export function createVercelDomainClient(
     url: URL,
     init: RequestInit = {},
   ): Promise<T> {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${config.token}`);
+    headers.set("Content-Type", "application/json");
     const response = await fetchImpl(url, {
       ...init,
-      headers: {
-        Authorization: `Bearer ${config.token}`,
-        "Content-Type": "application/json",
-        ...init.headers,
-      },
+      headers,
       signal: init.signal ?? AbortSignal.timeout(10_000),
     });
     const body = await responseBody(response);
@@ -221,14 +220,16 @@ export function createVercelDomainClient(
       if (domain.verified !== true) {
         try {
           domain = await verifyProjectDomain(hostname);
+          if (domain.verified !== true) {
+            domain = (await getProjectDomain(hostname)) ?? domain;
+          }
         } catch (error) {
-          // Verification can legitimately remain incomplete while DNS propagates.
-          // Re-read the domain so the UI receives the current TXT challenge.
+          // Vercel can return a client error while the ownership/DNS challenge is
+          // still incomplete. Re-read only expected provisioning conflicts so
+          // authentication/permission failures remain visible to the operator.
           if (
             error instanceof VercelDomainProvisioningError &&
-            error.status !== null &&
-            error.status >= 400 &&
-            error.status < 500
+            (error.status === 400 || error.status === 409)
           ) {
             domain = (await getProjectDomain(hostname)) ?? domain;
           } else {
