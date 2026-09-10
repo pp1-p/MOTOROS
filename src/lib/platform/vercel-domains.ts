@@ -211,6 +211,31 @@ export function createVercelDomainClient(
     return request<DomainConfig & Record<string, unknown>>(url);
   }
 
+  async function removeProjectDomain(hostname: string): Promise<boolean> {
+    const existing = await getProjectDomain(hostname);
+    if (!existing) return false;
+
+    const url = scope(
+      new URL(
+        `https://api.vercel.com/v9/projects/${project}/domains/${encodeURIComponent(hostname)}`,
+      ),
+    );
+    try {
+      await request<Record<string, unknown>>(url, {
+        method: "DELETE",
+        body: JSON.stringify({ removeRedirects: false }),
+      });
+      return true;
+    } catch (error) {
+      // Keep disconnect idempotent if another operator removed the hostname
+      // between the existence check and the DELETE request.
+      if (error instanceof VercelDomainProvisioningError && error.status === 404) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   return {
     async provision(hostname: string): Promise<VercelDomainProvisioningResult> {
       let domain = await getProjectDomain(hostname);
@@ -249,6 +274,13 @@ export function createVercelDomainClient(
         ready: verified && !misconfigured,
         verification: verificationChallenges(domain.verification),
         dnsRecommendations: normaliseDnsRecommendations(hostname, domainConfig),
+      };
+    },
+
+    async disconnect(hostname: string) {
+      return {
+        hostname,
+        removedFromProject: await removeProjectDomain(hostname),
       };
     },
   };
