@@ -75,7 +75,7 @@ export function PlatformDealershipControls({
   async function mutate(input: {
     key: string;
     endpoint: string;
-    method: "PATCH" | "POST";
+    method: "PATCH" | "POST" | "DELETE";
     payload: Record<string, unknown>;
     prompt: string;
     reload?: boolean;
@@ -150,6 +150,8 @@ export function PlatformDealershipControls({
     "inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 text-xs font-extrabold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60";
   const secondaryButtonClass =
     "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-950 px-4 text-xs font-extrabold text-white transition hover:border-cyan-400 disabled:cursor-wait disabled:opacity-60";
+  const dangerButtonClass =
+    "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-950/20 px-4 text-xs font-extrabold text-red-200 transition hover:border-red-400 hover:bg-red-950/40 disabled:cursor-wait disabled:opacity-60";
 
   return (
     <section className="rounded-2xl border border-amber-400/25 bg-slate-900">
@@ -520,6 +522,45 @@ export function PlatformDealershipControls({
                       {domain.status === "disabled" ? "Re-enable" : "Disable"}
                     </button>
                   </form>
+
+                  {domain.status === "disabled" ? (
+                    <form
+                      className="space-y-2 rounded-lg border border-red-500/20 bg-red-950/10 p-3"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const form = new FormData(event.currentTarget);
+                        void mutate({
+                          key: `disconnect-${domain.id}`,
+                          endpoint: `/api/platform/dealerships/${dealership.id}/domains/${domain.id}`,
+                          method: "DELETE",
+                          payload: {
+                            reason: String(form.get("reason")),
+                          },
+                          prompt: `Disconnect ${domain.hostname} from the MotorOS Vercel project? The MotorOS domain record will remain disabled for audit history and can be provisioned again later.`,
+                        });
+                      }}
+                    >
+                      <p className="text-xs leading-5 text-red-200">
+                        Offboarding only: detach this hostname from Vercel after it has already been disabled in MotorOS.
+                      </p>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                          name="reason"
+                          required
+                          minLength={8}
+                          maxLength={500}
+                          placeholder="Reason for disconnecting from Vercel"
+                          className={inputClass}
+                        />
+                        <button disabled={busy !== null} className={`${dangerButtonClass} shrink-0`}>
+                          {busy === `disconnect-${domain.id}` ? (
+                            <LoaderCircle className="size-4 animate-spin" />
+                          ) : null}
+                          Disconnect from Vercel
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
                 </div>
               );
             }
