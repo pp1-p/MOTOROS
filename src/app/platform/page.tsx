@@ -6,7 +6,6 @@ import {
   Globe2,
   MessageSquare,
   PauseCircle,
-  Plus,
   Rocket,
   Users,
 } from "lucide-react";
@@ -23,6 +22,8 @@ import {
   platformWebsiteStatuses,
   type PlatformDirectoryQuery,
 } from "@/lib/data/platform-admin";
+
+import { AddDealershipDialog } from "./add-dealership-dialog";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Overview" };
@@ -106,13 +107,7 @@ export default async function PlatformOverviewPage({
           </p>
         </div>
         {canMutatePlatform(actor.role) ? (
-          <Link
-            href="/onboarding"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-cyan-400 px-4 text-xs font-extrabold text-slate-950 hover:bg-cyan-300"
-          >
-            <Plus className="size-4" aria-hidden />
-            Add dealership
-          </Link>
+          <AddDealershipDialog />
         ) : (
           <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
             Read-only support access
