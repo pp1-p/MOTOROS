@@ -132,7 +132,7 @@ export function OnboardingWizard() {
               </label>
             ))}
           </div>
-          <label className="block text-xs font-extrabold">Optional custom domain<input name="customDomain" placeholder="www.dealership.co.uk" className={inputClass} /><span className="mt-1.5 block font-normal text-slate-500">Created as pending. Verify external ownership and DNS before marking it verified.</span></label>
+          <label className="block text-xs font-extrabold">Dealership website URL / custom domain<input name="customDomain" inputMode="url" autoCapitalize="none" spellCheck={false} placeholder="https://www.dealership.co.uk" className={inputClass} /><span className="mt-1.5 block font-normal text-slate-500">Paste their current website URL or enter a domain. MotorOS stores the hostname and creates it as pending until ownership and DNS are verified.</span></label>
         </fieldset>
 
         <fieldset data-step="3" hidden={step !== 3} className="space-y-5">
