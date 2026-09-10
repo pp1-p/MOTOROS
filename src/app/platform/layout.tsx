@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, Home, LogOut, Plus, ShieldCheck } from "lucide-react";
+import { Building2, Home, LogOut, ShieldCheck } from "lucide-react";
 
 import {
   canMutatePlatform,
   requirePlatformAdmin,
 } from "@/lib/auth/platform-admin";
+
+import { AddDealershipDialog } from "./add-dealership-dialog";
 
 export const metadata: Metadata = {
   title: {
@@ -56,13 +58,7 @@ export default async function PlatformLayout({
               Dealerships
             </Link>
             {canMutatePlatform(admin.role) ? (
-              <Link
-                href="/onboarding"
-                className="rounded-lg px-3 py-2 hover:bg-white/10"
-              >
-                <Plus className="mr-1.5 inline size-3.5" aria-hidden />
-                Add dealership
-              </Link>
+              <AddDealershipDialog variant="nav" />
             ) : null}
           </nav>
           <div className="flex items-center gap-3">
