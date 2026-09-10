@@ -47,13 +47,7 @@ export function AddDealershipDialog({
       </button>
 
       {open ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/85 p-3 backdrop-blur-sm sm:p-6"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) setOpen(false);
-          }}
-        >
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/85 p-3 backdrop-blur-sm sm:p-6">
           <section
             role="dialog"
             aria-modal="true"
