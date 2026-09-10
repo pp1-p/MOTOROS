@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPlatformDealershipSchema,
   platformCustomDomainCreateSchema,
+  platformCustomDomainDisconnectSchema,
   platformCustomDomainProvisionSchema,
   platformDealershipActionSchema,
   platformDomainActionSchema,
@@ -97,6 +98,21 @@ describe("platform mutation validation", () => {
     ).toBe(true);
     expect(
       platformCustomDomainProvisionSchema.safeParse({ confirmation: "yes" }).success,
+    ).toBe(false);
+  });
+
+  it("requires a meaningful reason before disconnecting from Vercel", () => {
+    expect(
+      platformCustomDomainDisconnectSchema.safeParse({
+        reason: "Dealer cancelled custom-domain hosting.",
+        confirmation: "CONFIRM",
+      }).success,
+    ).toBe(true);
+    expect(
+      platformCustomDomainDisconnectSchema.safeParse({
+        reason: "cancel",
+        confirmation: "CONFIRM",
+      }).success,
     ).toBe(false);
   });
 });
