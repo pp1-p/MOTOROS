@@ -19,7 +19,25 @@ const optionalEmail = z.preprocess(
 );
 
 const optionalHostname = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  (value) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+
+    const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
+
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return trimmed.toLowerCase();
+      }
+      return parsed.hostname.toLowerCase().replace(/\.$/, "");
+    } catch {
+      return trimmed.toLowerCase();
+    }
+  },
   z
     .string()
     .trim()
@@ -27,7 +45,7 @@ const optionalHostname = z.preprocess(
     .max(253)
     .regex(
       /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/,
-      "Enter a hostname without https:// or a path.",
+      "Enter a valid dealership website or hostname.",
     )
     .optional(),
 );
