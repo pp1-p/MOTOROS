@@ -227,6 +227,67 @@ export async function provisionPlatformCustomDomain(input: {
   };
 }
 
+export async function disconnectPlatformCustomDomain(input: {
+  organisationId: string;
+  domainId: string;
+  actor: PlatformActor;
+  reason: string;
+}) {
+  assertPlatformOwner(input.actor);
+  const before = await getDomain(input);
+  if (before.type !== "custom") {
+    throw new Error("MotorOS-managed subdomains cannot be disconnected from Vercel here.");
+  }
+  if (before.status !== "disabled") {
+    throw new Error("Disable this custom domain before disconnecting it from Vercel.");
+  }
+
+  const provider = await getVercelDomainClient().disconnect(before.hostname);
+  const supabase = createAdminSupabaseClient();
+  const changed = await supabase
+    .from("dealership_domains")
+    .update({ status: "disabled", verified_at: null })
+    .eq("id", input.domainId)
+    .eq("organisation_id", input.organisationId)
+    .select("id,organisation_id,hostname,type,status,verified_at,created_at")
+    .single();
+  if (changed.error || !changed.data) {
+    throw new Error("The disconnected domain state could not be saved.");
+  }
+
+  try {
+    await writeDomainAudit({
+      organisationId: input.organisationId,
+      actor: input.actor,
+      action: "platform.domain.disconnected_from_provider",
+      entityId: input.domainId,
+      reason: input.reason,
+      oldValues: {
+        status: before.status,
+        verified_at: before.verified_at,
+        hostname: before.hostname,
+      },
+      newValues: {
+        status: "disabled",
+        verified_at: null,
+        hostname: before.hostname,
+        provider: "vercel",
+        provider_domain_removed: provider.removedFromProject,
+      },
+    });
+  } catch (error) {
+    // The provider detach has already happened and cannot be transactionally
+    // rolled back with the database. Keep the domain fail-closed and surface the
+    // audit failure rather than falsely restoring a verified state.
+    throw error;
+  }
+
+  return {
+    domain: changed.data as DomainRow,
+    provider,
+  };
+}
+
 export async function changePlatformDomainStatusSafely(input: {
   organisationId: string;
   domainId: string;
