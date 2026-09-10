@@ -136,6 +136,57 @@ describe("Vercel custom-domain provisioning", () => {
       { type: "CNAME", name: "dealer.example", value: "cname.vercel-dns.com" },
     ]);
   });
+
+  it("disconnects an attached project domain without removing the account-level domain", async () => {
+    const calls: Array<{ url: string; method: string; body: string | null }> = [];
+    const responses = [
+      json({ name: "dealer.example", projectId: "project", verified: true }),
+      json({ name: "dealer.example" }),
+    ];
+    const client = createVercelDomainClient(
+      { token: "secret", projectIdOrName: "motoros", teamId: "team_123" },
+      async (input, init) => {
+        calls.push({
+          url: String(input),
+          method: init?.method ?? "GET",
+          body: typeof init?.body === "string" ? init.body : null,
+        });
+        const response = responses.shift();
+        if (!response) throw new Error("Unexpected fetch");
+        return response;
+      },
+    );
+
+    const result = await client.disconnect("dealer.example");
+
+    expect(result).toEqual({
+      hostname: "dealer.example",
+      removedFromProject: true,
+    });
+    expect(calls.map((call) => call.method)).toEqual(["GET", "DELETE"]);
+    expect(calls[1]?.url).toContain("/v9/projects/motoros/domains/dealer.example");
+    expect(calls[1]?.url).toContain("teamId=team_123");
+    expect(calls[1]?.body).toBe(JSON.stringify({ removeRedirects: false }));
+  });
+
+  it("treats disconnecting an already-absent project domain as an idempotent success", async () => {
+    const calls: Array<{ method: string }> = [];
+    const client = createVercelDomainClient(
+      { token: "secret", projectIdOrName: "motoros" },
+      async (_input, init) => {
+        calls.push({ method: init?.method ?? "GET" });
+        return json({ error: { code: "not_found", message: "Domain not found" } }, 404);
+      },
+    );
+
+    const result = await client.disconnect("dealer.example");
+
+    expect(result).toEqual({
+      hostname: "dealer.example",
+      removedFromProject: false,
+    });
+    expect(calls).toEqual([{ method: "GET" }]);
+  });
 });
 
 describe("DNS recommendation normalisation", () => {
