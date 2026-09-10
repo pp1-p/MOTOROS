@@ -107,6 +107,11 @@ export const platformCustomDomainProvisionSchema = z.object({
   confirmation: z.literal("CONFIRM"),
 });
 
+export const platformCustomDomainDisconnectSchema = z.object({
+  reason: z.string().trim().min(8).max(500),
+  confirmation: z.literal("CONFIRM"),
+});
+
 export const platformOwnerInvitationSchema = z.object({
   email: z.email().max(254),
   confirmation: z.literal("CONFIRM"),
