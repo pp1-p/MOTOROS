@@ -22,7 +22,7 @@ describe("Auto Trader stock mapping", () => {
         vehicleType: "Car",
         derivativeId: "test-derivative-placeholder",
         odometerReadingMiles: 20_000,
-        owners: 1,
+        owners: 2,
       },
       adverts: {
         forecourtPrice: { amountGBP: 15_995 },
@@ -45,6 +45,22 @@ describe("Auto Trader stock mapping", () => {
       media: { video: { href: "https://www.youtube.com/watch?v=placeholder" } },
     });
     expect(plan.payload).not.toHaveProperty("media.images");
+  });
+
+  it("converts local previous-owner count to Auto Trader total owners", () => {
+    const noPreviousOwners = planAutoTraderVehicle(
+      validAutoTraderVehicle({ previousOwners: 0 }),
+    );
+    const twoPreviousOwners = planAutoTraderVehicle(
+      validAutoTraderVehicle({ previousOwners: 2 }),
+    );
+    const unknownOwners = planAutoTraderVehicle(
+      validAutoTraderVehicle({ previousOwners: null }),
+    );
+
+    expect(noPreviousOwners.payload).toHaveProperty("vehicle.owners", 1);
+    expect(twoPreviousOwners.payload).toHaveProperty("vehicle.owners", 3);
+    expect(unknownOwners.payload).not.toHaveProperty("vehicle.owners");
   });
 
   it("publishes only when the channel explicitly requests published", () => {
