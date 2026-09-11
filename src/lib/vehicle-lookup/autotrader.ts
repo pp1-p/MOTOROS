@@ -22,6 +22,13 @@ function numberValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function warningMessages(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((warning) => textValue(asRecord(warning)?.message))
+    .filter((warning): warning is string => Boolean(warning));
+}
+
 function lookupError(error: unknown) {
   if (error instanceof AutoTraderApiError) {
     if (error.code === "not_found") {
@@ -76,11 +83,10 @@ export class AutoTraderVehicleLookupProvider implements VehicleLookupProvider {
       const make = textValue(vehicle.make);
       const fuelType = textValue(vehicle.fuelType);
       const year = textValue(vehicle.yearOfManufacture);
-      const warnings = Array.isArray(response.data.warnings)
-        ? response.data.warnings
-            .map((warning) => textValue(asRecord(warning)?.message))
-            .filter((warning): warning is string => Boolean(warning))
-        : [];
+      const warnings = [
+        ...warningMessages(response.data.warnings),
+        ...warningMessages(first?.warnings),
+      ].filter((warning, index, all) => all.indexOf(warning) === index);
 
       return {
         registration: textValue(vehicle.registration) ?? registration,
