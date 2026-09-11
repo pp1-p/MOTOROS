@@ -204,7 +204,8 @@ function activeStockPayload(
     zeroToSixtyMPHSeconds: vehicle.acceleration060Seconds,
     engineCapacityCC: vehicle.engineSizeCc,
     enginePowerBHP: vehicle.powerBhp,
-    owners: vehicle.previousOwners,
+    owners:
+      vehicle.previousOwners === null ? null : vehicle.previousOwners + 1,
     fuelEconomyNEDCExtraUrbanMPG: vehicle.fuelConsumptionExtraUrbanMpg,
     fuelEconomyNEDCUrbanMPG: vehicle.fuelConsumptionUrbanMpg,
     fuelEconomyNEDCCombinedMPG: vehicle.fuelConsumptionCombinedMpg,
