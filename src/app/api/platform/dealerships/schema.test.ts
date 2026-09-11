@@ -33,11 +33,19 @@ describe("platform onboarding validation", () => {
     expect(parsed.customDomain).toBe("www.direct.example");
   });
 
-  it("rejects a custom domain containing a protocol or path", () => {
+  it("accepts a pasted dealership URL and stores only its hostname", () => {
+    const parsed = createPlatformDealershipSchema.parse({
+      ...validDealership,
+      customDomain: "https://www.direct.example/cars?source=motoros",
+    });
+    expect(parsed.customDomain).toBe("www.direct.example");
+  });
+
+  it("rejects a non-http website scheme", () => {
     expect(
       createPlatformDealershipSchema.safeParse({
         ...validDealership,
-        customDomain: "https://direct.example/path",
+        customDomain: "javascript:alert(1)",
       }).success,
     ).toBe(false);
   });
