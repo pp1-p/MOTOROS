@@ -29,7 +29,25 @@ const hostname = z
   );
 
 const optionalHostname = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  (value) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+
+    const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
+
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return trimmed.toLowerCase();
+      }
+      return parsed.hostname.toLowerCase().replace(/\.$/, "");
+    } catch {
+      return trimmed.toLowerCase();
+    }
+  },
   hostname.optional(),
 );
 
