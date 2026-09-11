@@ -12660,21 +12660,25 @@ begin;
 -- that mirror the exact subset the views project. Read paths for `anon`
 -- (and any authenticated user) go through those policies; the existing
 -- authenticated / staff policies keep working unchanged.
+--
+-- Implementation note: `CREATE OR REPLACE VIEW` cannot drop or reorder
+-- columns, so we DROP the existing views (in dependency order, with CASCADE
+-- to be safe) and recreate them. Grants / policies on the views themselves
+-- are re-issued below.
 -- =============================================================================
 
 
--- Public read on organisations: only ever the active ones the public views
--- already exposed via the join. Reading other columns is still blocked by
--- the fact that this policy grants SELECT on rows only — column-level access
--- comes from the view definitions, which pick a public-safe projection.
+-- Public read policies on the underlying tables. Guarded with a
+-- DROP POLICY IF EXISTS so the migration is idempotent if partially applied.
+
+drop policy if exists organisations_public_read on public.organisations;
 create policy organisations_public_read
   on public.organisations
   for select
   to anon, authenticated
   using (status = 'active' and deleted_at is null);
 
--- Public read on dealership_settings: only for those whose organisation is
--- active. Same public-safe columns come through the public_dealerships view.
+drop policy if exists dealership_settings_public_read on public.dealership_settings;
 create policy dealership_settings_public_read
   on public.dealership_settings
   for select
@@ -12688,10 +12692,7 @@ create policy dealership_settings_public_read
     )
   );
 
--- Public read on vehicles: mirrors the filter the public_safe_vehicles view
--- already enforces (published, not soft-deleted, publishable status, and
--- populated advert fields). Any authenticated non-member also sees only
--- these rows via this policy.
+drop policy if exists vehicles_public_read on public.vehicles;
 create policy vehicles_public_read
   on public.vehicles
   for select
@@ -12712,8 +12713,7 @@ create policy vehicles_public_read
     )
   );
 
--- Public read on vehicle_images: only cover / gallery images whose parent
--- vehicle satisfies the public read policy above.
+drop policy if exists vehicle_images_public_read on public.vehicle_images;
 create policy vehicle_images_public_read
   on public.vehicle_images
   for select
@@ -12730,8 +12730,7 @@ create policy vehicle_images_public_read
     )
   );
 
--- Public read on vehicle_features: same story — features of a publishable
--- vehicle only.
+drop policy if exists vehicle_features_public_read on public.vehicle_features;
 create policy vehicle_features_public_read
   on public.vehicle_features
   for select
@@ -12747,10 +12746,21 @@ create policy vehicle_features_public_read
   );
 
 
--- Recreate the five views with `security_invoker = on`. The projected
--- columns and WHERE clauses are unchanged from the current definitions.
+-- Drop the existing views in dependency order (inventory depends on
+-- safe_vehicles). CASCADE handles any transitive dependency we don't know
+-- about; nothing else in the schema currently reads from these projections.
 
-create or replace view public.public_dealerships
+drop view if exists public.public_vehicle_inventory  cascade;
+drop view if exists public.public_vehicle_features   cascade;
+drop view if exists public.public_vehicle_images     cascade;
+drop view if exists public.public_safe_vehicles      cascade;
+drop view if exists public.public_dealerships        cascade;
+
+
+-- Recreate the five views with `security_invoker = on`. Projections and
+-- WHERE clauses are the same as the current definitions.
+
+create view public.public_dealerships
 with (security_invoker = on, security_barrier = true)
 as
 select
@@ -12775,7 +12785,7 @@ join public.dealership_settings ds on ds.organisation_id = o.id
 where o.status = 'active'
   and o.deleted_at is null;
 
-create or replace view public.public_safe_vehicles
+create view public.public_safe_vehicles
 with (security_invoker = on, security_barrier = true)
 as
 select
@@ -12829,7 +12839,7 @@ where v.is_public = true
   and v.description is not null
   and v.retail_price > 0;
 
-create or replace view public.public_vehicle_images
+create view public.public_vehicle_images
 with (security_invoker = on, security_barrier = true)
 as
 select
@@ -12856,7 +12866,7 @@ where vi.is_public = true
   and o.status = 'active'
   and o.deleted_at is null;
 
-create or replace view public.public_vehicle_features
+create view public.public_vehicle_features
 with (security_invoker = on, security_barrier = true)
 as
 select
@@ -12873,7 +12883,7 @@ where v.is_public = true
   and o.status = 'active'
   and o.deleted_at is null;
 
-create or replace view public.public_vehicle_inventory
+create view public.public_vehicle_inventory
 with (security_invoker = on, security_barrier = true)
 as
 select
@@ -12884,7 +12894,7 @@ join public.vehicles vehicle
   on vehicle.id = safe_vehicle.id
   and vehicle.organisation_id = safe_vehicle.organisation_id;
 
--- Grant identical select privileges on the recreated views.
+-- Re-grant identical select privileges on the recreated views.
 revoke all on public.public_dealerships from public;
 grant select on public.public_dealerships to anon, authenticated;
 
@@ -12899,6 +12909,392 @@ grant select on public.public_vehicle_features to anon, authenticated;
 
 revoke all on public.public_vehicle_inventory from public;
 grant select on public.public_vehicle_inventory to anon, authenticated;
+
+commit;
+
+-- ===== 202607290002_security_invoker_more_public_views.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS · Address Supabase "Security Definer View" lint (round two)
+--
+-- Same pattern as 202607290001, applied to the remaining three public.*
+-- projection views the Supabase advisor flagged after round one:
+--   * public.public_repair_services
+--   * public.public_website_pages
+--   * public.public_appointment_types
+--
+-- Each view is dropped and recreated with `security_invoker = on` so that
+-- RLS on the underlying table is evaluated against the *caller's* role
+-- (anon / authenticated) rather than the view owner. Narrow public-read
+-- policies mirror the exact WHERE clause each view already enforces.
+-- =============================================================================
+
+
+-- Public-read policies on the underlying tables (idempotent).
+
+drop policy if exists repair_services_public_read on public.repair_services;
+create policy repair_services_public_read
+  on public.repair_services
+  for select
+  to anon, authenticated
+  using (
+    is_public = true
+    and active = true
+    and exists (
+      select 1 from public.organisations o
+      where o.id = organisation_id
+        and o.status = 'active'
+        and o.deleted_at is null
+    )
+  );
+
+drop policy if exists website_pages_public_read on public.website_pages;
+create policy website_pages_public_read
+  on public.website_pages
+  for select
+  to anon, authenticated
+  using (
+    status = 'published'
+    and deleted_at is null
+    and exists (
+      select 1 from public.organisations o
+      where o.id = organisation_id
+        and o.status = 'active'
+        and o.deleted_at is null
+    )
+  );
+
+drop policy if exists appointment_types_public_read on public.appointment_types;
+create policy appointment_types_public_read
+  on public.appointment_types
+  for select
+  to anon, authenticated
+  using (
+    is_public_bookable = true
+    and active = true
+    and exists (
+      select 1 from public.organisations o
+      where o.id = organisation_id
+        and o.status = 'active'
+        and o.deleted_at is null
+    )
+  );
+
+
+-- Drop the existing views. None of these have downstream dependencies,
+-- but keep CASCADE for safety on partial re-runs.
+
+drop view if exists public.public_repair_services   cascade;
+drop view if exists public.public_website_pages     cascade;
+drop view if exists public.public_appointment_types cascade;
+
+
+-- Recreate with security_invoker on; projections + filters unchanged.
+
+create view public.public_repair_services
+with (security_invoker = on, security_barrier = true)
+as
+select
+  rs.id,
+  rs.organisation_id,
+  o.slug as organisation_slug,
+  rs.name,
+  rs.slug,
+  rs.short_description,
+  rs.full_description,
+  rs.icon_name,
+  rs.display_order,
+  rs.indicative_price_from
+from public.repair_services rs
+join public.organisations o on o.id = rs.organisation_id
+where rs.is_public = true
+  and rs.active = true
+  and o.status = 'active'
+  and o.deleted_at is null;
+
+create view public.public_website_pages
+with (security_invoker = on, security_barrier = true)
+as
+select
+  wp.id,
+  wp.organisation_id,
+  o.slug as organisation_slug,
+  wp.page_type,
+  wp.slug,
+  wp.title,
+  wp.content,
+  wp.seo_title,
+  wp.seo_description,
+  wp.requires_legal_review,
+  wp.published_at,
+  wp.updated_at
+from public.website_pages wp
+join public.organisations o on o.id = wp.organisation_id
+where wp.status = 'published'
+  and wp.deleted_at is null
+  and o.status = 'active'
+  and o.deleted_at is null;
+
+create view public.public_appointment_types
+with (security_invoker = on, security_barrier = true)
+as
+select
+  at.id,
+  at.organisation_id,
+  o.slug as organisation_slug,
+  at.name,
+  at.slug,
+  at.description,
+  at.category,
+  at.duration_minutes,
+  at.colour
+from public.appointment_types at
+join public.organisations o on o.id = at.organisation_id
+where at.is_public_bookable = true
+  and at.active = true
+  and o.status = 'active'
+  and o.deleted_at is null;
+
+-- Re-grant identical select privileges.
+revoke all on public.public_repair_services   from public;
+revoke all on public.public_website_pages     from public;
+revoke all on public.public_appointment_types from public;
+
+grant select on public.public_repair_services   to anon, authenticated;
+grant select on public.public_website_pages     to anon, authenticated;
+grant select on public.public_appointment_types to anon, authenticated;
+
+commit;
+
+-- ===== 202608010001_foreign_key_indexes.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS · Cover unindexed foreign keys the Supabase advisor flags.
+--
+-- Postgres does not create an index for a FK column automatically. Without
+-- one, every parent-row DELETE or UPDATE must scan the child table, and
+-- child-side lookups by parent id degrade to seq scans as data grows.
+--
+-- Scope: high-cardinality domain FKs used in admin UI joins/filters. We
+-- intentionally skip audit-only `_by` columns (created_by / updated_by /
+-- similar) — they're never queried, and indexing them just taxes writes.
+-- =============================================================================
+
+create index if not exists appointments_customer_idx_fk
+  on public.appointments (customer_id) where customer_id is not null;
+create index if not exists appointments_customer_vehicle_idx_fk
+  on public.appointments (customer_vehicle_id) where customer_vehicle_id is not null;
+create index if not exists appointments_lead_idx_fk
+  on public.appointments (lead_id) where lead_id is not null;
+create index if not exists appointments_assigned_user_idx_fk
+  on public.appointments (assigned_user_id) where assigned_user_id is not null;
+
+create index if not exists customer_vehicles_stock_vehicle_idx_fk
+  on public.customer_vehicles (stock_vehicle_id) where stock_vehicle_id is not null;
+create index if not exists customers_merged_into_idx_fk
+  on public.customers (merged_into_customer_id) where merged_into_customer_id is not null;
+
+create index if not exists documents_customer_idx_fk
+  on public.documents (customer_id) where customer_id is not null;
+create index if not exists documents_lead_idx_fk
+  on public.documents (lead_id) where lead_id is not null;
+create index if not exists documents_repair_job_idx_fk
+  on public.documents (repair_job_id) where repair_job_id is not null;
+create index if not exists documents_sale_idx_fk
+  on public.documents (sale_id) where sale_id is not null;
+create index if not exists documents_sourcing_request_idx_fk
+  on public.documents (sourcing_request_id) where sourcing_request_id is not null;
+create index if not exists documents_vehicle_idx_fk
+  on public.documents (vehicle_id) where vehicle_id is not null;
+create index if not exists documents_appointment_idx_fk
+  on public.documents (appointment_id) where appointment_id is not null;
+
+create index if not exists invoice_activity_actor_idx_fk
+  on public.invoice_activity (actor_user_id) where actor_user_id is not null;
+
+create index if not exists invoice_credit_notes_customer_idx_fk
+  on public.invoice_credit_notes (customer_id) where customer_id is not null;
+create index if not exists invoice_credit_notes_refunded_payment_idx_fk
+  on public.invoice_credit_notes (refunded_payment_id) where refunded_payment_id is not null;
+
+create index if not exists invoices_customer_idx_fk
+  on public.invoices (customer_id) where customer_id is not null;
+create index if not exists invoices_sourcing_request_idx_fk
+  on public.invoices (sourcing_request_id) where sourcing_request_id is not null;
+create index if not exists invoices_vehicle_idx_fk
+  on public.invoices (vehicle_id) where vehicle_id is not null;
+
+create index if not exists leads_customer_idx_fk
+  on public.leads (customer_id) where customer_id is not null;
+create index if not exists leads_sourcing_request_idx_fk
+  on public.leads (sourcing_request_id) where sourcing_request_id is not null;
+create index if not exists leads_vehicle_idx_fk
+  on public.leads (vehicle_id) where vehicle_id is not null;
+create index if not exists leads_assigned_user_idx_fk
+  on public.leads (assigned_user_id) where assigned_user_id is not null;
+
+create index if not exists notification_receipts_user_idx_fk
+  on public.notification_receipts (user_id);
+
+create index if not exists repair_jobs_technician_idx_fk
+  on public.repair_jobs (assigned_technician_id) where assigned_technician_id is not null;
+create index if not exists repair_jobs_customer_idx_fk
+  on public.repair_jobs (customer_id) where customer_id is not null;
+create index if not exists repair_jobs_customer_vehicle_idx_fk
+  on public.repair_jobs (customer_vehicle_id) where customer_vehicle_id is not null;
+
+create index if not exists sales_customer_idx_fk
+  on public.sales (customer_id) where customer_id is not null;
+create index if not exists sales_lead_idx_fk
+  on public.sales (lead_id) where lead_id is not null;
+create index if not exists sales_salesperson_idx_fk
+  on public.sales (salesperson_id) where salesperson_id is not null;
+create index if not exists sales_vehicle_idx_fk
+  on public.sales (vehicle_id) where vehicle_id is not null;
+
+create index if not exists sourcing_activities_org_idx_fk
+  on public.sourcing_activities (organisation_id);
+create index if not exists sourcing_candidates_stock_vehicle_idx_fk
+  on public.sourcing_candidates (stock_vehicle_id) where stock_vehicle_id is not null;
+create index if not exists sourcing_requests_assigned_user_idx_fk
+  on public.sourcing_requests (assigned_user_id) where assigned_user_id is not null;
+create index if not exists sourcing_requests_converted_vehicle_idx_fk
+  on public.sourcing_requests (converted_vehicle_id) where converted_vehicle_id is not null;
+create index if not exists sourcing_requests_customer_idx_fk
+  on public.sourcing_requests (customer_id) where customer_id is not null;
+create index if not exists sourcing_requests_lead_idx_fk
+  on public.sourcing_requests (lead_id) where lead_id is not null;
+
+create index if not exists storage_cleanup_jobs_org_idx_fk
+  on public.storage_cleanup_jobs (organisation_id);
+create index if not exists task_comments_org_idx_fk
+  on public.task_comments (organisation_id);
+
+create index if not exists tasks_appointment_idx_fk
+  on public.tasks (appointment_id) where appointment_id is not null;
+create index if not exists tasks_assigned_user_idx_fk
+  on public.tasks (assigned_user_id) where assigned_user_id is not null;
+create index if not exists tasks_customer_idx_fk
+  on public.tasks (customer_id) where customer_id is not null;
+create index if not exists tasks_lead_idx_fk
+  on public.tasks (lead_id) where lead_id is not null;
+create index if not exists tasks_repair_job_idx_fk
+  on public.tasks (repair_job_id) where repair_job_id is not null;
+create index if not exists tasks_sale_idx_fk
+  on public.tasks (sale_id) where sale_id is not null;
+create index if not exists tasks_sourcing_request_idx_fk
+  on public.tasks (sourcing_request_id) where sourcing_request_id is not null;
+create index if not exists tasks_vehicle_idx_fk
+  on public.tasks (vehicle_id) where vehicle_id is not null;
+
+create index if not exists team_invitations_invited_by_idx_fk
+  on public.team_invitations (invited_by) where invited_by is not null;
+create index if not exists team_invitations_accepted_by_idx_fk
+  on public.team_invitations (accepted_by) where accepted_by is not null;
+
+create index if not exists vehicle_sync_records_vehicle_idx_fk
+  on public.vehicle_sync_records (vehicle_id) where vehicle_id is not null;
+
+commit;
+
+-- ===== 202608010002_security_invoker_staff_views.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS · Flip the four staff-only projection views to
+-- `security_invoker = on` to clear the Supabase advisor's "Security Definer
+-- View" lint:
+--
+--   * public.vehicle_presentation_records   (sales / website editor)
+--   * public.technician_repair_jobs         (technician's own jobs)
+--   * public.staff_vehicle_records          (all operational staff)
+--   * public.staff_sales_records            (management + assigned salesperson)
+--
+-- These views existed to expose a *column-restricted* subset of vehicles /
+-- sales / repair_jobs to authenticated users. The original design used
+-- `revoke select on <table> from authenticated` (see 202607160006 lines
+-- 209-211) plus SECURITY DEFINER views to hide margin / gross-profit /
+-- internal-notes columns.
+--
+-- We keep the same guarantees while satisfying the advisor by:
+--   1. Adding column-level GRANT SELECT on the exact columns the views
+--      project. Sensitive columns (purchase_price, gross_profit,
+--      minimum_acceptable_price, internal_notes, finance_referral_*)
+--      stay revoked.
+--   2. Flipping each view's security_invoker option with ALTER VIEW so
+--      RLS on the underlying table is evaluated against the caller. We
+--      use ALTER (not DROP + CREATE) because several SECURITY DEFINER
+--      helper functions (`update_vehicle_presentation`,
+--      `update_assigned_repair_job`, and its retry variants) reference
+--      these views as their return row-type, and DROP ... CASCADE would
+--      take those functions with it.
+--   3. Adding a missing RLS policy so technicians can read their own
+--      repair jobs (repair_jobs_read_operational only covers owner /
+--      manager / service_advisor).
+-- =============================================================================
+
+
+-- --- Column-level grants -----------------------------------------------------
+
+-- public.vehicles: union of columns projected by staff_vehicle_records and
+-- vehicle_presentation_records. Excludes purchase_price, preparation_costs,
+-- repair_costs, other_costs, minimum_acceptable_price, estimated_gross_profit,
+-- actual_sale_price, actual_gross_profit, inspection_notes, known_faults,
+-- autotrader_*, lookup_provider, lookup_retrieved_at, data_reviewed_by,
+-- data_reviewed_at.
+grant select (
+  id, organisation_id, registration, stock_number,
+  make, model, derivative, year, mileage,
+  fuel_type, transmission, body_type, colour,
+  retail_price, status,
+  public_title, attention_grabber, description,
+  standard_equipment, optional_equipment,
+  finance_example_text, warranty_wording, video_url,
+  featured, is_public, slug, seo_title, seo_description,
+  sold_at, acquired_at, published_at,
+  created_at, updated_at, deleted_at
+) on public.vehicles to authenticated;
+
+-- public.sales: columns projected by staff_sales_records. Excludes
+-- gross_profit, internal_notes, finance_referral_provider,
+-- finance_referral_status.
+grant select (
+  id, organisation_id, reference,
+  vehicle_id, customer_id, lead_id, salesperson_id,
+  status,
+  sale_price, deposit, part_exchange_allowance, discount,
+  warranty, additional_products, payment_method,
+  sale_date, handover_date, completed_at,
+  created_at, updated_at, deleted_at
+) on public.sales to authenticated;
+
+-- public.repair_jobs already grants select to authenticated (no revoke was
+-- ever issued); no column change needed.
+
+
+-- --- RLS gap: technicians reading their own repair jobs ---------------------
+
+drop policy if exists repair_jobs_read_technician on public.repair_jobs;
+create policy repair_jobs_read_technician
+  on public.repair_jobs for select to authenticated
+  using (
+    public.has_org_role(organisation_id, array['technician'])
+    and assigned_technician_id = (select auth.uid())
+    and deleted_at is null
+  );
+
+
+-- --- Flip the view flag without disturbing dependent functions -------------
+
+alter view public.vehicle_presentation_records set (security_invoker = on);
+alter view public.technician_repair_jobs       set (security_invoker = on);
+alter view public.staff_vehicle_records        set (security_invoker = on);
+alter view public.staff_sales_records          set (security_invoker = on);
 
 commit;
 
@@ -13760,5 +14156,109 @@ create unique index if not exists integration_settings_autotrader_binding_unique
   )
   where provider = 'autotrader'
     and nullif(btrim(public_configuration ->> 'credential_binding'), '') is not null;
+
+commit;
+
+-- ===== 202609060001_complete_foreign_key_index_sweep.sql =====
+
+begin;
+
+-- =============================================================================
+-- MOTOR.OS · Final foreign-key index sweep.
+--
+-- 202608010001 adds named indexes for the operational foreign keys that are
+-- used most heavily by the application. The Supabase advisor, correctly,
+-- also reports audit and administrative foreign keys when no covering index
+-- exists. This migration closes that remaining gap after every current schema
+-- migration has run.
+--
+-- The block only creates an index when an existing valid index does not start
+-- with the FK columns in the same order. Primary/unique and partial indexes
+-- therefore count as coverage, matching PostgreSQL/Supabase advisor semantics.
+-- =============================================================================
+
+do $$
+declare
+  fk record;
+  has_covering_index boolean;
+  columns_sql text;
+  generated_index_name text;
+begin
+  for fk in
+    select
+      constraint_row.oid as constraint_oid,
+      constraint_row.conrelid as table_oid,
+      namespace_row.nspname as schema_name,
+      table_row.relname as table_name,
+      constraint_row.conname as constraint_name,
+      constraint_row.conkey as key_columns
+    from pg_constraint as constraint_row
+    join pg_class as table_row
+      on table_row.oid = constraint_row.conrelid
+    join pg_namespace as namespace_row
+      on namespace_row.oid = table_row.relnamespace
+    where constraint_row.contype = 'f'
+      and namespace_row.nspname = 'public'
+    order by table_row.relname, constraint_row.conname
+  loop
+    select exists (
+      select 1
+      from pg_index as index_row
+      where index_row.indrelid = fk.table_oid
+        and index_row.indisvalid
+        and index_row.indisready
+        and not exists (
+          select 1
+          from unnest(fk.key_columns) with ordinality
+            as required_column(attnum, position)
+          where index_row.indkey[(required_column.position - 1)::integer]
+                  is distinct from required_column.attnum
+        )
+    )
+    into has_covering_index;
+
+    if has_covering_index then
+      continue;
+    end if;
+
+    select string_agg(
+      format('%I', attribute_row.attname),
+      ', '
+      order by required_column.position
+    )
+    into columns_sql
+    from unnest(fk.key_columns) with ordinality
+      as required_column(attnum, position)
+    join pg_attribute as attribute_row
+      on attribute_row.attrelid = fk.table_oid
+     and attribute_row.attnum = required_column.attnum;
+
+    if columns_sql is null then
+      raise exception
+        'Could not resolve columns for foreign key %.%',
+        fk.table_name,
+        fk.constraint_name;
+    end if;
+
+    generated_index_name :=
+      left(format('%s_%s', fk.table_name, fk.constraint_name), 45)
+      || '_'
+      || substr(
+        md5(fk.schema_name || '.' || fk.table_name || '.' || fk.constraint_name),
+        1,
+        10
+      )
+      || '_fk_idx';
+
+    execute format(
+      'create index if not exists %I on %I.%I (%s)',
+      generated_index_name,
+      fk.schema_name,
+      fk.table_name,
+      columns_sql
+    );
+  end loop;
+end;
+$$;
 
 commit;

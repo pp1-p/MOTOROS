@@ -1,0 +1,32 @@
+name: PR 39 runtime dependency audit
+
+on:
+  push:
+    branches:
+      - claude/code-to-github-zn0nab
+
+permissions:
+  contents: read
+
+jobs:
+  audit-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Audit production dependencies
+        shell: bash
+        run: |
+          set +e
+          npm audit --omit=dev --audit-level=high
+          code=$?
+          if [ "$code" -ne 0 ]; then
+            echo "Production dependency audit found a high/critical issue."
+            exit "$code"
+          fi
+          echo "No high/critical production dependency vulnerabilities found."

@@ -2,14 +2,18 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, LoaderCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  financeCalculatorMessage,
+  parseFinanceEnquiryPrefill,
+} from "@/lib/finance-handoff";
 
 import {
   ConsentField,
@@ -30,16 +34,8 @@ const financeSchema = z.object({
     .min(7, "Enter a valid telephone number")
     .max(30)
     .regex(/^[+()\d\s-]+$/, "Enter a valid telephone number"),
-  budgetMonthly: z
-    .string()
-    .trim()
-    .max(40)
-    .optional(),
-  deposit: z
-    .string()
-    .trim()
-    .max(40)
-    .optional(),
+  budgetMonthly: z.string().trim().max(40).optional(),
+  deposit: z.string().trim().max(40).optional(),
   term: z.enum(["24", "36", "48", "60", "unsure"]),
   employmentStatus: z.enum([
     "employed",
@@ -47,16 +43,8 @@ const financeSchema = z.object({
     "retired",
     "other",
   ]),
-  vehicleOfInterest: z
-    .string()
-    .trim()
-    .max(200)
-    .optional(),
-  message: z
-    .string()
-    .trim()
-    .max(2000)
-    .optional(),
+  vehicleOfInterest: z.string().trim().max(200).optional(),
+  message: z.string().trim().max(2000).optional(),
   consent: z.boolean().refine(Boolean, {
     message: "Please agree so we can respond to your finance enquiry",
   }),
@@ -67,10 +55,20 @@ type FinanceValues = z.infer<typeof financeSchema>;
 
 export function FinanceEnquiryForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const prefill = useMemo(
+    () => parseFinanceEnquiryPrefill(searchParams),
+    [searchParams],
+  );
+  const calculatorMessage = financeCalculatorMessage(prefill);
+
   const {
     register,
     handleSubmit,
+    reset,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FinanceValues>({
     resolver: zodResolver(financeSchema),
@@ -78,16 +76,34 @@ export function FinanceEnquiryForm() {
       name: "",
       email: "",
       phone: "",
-      budgetMonthly: "",
-      deposit: "",
-      term: "unsure",
+      budgetMonthly: prefill.budgetMonthly,
+      deposit: prefill.deposit,
+      term: prefill.term,
       employmentStatus: "employed",
-      vehicleOfInterest: "",
-      message: "",
+      vehicleOfInterest: prefill.vehicleOfInterest,
+      message: calculatorMessage,
       consent: false,
       website: "",
     },
   });
+
+  useEffect(() => {
+    const current = getValues();
+    const currentMessage = current.message ?? "";
+    const shouldRefreshCalculatorMessage =
+      !currentMessage || currentMessage.startsWith("From the online calculator:");
+
+    reset({
+      ...current,
+      budgetMonthly: prefill.budgetMonthly,
+      deposit: prefill.deposit,
+      term: prefill.term,
+      vehicleOfInterest: prefill.vehicleOfInterest,
+      message: shouldRefreshCalculatorMessage
+        ? calculatorMessage
+        : currentMessage,
+    });
+  }, [calculatorMessage, getValues, prefill, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -109,6 +125,8 @@ export function FinanceEnquiryForm() {
       values.vehicleOfInterest
         ? `Vehicle of interest: ${values.vehicleOfInterest}`
         : null,
+      prefill.product ? `Calculator product: ${prefill.product}` : null,
+      prefill.apr ? `Calculator APR: ${prefill.apr}%` : null,
       values.budgetMonthly
         ? `Comfortable monthly budget: ${values.budgetMonthly}`
         : null,
@@ -145,6 +163,57 @@ export function FinanceEnquiryForm() {
   return (
     <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
       <HoneypotField registerProps={register("website")} />
+      {prefill.hasAnyPrefill ? (
+        <div className="rounded-2xl border border-brand/25 bg-brand-soft/70 p-4 text-xs font-semibold leading-6 text-brand-strong">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand">
+            From your calculator
+          </p>
+          <ul className="mt-1.5 grid gap-0.5 sm:grid-cols-2">
+            {prefill.vehicleOfInterest ? (
+              <li>
+                Vehicle ·{" "}
+                <span className="font-extrabold">
+                  {prefill.vehicleOfInterest}
+                </span>
+              </li>
+            ) : null}
+            {prefill.product ? (
+              <li>
+                Product ·{" "}
+                <span className="font-extrabold">{prefill.product}</span>
+              </li>
+            ) : null}
+            {prefill.budgetMonthly ? (
+              <li>
+                Illustrative monthly ·{" "}
+                <span className="font-extrabold">{prefill.budgetMonthly}</span>
+              </li>
+            ) : null}
+            {prefill.deposit ? (
+              <li>
+                Deposit ·{" "}
+                <span className="font-extrabold">{prefill.deposit}</span>
+              </li>
+            ) : null}
+            {prefill.term !== "unsure" ? (
+              <li>
+                Term ·{" "}
+                <span className="font-extrabold">{prefill.term} months</span>
+              </li>
+            ) : null}
+            {prefill.apr ? (
+              <li>
+                Illustrative APR ·{" "}
+                <span className="font-extrabold">{prefill.apr}%</span>
+              </li>
+            ) : null}
+          </ul>
+          <p className="mt-2 text-[10px] text-brand-strong/70">
+            Tweak anything below before you send — we&apos;ll only quote against
+            the numbers you confirm here.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="finName">Full name</FieldLabel>
@@ -186,14 +255,22 @@ export function FinanceEnquiryForm() {
             Comfortable monthly budget{" "}
             <span className="font-semibold text-foreground/45">(optional)</span>
           </FieldLabel>
-          <Input id="finBudget" placeholder="£250" {...register("budgetMonthly")} />
+          <Input
+            id="finBudget"
+            placeholder="£250"
+            {...register("budgetMonthly")}
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="finDeposit">
             Deposit available{" "}
             <span className="font-semibold text-foreground/45">(optional)</span>
           </FieldLabel>
-          <Input id="finDeposit" placeholder="£1,500" {...register("deposit")} />
+          <Input
+            id="finDeposit"
+            placeholder="£1,500"
+            {...register("deposit")}
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="finTerm">Preferred term</FieldLabel>

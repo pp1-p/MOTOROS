@@ -10,6 +10,13 @@ import {
 } from "lucide-react";
 
 import { FinanceEnquiryForm } from "@/components/forms/finance-enquiry-form";
+import { FinanceCalculator } from "@/components/public/finance-calculator";
+
+// The enquiry form reads useSearchParams() to pre-fill from the finance
+// calculator's CTA (?monthly=&deposit=&term=&vehicle=&type=&apr=). App Router
+// requires the page to be dynamic (or suspense-wrapped) for that hook to
+// work at build time.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Car finance made simple",
@@ -95,6 +102,25 @@ export default function FinancePage() {
         </div>
       </section>
 
+      <section className="bg-white pt-4 pb-14 sm:pt-8 sm:pb-20">
+        <div className="container-shell grid gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-start lg:gap-16">
+          <div>
+            <p className="text-xs font-extrabold tracking-[0.18em] text-brand uppercase">
+              Try the numbers
+            </p>
+            <h2 className="mt-4 tracking-display-lg font-display text-5xl text-balance sm:text-6xl">
+              See what a monthly payment could look like.
+            </h2>
+            <p className="mt-6 text-base leading-8 text-foreground/65">
+              Move the deposit, term and APR to shape a payment you would be
+              comfortable with. When you&apos;re happy, drop us the numbers
+              and we&apos;ll put a proper quote in front of the right lender.
+            </p>
+          </div>
+          <FinanceCalculator cashPrice={15_000} variant="full" />
+        </div>
+      </section>
+
       <section className="py-14 sm:py-20">
         <div className="container-shell grid gap-10 lg:grid-cols-[0.66fr_1fr] lg:items-start lg:gap-16">
           <div className="lg:sticky lg:top-8">
@@ -123,8 +149,9 @@ export default function FinancePage() {
             </div>
             <p className="mt-6 text-xs leading-6 text-foreground/45">
               Finance is subject to status, affordability checks and lender
-              approval. Terms apply. We are a credit broker, not a lender, and
-              may receive a fee from the finance provider.
+              approval. Terms apply. Finance is arranged through
+              FCA-authorised broker partners; the dealership may receive a fee
+              from the finance provider.
             </p>
           </div>
           <div className="rounded-3xl border bg-white p-5 shadow-sm sm:p-8 lg:p-10">
