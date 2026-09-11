@@ -39,6 +39,9 @@ const serverEnvSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .default("direct-motors"),
   MOTOROS_TRUST_PROXY_HOST: z.enum(["true", "false"]).default("false"),
+  MOTOROS_VERCEL_API_TOKEN: optionalNonEmptyString,
+  MOTOROS_VERCEL_PROJECT_ID: optionalNonEmptyString,
+  MOTOROS_VERCEL_TEAM_ID: optionalNonEmptyString,
   VEHICLE_LOOKUP_PROVIDER: z.enum(["mock", "dvla", "autotrader", "manual"]).default("mock"),
   DVLA_VES_API_KEY: z.string().optional(),
   DVLA_VES_BASE_URL: optionalUrl.default(

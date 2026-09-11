@@ -18,6 +18,16 @@ const optionalEmail = z.preprocess(
   z.email().max(254).optional(),
 );
 
+const hostname = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(253)
+  .regex(
+    /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/,
+    "Enter a hostname without https:// or a path.",
+  );
+
 const optionalHostname = z.preprocess(
   (value) => {
     if (typeof value !== "string") return value;
@@ -38,16 +48,7 @@ const optionalHostname = z.preprocess(
       return trimmed.toLowerCase();
     }
   },
-  z
-    .string()
-    .trim()
-    .toLowerCase()
-    .max(253)
-    .regex(
-      /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/,
-      "Enter a valid dealership website or hostname.",
-    )
-    .optional(),
+  hostname.optional(),
 );
 
 export const createPlatformDealershipSchema = z.object({
@@ -110,6 +111,21 @@ export const platformDealershipActionSchema = z.discriminatedUnion("action", [
 
 export const platformDomainActionSchema = z.object({
   status: z.enum(platformDomainStatuses),
+  reason: z.string().trim().min(8).max(500),
+  confirmation: z.literal("CONFIRM"),
+});
+
+export const platformCustomDomainCreateSchema = z.object({
+  hostname,
+  reason: z.string().trim().min(8).max(500),
+  confirmation: z.literal("CONFIRM"),
+});
+
+export const platformCustomDomainProvisionSchema = z.object({
+  confirmation: z.literal("CONFIRM"),
+});
+
+export const platformCustomDomainDisconnectSchema = z.object({
   reason: z.string().trim().min(8).max(500),
   confirmation: z.literal("CONFIRM"),
 });

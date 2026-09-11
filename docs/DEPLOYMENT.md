@@ -82,13 +82,67 @@ For a shared MotorOS deployment also set:
 - `MOTOROS_TRUST_PROXY_HOST=false` unless the deployed edge overwrites forwarded
   host/protocol headers;
 - `PLATFORM_ADMIN_EMAILS` only during controlled bootstrap, then remove it after
-  assigning `platform_user_roles` by Auth UUID.
+  assigning `platform_user_roles` by Auth UUID;
+- `MOTOROS_VERCEL_API_TOKEN` to a server-only token permitted to manage domains
+  on the MotorOS Vercel project;
+- `MOTOROS_VERCEL_PROJECT_ID` to the production MotorOS project ID or project name;
+- `MOTOROS_VERCEL_TEAM_ID` when that project belongs to a Vercel team.
 
-Route the base domain and its wildcard to the application. Add each custom
-domain individually and keep its database status pending until ownership, DNS
-and certificate provisioning have been checked. A syntactically valid hostname
-is not proof of ownership. See `docs/MULTITENANCY.md` and
-`docs/PLATFORM_ADMIN.md`.
+Route the MotorOS base domain and its wildcard to the application so every
+created dealership can receive its MotorOS subdomain without a separate deploy.
+Do not expose the Vercel token to client code.
+
+### Dealer custom-domain go-live
+
+Custom dealership hostnames use the platform-admin domain workflow rather than
+manual database promotion:
+
+1. In `/platform`, open the dealership and add its hostname. The database row is
+   created as `pending` and is not public yet.
+2. Select **Provision / check DNS**. MotorOS checks whether the hostname is
+   already attached to the configured Vercel project and adds it only when
+   missing.
+3. MotorOS asks Vercel to verify the ownership challenge and reads Vercel's
+   current DNS/TLS configuration. Any TXT ownership challenge and recommended A
+   or CNAME values are returned to the platform UI for the operator to copy to
+   the dealer's DNS provider.
+4. Repeat the check after DNS propagates. MotorOS changes the database domain to
+   `verified` only when Vercel reports both ownership verification and a
+   non-misconfigured DNS/TLS state.
+5. Public hostname resolution continues to fail closed for pending, failed or
+   disabled custom domains.
+
+If both `dealership.co.uk` and `www.dealership.co.uk` should resolve directly,
+add and verify both hostnames. Keep the dealership as the owner of its domain;
+MotorOS only needs DNS records pointed at the shared Vercel project.
+
+Never mark a custom domain `verified` by editing the database or using a manual
+status control. A syntactically valid hostname is not proof of ownership. See
+`docs/MULTITENANCY.md` and `docs/PLATFORM_ADMIN.md`.
+
+### Dealer custom-domain offboarding
+
+Disconnecting a customer hostname is deliberately separate from temporarily
+disabling it:
+
+1. Disable the custom domain in `/platform`. Tenant resolution immediately fails
+   closed for that hostname while the dealership's stock, leads and content stay
+   untouched.
+2. Once the domain is disabled, use **Disconnect from Vercel** and provide an
+   audit reason. MotorOS removes the hostname from the configured Vercel project
+   only; it does not delete the dealership's domain registration or account-level
+   domain ownership.
+3. The `dealership_domains` row remains present with `status = disabled` and
+   `verified_at = null` so the audit trail and original tenant association remain
+   explicit.
+4. A repeated disconnect is safe if another operator already removed the
+   hostname from the project.
+5. To use the hostname again, re-enable it to `pending`, then run
+   **Provision / check DNS** and complete verification again before it can become
+   public.
+
+Do not disconnect a still-live hostname as a shortcut. The API rejects provider
+detach until the MotorOS domain is already disabled.
 
 Keep `SITE_INDEXABLE=false` until the contact details and professionally reviewed
 legal wording are complete. Set it to `true` only at launch; this enables search
@@ -153,6 +207,14 @@ Then manually verify:
 15. Platform owner can operate `/platform`, support is read-only, and a normal
     dealership user receives no platform access.
 16. All four themes preview and publish without changing tenant stock or leads.
+17. A test custom domain remains non-public while pending, displays the provider
+    DNS/ownership instructions, becomes verified only after the provider passes,
+    and resolves to the correct dealership after TLS is ready.
+18. A verified custom domain can be disabled without exposing another tenant or
+    changing dealership stock, leads or website content.
+19. A disabled custom domain can be disconnected from the Vercel project, stays
+    disabled in MotorOS with `verified_at = null`, and can only return to service
+    through the normal pending/provision/verify flow.
 
 ## Rollback
 

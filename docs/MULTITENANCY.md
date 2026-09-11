@@ -67,9 +67,27 @@ suspended database assignment cannot be bypassed with that email fallback.
 ## Domains
 
 `dealership_domains` stores MotorOS subdomains and optional custom hostnames.
-Custom domains start in `pending`. Only change them to `verified` after an
-external ownership and DNS check; hostname syntax alone is not ownership
-verification. Public tenant resolution only consumes verified records.
+Custom domains start in `pending`. They can only become `verified` after the
+server-side Vercel workflow confirms both domain ownership and a non-misconfigured
+DNS/TLS state. Hostname syntax alone is never treated as ownership verification,
+and platform operators cannot manually promote a custom domain to `verified`.
+Public tenant resolution consumes only verified records with a verification
+timestamp.
+
+Custom-domain provisioning uses a server-only Vercel token and the configured
+MotorOS project ID. The platform UI can add a hostname after dealership creation,
+attach it to the project when missing, show the current ownership challenge and
+recommended DNS values, and re-check it during propagation. A pending or
+misconfigured hostname continues to fail closed.
+
+Temporary suspension and provider offboarding are separate operations. Disabling
+a custom domain makes it immediately unavailable in MotorOS without detaching it
+from Vercel. A provider disconnect is allowed only after the domain is already
+disabled; it removes the hostname from the MotorOS Vercel project while keeping
+the `dealership_domains` row disabled with `verified_at = null` for audit history.
+The operation is idempotent if the project domain was already removed. Reuse of
+the hostname requires re-enabling it to `pending` and passing the complete
+provisioning/verification flow again.
 
 Recommended production DNS:
 
