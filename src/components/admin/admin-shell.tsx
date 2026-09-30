@@ -35,6 +35,7 @@ import type { StaffRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { DealershipSwitcher } from "./dealership-switcher";
+import { WorkspaceDialog } from "./workspace-dialog";
 
 const navigation = [
   { label: "Today", href: "/admin", icon: LayoutDashboard, matches: ["/admin"] },
@@ -141,17 +142,6 @@ function canOpen(role: StaffRole | null, href: string) {
   return roleAccess[role].includes("*") || roleAccess[role].includes(href);
 }
 
-function useEscape(handler: () => void, enabled: boolean) {
-  useEffect(() => {
-    if (!enabled) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") handler();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enabled, handler]);
-}
-
 function initials(value: string) {
   return (
     value
@@ -220,21 +210,25 @@ export function AdminShell({
   const [searching, setSearching] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const dialogTriggerRef = useRef<HTMLElement | null>(null);
   const unread = notifications.filter((notification) => !notification.readAt).length;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        if (!document.activeElement?.closest("[data-workspace-dialog]")) {
+          dialogTriggerRef.current = document.activeElement as HTMLElement;
+        }
+        setQuickOpen(false);
+        setNotificationsOpen(false);
+        setMobileOpen(false);
         setCommandOpen(true);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
-  useEffect(() => {
-    if (commandOpen) window.setTimeout(() => searchRef.current?.focus(), 60);
-  }, [commandOpen]);
   useEffect(() => {
     if (!role) return;
     const controller = new AbortController();
@@ -284,6 +278,7 @@ export function AdminShell({
               }[];
             }
           | null;
+        if (controller.signal.aborted) return;
         if (!response.ok) {
           setRemoteResults([]);
           return;
@@ -299,11 +294,11 @@ export function AdminShell({
             .filter((record) => record.href.startsWith("/admin")),
         );
       } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
+        if (!controller.signal.aborted && !(error instanceof DOMException && error.name === "AbortError")) {
           setRemoteResults([]);
         }
       } finally {
-        setSearching(false);
+        if (!controller.signal.aborted) setSearching(false);
       }
     }, 220);
     return () => {
@@ -311,10 +306,6 @@ export function AdminShell({
       controller.abort();
     };
   }, [query]);
-
-  useEscape(() => setCommandOpen(false), commandOpen);
-  useEscape(() => setQuickOpen(false), quickOpen);
-  useEscape(() => setNotificationsOpen(false), notificationsOpen);
 
   if (
     pathname === "/admin/sign-in" ||
@@ -380,6 +371,14 @@ export function AdminShell({
 
   const filtered = query.trim().length >= 2 ? (remoteResults ?? []) : [];
 
+  function openDialog(kind: "navigation" | "search" | "quick" | "notifications") {
+    dialogTriggerRef.current = document.activeElement as HTMLElement;
+    setMobileOpen(kind === "navigation");
+    setCommandOpen(kind === "search");
+    setQuickOpen(kind === "quick");
+    setNotificationsOpen(kind === "notifications");
+  }
+
   async function signOut() {
     setSigningOut(true);
     try {
@@ -408,32 +407,31 @@ export function AdminShell({
     }
   }
 
-  return (
-    <div className="hud-shell min-h-screen">
+  const sidebar = (
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col bg-[#10231f] text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)] transition-transform duration-200 lg:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "motor-sidebar fixed inset-y-0 left-0 z-50 w-[248px] flex-col border-r bg-white text-foreground",
+          mobileOpen ? "flex" : "hidden lg:flex",
         )}
-        aria-label="DealerOS navigation"
+        aria-label="MOTOR.OS navigation"
       >
-        <div className="flex h-[76px] items-center gap-3 border-b border-white/10 px-5">
+        <div className="flex h-[72px] shrink-0 items-center gap-3 border-b px-5">
           <Link href="/admin" className="flex min-w-0 items-center gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#d6a852] text-[#10231f] shadow-[inset_0_1px_rgba(255,255,255,.4)]">
               <Command className="size-5" aria-hidden="true" />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-base font-extrabold tracking-[-0.03em]">
-                DealerOS
+                MOTOR.OS
               </span>
-              <span className="block truncate text-[10px] font-bold uppercase tracking-[0.16em] text-white/42">
+              <span className="block truncate text-[11px] font-medium text-foreground/70">
                 {organisationName}
               </span>
             </span>
           </Link>
           <button
             type="button"
-            className="ml-auto rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+            className="ml-auto rounded-lg p-2 text-foreground/70 hover:bg-surface-muted lg:hidden"
             onClick={() => setMobileOpen(false)}
             aria-label="Close navigation"
           >
@@ -444,7 +442,7 @@ export function AdminShell({
         <DealershipSwitcher />
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/30">
+          <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-foreground/70">
             Workspace
           </p>
           <div className="space-y-0.5">
@@ -460,18 +458,19 @@ export function AdminShell({
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`)) ? "page" : undefined}
+                  data-active={active}
                   className={cn(
-                    "group flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition-colors duration-150 ease-out active:scale-[0.985]",
+                    "group flex h-11 items-center gap-3 rounded-lg px-3 text-[13px] font-semibold transition-colors duration-150 ease-out",
                     active
-                      ? "bg-white text-[#10231f] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-                      : "text-white/62 hover:bg-white/[0.08] hover:text-white",
+                      ? "bg-brand-soft text-brand-strong"
+                      : "text-foreground/75 hover:bg-surface-muted hover:text-foreground",
                   )}
                 >
                   <Icon
                     className={cn(
                       "size-[17px]",
-                      active ? "text-brand" : "text-white/45 group-hover:text-white/80",
+                      active ? "text-brand" : "text-foreground/65 group-hover:text-brand",
                     )}
                     aria-hidden="true"
                   />
@@ -486,28 +485,29 @@ export function AdminShell({
                 type="button"
                 onClick={() => setMoreOpen((current) => !current)}
                 aria-expanded={moreOpen}
+                aria-controls="management-navigation"
                 className={cn(
                   "group flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-bold transition-colors duration-150 ease-out",
                   moreActive
-                    ? "bg-white text-[#10231f] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-                    : "text-white/62 hover:bg-white/[0.08] hover:text-white",
+                    ? "bg-brand-soft text-brand-strong"
+                    : "text-foreground/75 hover:bg-surface-muted hover:text-foreground",
                 )}
               >
                 <Menu
                   className={cn(
                     "size-[17px]",
-                    moreActive ? "text-brand" : "text-white/45 group-hover:text-white/80",
+                    moreActive ? "text-brand" : "text-foreground/65 group-hover:text-brand",
                   )}
                   aria-hidden="true"
                 />
-                <span className="flex-1 text-left">More</span>
+                <span className="flex-1 text-left">More tools</span>
                 <ChevronDown
                   className={cn("size-4 transition-transform", moreOpen && "rotate-180")}
                   aria-hidden="true"
                 />
               </button>
               {moreOpen ? (
-                <div className="ml-5 mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                <div id="management-navigation" className="ml-5 mt-2 space-y-0.5 border-l pl-3">
                   {visibleManagement.map((item) => {
                     const active = pathname.startsWith(item.href);
                     const Icon = item.icon;
@@ -518,13 +518,13 @@ export function AdminShell({
                         onClick={() => setMobileOpen(false)}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "group flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[12px] font-bold transition-colors",
+                          "group flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 text-xs font-medium transition-colors",
                           active
-                            ? "bg-white/12 text-white"
-                            : "text-white/50 hover:bg-white/[0.07] hover:text-white",
+                            ? "bg-brand-soft text-brand-strong"
+                            : "text-foreground/75 hover:bg-surface-muted hover:text-foreground",
                         )}
                       >
-                        <Icon className="size-3.5 text-white/40" aria-hidden="true" />
+                        <Icon className="size-3.5 text-foreground/65" aria-hidden="true" />
                         {item.label}
                       </Link>
                     );
@@ -535,30 +535,30 @@ export function AdminShell({
           ) : null}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
+        <div className="shrink-0 border-t p-3">
           {isPlatformAdmin ? (
             <Link
               href="/platform"
               onClick={() => setMobileOpen(false)}
-              className="mb-2 flex items-center gap-2 rounded-xl border border-[#22d3ee]/30 bg-[#22d3ee]/10 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#67e8f9] hover:bg-[#22d3ee]/20"
+              className="mb-2 flex items-center gap-2 rounded-lg border bg-brand-soft px-3 py-2 text-xs font-semibold text-brand-strong hover:bg-surface-muted"
             >
               <ShieldCheck className="size-3.5" aria-hidden />
               <span className="flex-1">Platform admin</span>
-              <span className="text-[9px] text-[#67e8f9]/70">All dealerships</span>
+              <span className="text-[10px]">All dealerships</span>
             </Link>
           ) : null}
-          <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.05] p-1">
+          <div className="flex items-center rounded-xl border bg-surface-muted/50 p-1">
             <Link
               href="/admin/settings"
               onClick={() => setMobileOpen(false)}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 hover:bg-white/[0.06]"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 hover:bg-surface-muted"
             >
               <span className="grid size-9 place-items-center rounded-full bg-[#d6a852] text-xs font-extrabold text-[#10231f]">
                 {initials(displayName)}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-extrabold">{displayName}</span>
-                <span className="block truncate text-[10px] text-white/40">
+                <span className="block truncate text-[11px] text-foreground/70">
                   {roleLabel(role)}
                 </span>
               </span>
@@ -567,7 +567,7 @@ export function AdminShell({
               type="button"
               onClick={() => void signOut()}
               disabled={signingOut}
-              className="grid size-9 place-items-center rounded-lg text-white/35 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              className="grid size-10 place-items-center rounded-lg text-foreground/70 hover:bg-surface-muted hover:text-foreground disabled:opacity-50"
               aria-label="Sign out"
             >
               {signingOut ? <LoaderCircle className="size-4 animate-spin" /> : <LogOut className="size-4" />}
@@ -575,30 +575,36 @@ export function AdminShell({
           </div>
         </div>
       </aside>
+  );
 
+  return (
+    <div className="hud-shell min-h-screen">
+      <a href="#main-content" className="workspace-skip-link">Skip to main content</a>
       {mobileOpen ? (
-        <button
-          className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] lg:hidden"
-          onClick={() => setMobileOpen(false)}
-          aria-label="Close navigation overlay"
-        />
-      ) : null}
+        <WorkspaceDialog open={mobileOpen} onOpenChange={setMobileOpen} title="Navigation" returnFocusRef={dialogTriggerRef} className="!justify-start !p-0">
+          {sidebar}
+        </WorkspaceDialog>
+      ) : sidebar}
 
-      <div className="lg:pl-[272px]">
-        <header className="sticky top-0 z-30 flex h-[76px] items-center gap-3 border-b bg-white/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+      <div className="min-w-0 lg:pl-[248px]">
+        <header className="motor-topbar sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b bg-white px-4 sm:px-6 lg:px-8">
           <button
             type="button"
             className="grid size-10 place-items-center rounded-xl border bg-white text-foreground/65 lg:hidden"
-            onClick={() => setMobileOpen(true)}
+            onClick={() => openDialog("navigation")}
             aria-label="Open navigation"
+            aria-haspopup="dialog"
+            aria-expanded={mobileOpen}
           >
             <Menu className="size-5" />
           </button>
           <button
             type="button"
-            onClick={() => setCommandOpen(true)}
+            onClick={() => openDialog("search")}
             className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border bg-[#f7f7f4] px-3 text-left text-sm text-foreground/40 transition hover:border-foreground/20 sm:max-w-xl"
-            aria-label="Search DealerOS"
+            aria-label="Search MOTOR.OS"
+            aria-haspopup="dialog"
+            aria-expanded={commandOpen}
           >
             <Search className="size-4 shrink-0" />
             <span className="truncate">Search vehicles, customers, leads…</span>
@@ -610,14 +616,14 @@ export function AdminShell({
             className="hidden items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/70 xl:inline-flex"
             aria-hidden
           >
-            <span className="hud-reactor" />
-            <span>System online</span>
-            <span className="text-foreground/25">·</span>
-            <span className="text-foreground/50">Role: {roleLabel(role)}</span>
+            <ShieldCheck className="size-3.5 text-brand" />
+            <span>{roleLabel(role)} workspace</span>
           </span>
           <button
             type="button"
-            onClick={() => setQuickOpen(true)}
+            onClick={() => openDialog("quick")}
+            aria-haspopup="dialog"
+            aria-expanded={quickOpen}
             className="hud-cta-gold hidden h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-extrabold text-white transition sm:flex"
           >
             <Plus className="size-4" />
@@ -625,17 +631,21 @@ export function AdminShell({
           </button>
           <button
             type="button"
-            onClick={() => setQuickOpen(true)}
+            onClick={() => openDialog("quick")}
             className="hud-cta-gold grid size-10 place-items-center rounded-xl text-white sm:hidden"
             aria-label="Quick create"
+            aria-haspopup="dialog"
+            aria-expanded={quickOpen}
           >
             <Plus className="size-4" />
           </button>
           <button
             type="button"
-            onClick={() => setNotificationsOpen(true)}
+            onClick={() => openDialog("notifications")}
             className="relative grid size-10 shrink-0 place-items-center rounded-xl border bg-white text-foreground/60 transition hover:bg-surface-muted hover:text-foreground"
             aria-label={`${unread} unread notifications`}
+            aria-haspopup="dialog"
+            aria-expanded={notificationsOpen}
           >
             <Bell className="size-[18px]" />
             {unread ? (
@@ -643,21 +653,13 @@ export function AdminShell({
             ) : null}
           </button>
         </header>
-        <main id="main-content" className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
+        <main id="main-content" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1440px] p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>
 
       {commandOpen ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-start justify-center bg-[#09100e]/55 p-4 pt-[10vh] backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Global search"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setCommandOpen(false);
-          }}
-        >
+        <WorkspaceDialog open={commandOpen} onOpenChange={setCommandOpen} title="Global search" returnFocusRef={dialogTriggerRef} className="!items-start pt-[10vh]">
           <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl">
             <div className="flex items-center gap-3 border-b px-4">
               <Search className="size-5 text-foreground/35" />
@@ -667,10 +669,8 @@ export function AdminShell({
                 onChange={(event) => {
                   const nextQuery = event.target.value;
                   setQuery(nextQuery);
-                  if (nextQuery.trim().length < 2) {
-                    setRemoteResults(null);
-                    setSearching(false);
-                  }
+                  setRemoteResults(null);
+                  setSearching(nextQuery.trim().length >= 2);
                 }}
                 className="h-16 min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:text-foreground/30"
                 placeholder="Search by registration, name, phone or reference…"
@@ -680,14 +680,15 @@ export function AdminShell({
                 type="button"
                 onClick={() => setCommandOpen(false)}
                 className="rounded-lg border px-2 py-1 text-[10px] font-bold text-foreground/45"
+                aria-label="Close search"
               >
                 ESC
               </button>
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-2">
-              <p className="flex items-center gap-2 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.15em] text-foreground/35">
+              <p role="status" aria-live="polite" className="flex items-center gap-2 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.15em] text-foreground/35">
                 {query.trim().length >= 2
-                  ? `${filtered.length} matching results`
+                  ? searching ? "Searching…" : `${filtered.length} matching results`
                   : "Type at least two characters to search"}
                 {searching ? <LoaderCircle className="size-3 animate-spin" /> : null}
               </p>
@@ -705,7 +706,7 @@ export function AdminShell({
                     <span className="block truncate text-sm font-extrabold">{item.label}</span>
                     <span className="block truncate text-xs text-foreground/45">{item.detail}</span>
                   </span>
-                  <span className="text-xs text-foreground/30">↵</span>
+                  <span className="text-xs text-foreground/30" aria-hidden="true">↵</span>
                 </Link>
               ))}
               {!filtered.length && query.trim().length >= 2 && !searching ? (
@@ -720,25 +721,17 @@ export function AdminShell({
               ) : null}
             </div>
             <div className="flex gap-4 border-t bg-[#fafaf8] px-4 py-3 text-[10px] font-bold text-foreground/35">
-              <span>↑↓ Navigate</span>
-              <span>↵ Open</span>
+              <span>Tab Navigate</span>
+              <span>Enter Open</span>
               <span>ESC Close</span>
               <span className="ml-auto">Results respect your access level</span>
             </div>
           </div>
-        </div>
+        </WorkspaceDialog>
       ) : null}
 
       {quickOpen ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-[#09100e]/55 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="quick-create-title"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setQuickOpen(false);
-          }}
-        >
+        <WorkspaceDialog open={quickOpen} onOpenChange={setQuickOpen} title="Quick create" returnFocusRef={dialogTriggerRef}>
           <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-white p-5 shadow-2xl">
             <div className="flex items-start justify-between">
               <div>
@@ -780,18 +773,13 @@ export function AdminShell({
               })}
             </div>
           </div>
-        </div>
+        </WorkspaceDialog>
       ) : null}
 
       {notificationsOpen ? (
-        <>
-          <button
-            className="fixed inset-0 z-[60] bg-[#09100e]/30 backdrop-blur-[1px]"
-            onClick={() => setNotificationsOpen(false)}
-            aria-label="Close notifications"
-          />
+        <WorkspaceDialog open={notificationsOpen} onOpenChange={setNotificationsOpen} title="Notification centre" returnFocusRef={dialogTriggerRef} className="!justify-end !p-0">
           <aside
-            className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col bg-white shadow-2xl"
+            className="workspace-drawer fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col bg-white shadow-2xl"
             aria-label="Notification centre"
           >
             <div className="flex h-[76px] items-center justify-between border-b px-5">
@@ -875,7 +863,7 @@ export function AdminShell({
               </Link>
             </div>
           </aside>
-        </>
+        </WorkspaceDialog>
       ) : null}
     </div>
   );

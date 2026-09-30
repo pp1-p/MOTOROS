@@ -2,313 +2,198 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import {
-  ChevronDown,
-  Download,
-  Grid2X2,
-  List,
-  MoreHorizontal,
-  Plus,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+import { ArrowUpRight, Download, Grid2X2, List, Plus, Search, X } from "lucide-react";
 
-import type { AdminVehicle } from "@/components/admin/admin-data";
-import { StatusPill } from "@/components/admin/page-kit";
+import type { AdminVehicle } from "./admin-data";
+import { EmptyState, StatusPill } from "./page-kit";
+import { filterAndSortStock, type StockSort } from "./stock-filters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn, formatCurrency, formatMileage } from "@/lib/utils";
 
-export function StockTable({
-  vehicles,
-  canViewCommercial,
-}: {
+const statuses = [
+  "All active stock", "All stock", "Available", "Due in", "Preparation",
+  "Photography required", "Reserved", "Sold", "Returned", "Archived",
+];
+
+function StockCard({ vehicle, canViewCommercial }: {
+  vehicle: AdminVehicle;
+  canViewCommercial: boolean;
+}) {
+  return (
+    <Link href={"/admin/stock/" + vehicle.id}
+      className="group overflow-hidden rounded-xl border bg-white shadow-sm transition-colors hover:border-brand/40">
+      <div className="aspect-[16/9] bg-surface-muted bg-cover bg-center"
+        style={{ backgroundImage: "url(" + JSON.stringify(vehicle.image) + ")" }} aria-hidden="true" />
+      <div className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="rounded-md bg-[#f2e6bd] px-2 py-1 font-mono text-xs font-bold tracking-wide text-black">
+            {vehicle.registration}
+          </span>
+          <StatusPill status={vehicle.status} />
+        </div>
+        <h2 className="mt-3 text-sm font-bold leading-6">{vehicle.title}</h2>
+        <p className="mt-1 text-xs leading-5 text-foreground/70">
+          {vehicle.year} · {formatMileage(vehicle.mileage)} · {vehicle.stockNumber}
+        </p>
+        <div className="mt-4 flex items-end justify-between gap-3 border-t pt-3">
+          <div>
+            <p className="text-xs text-foreground/70">Retail price</p>
+            <p className="mt-0.5 text-xl font-bold tracking-tight tabular-nums">{formatCurrency(vehicle.price)}</p>
+          </div>
+          <span className={cn("text-xs font-semibold", vehicle.age > 20 ? "text-amber-800" : "text-foreground/70")}>
+            {vehicle.age} days
+          </span>
+        </div>
+        {canViewCommercial ? (
+          <p className="mt-2 text-xs font-medium text-emerald-800">
+            Est. margin {formatCurrency(vehicle.price - vehicle.cost)}
+          </p>
+        ) : null}
+      </div>
+    </Link>
+  );
+}
+
+export function StockTable({ vehicles, canViewCommercial }: {
   vehicles: AdminVehicle[];
   canViewCommercial: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All active stock");
+  const [sort, setSort] = useState<StockSort>("stock-number");
   const [view, setView] = useState<"table" | "grid">("table");
-  const [filterOpen, setFilterOpen] = useState(false);
-
   const filtered = useMemo(
-    () =>
-      vehicles.filter((vehicle) => {
-        const queryMatch = `${vehicle.registration} ${vehicle.stockNumber} ${vehicle.title}`
-          .toLowerCase()
-          .includes(query.toLowerCase());
-        const statusMatch =
-          status === "All active stock" ||
-          (status === "Available" && vehicle.status === "On forecourt") ||
-          vehicle.status === status;
-        return queryMatch && statusMatch;
-      }),
-    [query, status, vehicles],
+    () => filterAndSortStock(vehicles, query, status, sort),
+    [query, status, sort, vehicles],
   );
+  const hasFilters = query.trim().length > 0 || status !== "All active stock";
+
+  function clearFilters() {
+    setQuery("");
+    setStatus("All active stock");
+  }
 
   return (
     <div className="min-w-0 max-w-full space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border bg-white p-3 sm:flex-row sm:items-center">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/30" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search stock number, registration or model…"
-            className="h-10 border-0 bg-surface-muted pl-9 shadow-none"
-            aria-label="Search stock"
-          />
-        </div>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setFilterOpen((value) => !value)}
-            className="flex h-10 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-extrabold sm:w-auto"
-            aria-expanded={filterOpen}
-          >
-            <SlidersHorizontal className="size-4 text-foreground/40" />
-            {status}
-            <ChevronDown className="size-3.5 text-foreground/35" />
-          </button>
-          {filterOpen ? (
-            <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border bg-white p-1.5 shadow-xl">
-              {[
-                "All active stock",
-                "Available",
-                "Due in",
-                "Preparation",
-                "Photography required",
-                "Reserved",
-                "Sold",
-              ].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => {
-                    setStatus(option);
-                    setFilterOpen(false);
-                  }}
-                  className={cn(
-                    "block w-full rounded-lg px-3 py-2 text-left text-xs font-bold hover:bg-surface-muted",
-                    option === status && "bg-brand-soft text-brand-strong",
-                  )}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 shadow-sm">
+        <div className="relative min-w-0 basis-full md:flex-1 md:basis-auto">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/70" aria-hidden="true" />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)}
+            placeholder="Registration, stock number or model"
+            className="h-11 bg-surface-muted/50 pl-9 pr-10 shadow-none" aria-label="Search stock" />
+          {query ? (
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear stock search"
+              className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-foreground/70 hover:bg-surface-muted">
+              <X className="size-4" aria-hidden="true" />
+            </button>
           ) : null}
         </div>
-        <Button asChild variant="outline" size="sm">
-          <a href="/api/admin/vehicles/export" download>
-            <Download className="size-4" />
-            Export CSV
-          </a>
+        <label className="min-w-0 flex-1 sm:flex-none">
+          <span className="sr-only">Stock status</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}
+            className="h-11 w-full rounded-lg border bg-white px-3 text-xs font-semibold sm:w-44">
+            {statuses.map((option) => <option key={option}>{option}</option>)}
+          </select>
+        </label>
+        <label className="min-w-0 flex-1 sm:flex-none">
+          <span className="sr-only">Sort stock</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value as StockSort)}
+            className="h-11 w-full rounded-lg border bg-white px-3 text-xs font-semibold sm:w-40">
+            <option value="stock-number">Stock number</option>
+            <option value="age">Oldest stock first</option>
+            <option value="price-low">Price: low to high</option>
+            <option value="price-high">Price: high to low</option>
+          </select>
+        </label>
+        <Button asChild variant="outline" size="sm" className="h-11">
+          <a href="/api/admin/vehicles/export" download><Download className="size-4" />Export CSV</a>
         </Button>
-        <div className="flex rounded-xl bg-surface-muted p-1">
-          <button
-            type="button"
-            onClick={() => setView("table")}
-            className={cn(
-              "grid size-8 place-items-center rounded-lg",
-              view === "table" ? "bg-white shadow-sm" : "text-foreground/35",
-            )}
-            aria-label="Table view"
-            aria-pressed={view === "table"}
-          >
-            <List className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("grid")}
-            className={cn(
-              "grid size-8 place-items-center rounded-lg",
-              view === "grid" ? "bg-white shadow-sm" : "text-foreground/35",
-            )}
-            aria-label="Grid view"
-            aria-pressed={view === "grid"}
-          >
-            <Grid2X2 className="size-4" />
-          </button>
+        <div className="hidden rounded-lg border bg-surface-muted p-1 md:flex" role="group" aria-label="Stock layout">
+          {([{ value: "table", label: "Table view", icon: List }, { value: "grid", label: "Grid view", icon: Grid2X2 }] as const).map((item) => (
+            <button key={item.value} type="button" onClick={() => setView(item.value)}
+              className={cn("grid size-9 place-items-center rounded-md text-foreground/70", view === item.value && "bg-white text-brand shadow-sm")}
+              aria-label={item.label} aria-pressed={view === item.value}>
+              <item.icon className="size-4" aria-hidden="true" />
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-1 text-xs">
-        <p className="font-bold text-foreground/45">
-          Showing <span className="text-foreground">{filtered.length}</span> vehicles
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+        <p className="font-medium text-foreground/70" role="status" aria-live="polite" aria-atomic="true">
+          Showing <span className="font-bold text-foreground">{filtered.length}</span> of {vehicles.length} vehicles
         </p>
-        <p className="hidden text-foreground/35 sm:block">Stock updated moments ago</p>
+        {hasFilters ? (
+          <button type="button" onClick={clearFilters} className="min-h-9 rounded-lg px-2 font-semibold text-brand hover:bg-brand-soft">
+            Clear filters
+          </button>
+        ) : null}
       </div>
 
-      {view === "table" ? (
-        <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border bg-white">
-          <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
-            <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-              <thead className="border-b bg-[#fafaf8] text-[10px] font-extrabold uppercase tracking-[0.11em] text-foreground/38">
-                <tr>
-                  <th className="px-4 py-3">Vehicle</th>
-                  <th className="px-4 py-3">Registration</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Mileage</th>
-                  <th className="px-4 py-3">Retail price</th>
-                  {canViewCommercial ? (
-                    <th className="px-4 py-3">Est. margin</th>
-                  ) : null}
-                  <th className="px-4 py-3">Age</th>
-                  <th className="w-12 px-2 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtered.map((vehicle) => (
-                  <tr key={vehicle.id} className="group transition hover:bg-[#fafaf8]">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/stock/${vehicle.id}`}
-                        className="flex min-w-[230px] items-center gap-3"
-                      >
-                        <span
-                          className="h-12 w-16 shrink-0 rounded-lg bg-surface-muted bg-cover bg-center"
-                          style={{ backgroundImage: `url("${vehicle.image}")` }}
-                          role="img"
-                          aria-label=""
-                        />
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-extrabold">
-                            {vehicle.title}
-                          </span>
-                          <span className="mt-0.5 block text-[10px] text-foreground/42">
-                            {vehicle.year} · {vehicle.stockNumber}
-                          </span>
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-md bg-[#f2e6bd] px-2 py-1 font-mono text-xs font-black tracking-wide text-black">
-                        {vehicle.registration}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusPill status={vehicle.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs font-semibold tabular-nums text-foreground/58">
-                      {formatMileage(vehicle.mileage)}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-extrabold tabular-nums">
-                      {formatCurrency(vehicle.price)}
-                    </td>
-                    {canViewCommercial ? (
-                      <td className="px-4 py-3 text-xs font-extrabold tabular-nums text-emerald-700">
-                        {formatCurrency(vehicle.price - vehicle.cost)}
-                      </td>
-                    ) : null}
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "text-xs font-bold tabular-nums",
-                          vehicle.age > 20 ? "text-amber-700" : "text-foreground/55",
-                        )}
-                      >
-                        {vehicle.age} days
-                      </span>
-                    </td>
-                    <td className="px-2 py-3">
-                      <Link
-                        href={`/admin/stock/${vehicle.id}`}
-                        className="grid size-8 place-items-center rounded-lg text-foreground/35 hover:bg-surface-muted hover:text-foreground"
-                        aria-label={`Open ${vehicle.title}`}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {!filtered.length ? (
-            <div className="border-t px-6 py-16 text-center">
-              {vehicles.length === 0 ? (
-                <>
-                  <p className="text-lg font-extrabold">No cars in stock yet</p>
-                  <p className="mt-2 text-sm text-foreground/50">
-                    Add your first vehicle to get started. Type a UK
-                    registration and MOTOR.OS will fetch the basics.
-                  </p>
-                  <Link
-                    href="/admin/stock/new"
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-xs font-extrabold text-white hover:bg-brand-strong"
-                  >
-                    <Plus className="size-4" />
-                    Add your first vehicle
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p className="font-extrabold">No vehicles match those filters</p>
-                  <p className="mt-1 text-sm text-foreground/45">
-                    Try another status or clear the search.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery("");
-                      setStatus("All active stock");
-                    }}
-                    className="mt-4 text-xs font-extrabold text-brand hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                </>
-              )}
+      {filtered.length ? (
+        <>
+          {view === "table" ? (
+            <div className="workspace-data-card hidden min-w-0 overflow-hidden md:block">
+              <div className="workspace-table-scroll w-full overflow-x-auto overscroll-x-contain"
+                role="region" aria-label="Stock inventory table" tabIndex={0}>
+                <table className="w-full min-w-[940px] border-collapse text-left text-sm">
+                  <caption className="sr-only">Vehicle stock with status, mileage, retail price and age</caption>
+                  <thead className="border-b bg-surface-muted/60 text-[11px] font-semibold uppercase tracking-wide text-foreground/70">
+                    <tr>
+                      {["Vehicle", "Registration", "Status", "Mileage", "Retail price", ...(canViewCommercial ? ["Est. margin"] : []), "Age"].map((label) => (
+                        <th key={label} scope="col" className="px-4 py-3">{label}</th>
+                      ))}
+                      <th scope="col" className="w-12 px-2 py-3"><span className="sr-only">Open vehicle</span></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filtered.map((vehicle) => (
+                      <tr key={vehicle.id} className="transition-colors hover:bg-surface-muted/40">
+                        <td className="px-4 py-4">
+                          <Link href={"/admin/stock/" + vehicle.id} className="flex min-w-[220px] items-center gap-3 rounded-md">
+                            <span className="h-12 w-16 shrink-0 rounded-lg bg-surface-muted bg-cover bg-center"
+                              style={{ backgroundImage: "url(" + JSON.stringify(vehicle.image) + ")" }} aria-hidden="true" />
+                            <span>
+                              <span className="block text-sm font-semibold leading-5">{vehicle.title}</span>
+                              <span className="mt-1 block text-xs text-foreground/70">{vehicle.year} · {vehicle.stockNumber}</span>
+                            </span>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-4"><span className="rounded-md bg-[#f2e6bd] px-2 py-1 font-mono text-xs font-bold tracking-wide text-black">{vehicle.registration}</span></td>
+                        <td className="px-4 py-4"><StatusPill status={vehicle.status} /></td>
+                        <td className="px-4 py-4 text-xs font-medium tabular-nums text-foreground/70">{formatMileage(vehicle.mileage)}</td>
+                        <td className="px-4 py-4 text-sm font-semibold tabular-nums">{formatCurrency(vehicle.price)}</td>
+                        {canViewCommercial ? <td className="px-4 py-4 text-xs font-semibold tabular-nums text-emerald-800">{formatCurrency(vehicle.price - vehicle.cost)}</td> : null}
+                        <td className="whitespace-nowrap px-4 py-4"><span className={cn("text-xs font-medium tabular-nums", vehicle.age > 20 ? "text-amber-800" : "text-foreground/70")}>{vehicle.age} days</span></td>
+                        <td className="px-2 py-4"><Link href={"/admin/stock/" + vehicle.id}
+                          className="grid size-10 place-items-center rounded-lg text-foreground/70 hover:bg-brand-soft hover:text-brand"
+                          aria-label={"Open " + vehicle.title}><ArrowUpRight className="size-4" aria-hidden="true" /></Link></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : null}
-        </div>
+          <div className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-3", view === "table" && "md:hidden")} aria-label="Vehicle cards">
+            {filtered.map((vehicle) => <StockCard key={vehicle.id} vehicle={vehicle} canViewCommercial={canViewCommercial} />)}
+          </div>
+        </>
+      ) : vehicles.length === 0 ? (
+        <EmptyState title="No cars in stock yet" description="Add your first vehicle using a registration lookup or manual entry."
+          actionHref="/admin/stock/new" actionLabel="Add your first vehicle" />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((vehicle) => (
-            <Link
-              key={vehicle.id}
-              href={`/admin/stock/${vehicle.id}`}
-              className="group overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-0.5 hover:shadow-xl"
-            >
-              <div
-                className="aspect-[16/9] bg-surface-muted bg-cover bg-center"
-                style={{ backgroundImage: `url("${vehicle.image}")` }}
-              />
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-extrabold">{vehicle.title}</p>
-                    <p className="mt-1 text-xs text-foreground/45">
-                      {vehicle.registration} · {formatMileage(vehicle.mileage)}
-                    </p>
-                  </div>
-                  <StatusPill status={vehicle.status} />
-                </div>
-                <div className="mt-4 flex items-end justify-between border-t pt-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase text-foreground/35">Retail</p>
-                    <p className="font-extrabold">{formatCurrency(vehicle.price)}</p>
-                  </div>
-                  {canViewCommercial ? (
-                    <p className="text-xs font-bold text-emerald-700">
-                      +{formatCurrency(vehicle.price - vehicle.cost)} est.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            </Link>
-          ))}
+        <div className="rounded-xl border bg-white px-6 py-12 text-center">
+          <h2 className="text-lg font-bold">No vehicles match those filters</h2>
+          <p className="mt-2 text-sm text-foreground/70">Try another status or search term.</p>
+          <button type="button" onClick={clearFilters} className="mt-4 min-h-10 rounded-lg border px-4 text-sm font-semibold text-brand hover:bg-brand-soft">Clear filters</button>
         </div>
       )}
 
       <div className="fixed bottom-5 right-5 z-20 sm:hidden">
         <Button asChild size="icon" className="size-12 rounded-full shadow-xl">
-          <Link href="/admin/stock/new" aria-label="Add a vehicle">
-            <Plus />
-          </Link>
+          <Link href="/admin/stock/new" aria-label="Add a vehicle"><Plus /></Link>
         </Button>
       </div>
     </div>

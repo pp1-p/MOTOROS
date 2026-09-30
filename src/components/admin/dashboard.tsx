@@ -171,7 +171,7 @@ export function Dashboard({
 
   return (
     <div className="space-y-6">
-      <section className="hud-panel overflow-hidden rounded-2xl px-6 py-6 sm:px-8 sm:py-7">
+      <section className="hud-panel overflow-hidden px-5 py-6 sm:px-7 sm:py-7" aria-label="Dealership overview">
         <div className="flex flex-wrap items-center gap-3 text-[11px] font-extrabold tracking-[0.14em] uppercase">
           <span className="text-brand">Dashboard · {today}</span>
           <span className="text-foreground/25">·</span>
@@ -179,7 +179,7 @@ export function Dashboard({
           <span className="ml-auto inline-flex items-center gap-2 rounded-full border bg-white px-2.5 py-1">
             <span className="hud-reactor" />
             <span className="text-[10px] font-extrabold text-foreground/60">
-              All systems operational
+              {snapshot.mode === "demo" ? "Demo data" : "Live dealership data"}
             </span>
           </span>
         </div>
@@ -189,29 +189,32 @@ export function Dashboard({
         <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/60">
           Here&apos;s what needs your attention today. Start with the priority queue below.
         </p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            { label: "Stock", value: snapshot.vehiclesInStock },
+            { label: "Stock", value: snapshot.vehiclesInStock, href: "/admin/stock", icon: CarFront },
             {
               label: snapshot.canViewLeads ? "New enquiries" : "Active repairs",
               value: snapshot.canViewLeads
                 ? snapshot.newSalesLeads
                 : snapshot.repairJobsInProgress,
+              href: snapshot.canViewLeads ? "/admin/leads" : "/admin/repairs",
+              icon: snapshot.canViewLeads ? HeartHandshake : Wrench,
             },
-            { label: "Appts today", value: snapshot.repairCallsToday },
-            { label: "Overdue tasks", value: snapshot.overdueTasks },
+            { label: "Appointments", value: snapshot.repairCallsToday, href: "/admin/diary", icon: CalendarClock },
+            { label: "Overdue tasks", value: snapshot.overdueTasks, href: "/admin/tasks", icon: ListTodo },
           ].map((stat) => (
-            <div
+            <Link
               key={stat.label}
-              className="rounded-xl border bg-white px-3 py-3"
+              href={stat.href}
+              className="group rounded-xl border bg-surface-muted/40 px-4 py-4 transition-colors hover:border-brand/35 hover:bg-brand-soft/50"
             >
-              <p className="text-[10px] font-extrabold tracking-[0.14em] text-foreground/50 uppercase">
-                {stat.label}
-              </p>
-              <p className="mt-1 hud-numeric text-2xl font-extrabold tracking-[-0.02em] text-foreground">
+              <span className="flex items-center justify-between gap-2 text-[11px] font-semibold text-foreground/70">
+                {stat.label}<stat.icon className="size-4 text-brand" aria-hidden="true" />
+              </span>
+              <p className="mt-2 hud-numeric text-3xl font-bold tracking-[-0.03em] text-foreground">
                 {stat.value}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
