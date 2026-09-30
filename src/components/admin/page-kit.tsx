@@ -26,24 +26,24 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <header className="workspace-page-header flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-brand">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.13em] text-brand">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-balance text-2xl font-extrabold tracking-[-0.032em] leading-[1.05] text-foreground sm:text-3xl">
+        <h1 className="text-balance text-3xl font-bold tracking-[-0.035em] leading-[1.15] text-foreground sm:text-4xl">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-foreground/58">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/70">
             {description}
           </p>
         ) : null}
       </div>
       {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 [&>*]:min-h-10">{actions}</div>
       ) : null}
     </header>
   );
@@ -77,7 +77,7 @@ export function MetricCard({
     <Link
       href={href}
       className={cn(
-        "group rounded-2xl border p-4 shadow-[0_1px_2px_rgba(20,24,18,.03)] transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_12px_30px_rgba(20,24,18,.08)]",
+        "workspace-metric group rounded-xl border p-5 shadow-sm transition-colors hover:border-brand/35",
         tones[tone],
       )}
     >
@@ -92,7 +92,7 @@ export function MetricCard({
       </div>
       <p className="mt-5 text-2xl font-extrabold tracking-[-0.032em] tabular-nums">{value}</p>
       <p className="mt-0.5 text-sm font-bold">{label}</p>
-      <p className="mt-2 flex items-center gap-1 text-xs opacity-55">
+      <p className="mt-2 flex items-center gap-1 text-xs opacity-75">
         {trend === "up" ? <ArrowUpRight className="size-3.5" /> : null}
         {trend === "down" ? <ArrowDownRight className="size-3.5" /> : null}
         {detail}
@@ -111,11 +111,11 @@ export function SectionHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h2 className="font-extrabold tracking-[-0.02em]">{title}</h2>
         {description ? (
-          <p className="mt-0.5 text-xs leading-5 text-foreground/50">{description}</p>
+          <p className="mt-1 text-sm leading-5 text-foreground/70">{description}</p>
         ) : null}
       </div>
       {action}
@@ -131,7 +131,7 @@ export function DataCard({
   className?: string;
 }) {
   return (
-    <Card className={cn("overflow-hidden border-foreground/[0.09] shadow-none", className)}>
+    <Card className={cn("workspace-data-card overflow-hidden rounded-xl border-foreground/[0.1] shadow-sm", className)}>
       {children}
     </Card>
   );
@@ -139,7 +139,7 @@ export function DataCard({
 
 export function TableWrap({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="workspace-table-scroll overflow-x-auto overscroll-x-contain" role="region" aria-label="Scrollable data table" tabIndex={0}>
       <table className="w-full min-w-[760px] border-collapse text-left text-sm">
         {children}
       </table>
@@ -149,7 +149,7 @@ export function TableWrap({ children }: { children: ReactNode }) {
 
 export function TableHead({ children }: { children: ReactNode }) {
   return (
-    <thead className="border-y bg-[#fafaf8] text-[11px] font-extrabold uppercase tracking-[0.1em] text-foreground/45">
+    <thead className="border-y bg-surface-muted text-[11px] font-bold uppercase tracking-[0.08em] text-foreground/70">
       {children}
     </thead>
   );
@@ -291,4 +291,3 @@ export function SegmentedLinks({
     </nav>
   );
 }
-

@@ -73,10 +73,10 @@ export function DealershipSwitcher() {
   }
 
   return (
-    <div className="border-b border-white/10 px-3 py-3">
+    <div className="border-b px-3 py-3">
       <label
         htmlFor="active-dealership"
-        className="mb-1.5 flex items-center gap-2 px-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/40"
+        className="mb-1.5 flex items-center gap-2 px-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-foreground/70"
       >
         <Building2 className="size-3.5" aria-hidden="true" />
         Active dealership
@@ -87,7 +87,7 @@ export function DealershipSwitcher() {
           value={access.activeOrganisationId ?? ""}
           disabled={switching}
           onChange={(event) => void switchDealership(event.target.value)}
-          className="h-10 w-full appearance-none rounded-xl border border-white/12 bg-white/[0.07] px-3 pr-9 text-xs font-bold text-white outline-none transition focus:border-[#d6a852] disabled:opacity-60"
+          className="h-11 w-full rounded-lg border bg-surface-muted/50 px-3 pr-9 text-xs font-semibold text-foreground transition focus:border-brand disabled:opacity-60"
         >
           {access.organisations.map((organisation) => (
             <option key={organisation.id} value={organisation.id} className="text-foreground">
@@ -96,7 +96,7 @@ export function DealershipSwitcher() {
           ))}
         </select>
         {switching ? (
-          <LoaderCircle className="pointer-events-none absolute right-3 top-3 size-4 animate-spin text-white/60" />
+          <LoaderCircle className="pointer-events-none absolute right-3 top-3.5 size-4 animate-spin text-brand" />
         ) : null}
       </div>
     </div>
