@@ -3,7 +3,10 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/admin/page-kit";
 import { VehicleReviewForm } from "@/components/admin/vehicle-review-form";
 
-export default function ReviewVehiclePage() {
+import { requireStaff } from "@/lib/auth/permissions";
+
+export default async function ReviewVehiclePage() {
+  await requireStaff("stock:manage");
   return (
     <div className="space-y-8">
       <PageHeader

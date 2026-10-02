@@ -12,7 +12,6 @@ export default function ErrorPage({
   useEffect(() => {
     console.error("DealerOS route error", {
       digest: error.digest,
-      message: error.message,
     });
   }, [error]);
 
@@ -24,8 +23,8 @@ export default function ErrorPage({
         </p>
         <h1 className="mt-3 font-display text-4xl">We could not load this page.</h1>
         <p className="mt-4 text-foreground/65">
-          Your information has not been discarded. Please try again, or contact the
-          dealership if the problem continues.
+          If this happened while saving, check whether the record was saved before
+          trying again. Contact the dealership if the problem continues.
         </p>
         <button
           type="button"

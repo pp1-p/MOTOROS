@@ -14,6 +14,8 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +31,7 @@ import {
   PublicSelect,
   publicFormInputClass,
 } from "./form-field";
+import { FormErrorSummary } from "./form-error-summary";
 import { postFormData, postJson } from "./form-submit";
 
 const bookingSchema = z.object({
@@ -94,6 +97,7 @@ function getSlotLabel(slot: AvailabilitySlot) {
 }
 
 export function RepairBookingForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(
@@ -109,8 +113,9 @@ export function RepairBookingForm() {
     handleSubmit,
     setValue,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<BookingValues>({
+    shouldFocusError: false,
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       reason: "diagnostics",
@@ -222,7 +227,9 @@ export function RepairBookingForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
+      <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
       <fieldset className="grid gap-5">
@@ -254,8 +261,9 @@ export function RepairBookingForm() {
               placeholder="AB12 CDE"
               {...register("registration")}
               aria-invalid={Boolean(errors.registration)}
+            aria-describedby={errors.registration ? "registration-error" : undefined}
             />
-            <FieldError message={errors.registration?.message} />
+            <FieldError id="registration-error" message={errors.registration?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="bookingMakeModel">
@@ -266,8 +274,9 @@ export function RepairBookingForm() {
               placeholder="e.g. Volkswagen Golf"
               {...register("makeModel")}
               aria-invalid={Boolean(errors.makeModel)}
+            aria-describedby={errors.makeModel ? "makeModel-error" : undefined}
             />
-            <FieldError message={errors.makeModel?.message} />
+            <FieldError id="makeModel-error" message={errors.makeModel?.message} />
           </Field>
         </div>
         <Field>
@@ -279,8 +288,9 @@ export function RepairBookingForm() {
             placeholder="Describe the symptoms, when they started, and anything you have already tried."
             {...register("faultDescription")}
             aria-invalid={Boolean(errors.faultDescription)}
+            aria-describedby={errors.faultDescription ? "faultDescription-error" : undefined}
           />
-          <FieldError message={errors.faultDescription?.message} />
+          <FieldError id="faultDescription-error" message={errors.faultDescription?.message} />
         </Field>
         <Field>
           <FieldLabel htmlFor="bookingLights">
@@ -346,12 +356,13 @@ export function RepairBookingForm() {
                 void loadAvailability(event.target.value);
               }}
               aria-invalid={Boolean(errors.preferredDate)}
+            aria-describedby={errors.preferredDate ? "preferredDate-error" : undefined}
             />
-            <FieldError message={errors.preferredDate?.message} />
+            <FieldError id="preferredDate-error" message={errors.preferredDate?.message} />
           </Field>
           <Field>
             <FieldLabel>Available times</FieldLabel>
-            <div
+            <div data-error-field="timeSlot" tabIndex={-1} role="group" aria-label="Available call times" aria-describedby={errors.timeSlot ? "timeSlot-error" : undefined}
               className={cn(
                 publicFormInputClass,
                 "flex h-auto min-h-12 flex-wrap items-center gap-2 py-2",
@@ -391,7 +402,7 @@ export function RepairBookingForm() {
               )}
             </div>
             <input type="hidden" {...register("timeSlot")} />
-            <FieldError message={errors.timeSlot?.message} />
+            <FieldError id="timeSlot-error" message={errors.timeSlot?.message} />
           </Field>
         </div>
         {availabilityError ? (
@@ -420,8 +431,9 @@ export function RepairBookingForm() {
               autoComplete="name"
               {...register("name")}
               aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "name-error" : undefined}
             />
-            <FieldError message={errors.name?.message} />
+            <FieldError id="name-error" message={errors.name?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="bookingPhone">Telephone</FieldLabel>
@@ -432,8 +444,9 @@ export function RepairBookingForm() {
               autoComplete="tel"
               {...register("phone")}
               aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
             />
-            <FieldError message={errors.phone?.message} />
+            <FieldError id="phone-error" message={errors.phone?.message} />
           </Field>
         </div>
         <Field>
@@ -444,8 +457,9 @@ export function RepairBookingForm() {
             autoComplete="email"
             {...register("email")}
             aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
           />
-          <FieldError message={errors.email?.message} />
+          <FieldError id="email-error" message={errors.email?.message} />
         </Field>
         <Field>
           <FieldLabel htmlFor="bookingContact">
@@ -464,14 +478,6 @@ export function RepairBookingForm() {
         />
       </fieldset>
 
-      {submitError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-        >
-          {submitError}
-        </div>
-      ) : null}
 
       <Button type="submit" size="lg" disabled={isSubmitting || loadingSlots}>
         {isSubmitting ? (
@@ -491,6 +497,7 @@ export function RepairBookingForm() {
         The selected slot is checked again when you submit to prevent
         double-booking.
       </p>
+      </fieldset>
     </form>
   );
 }

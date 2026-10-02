@@ -92,6 +92,8 @@ export function VehicleReviewForm() {
   const searchParams = useSearchParams();
   const [lookup, setLookup] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creationUncertain, setCreationUncertain] = useState(false);
+  const creationPending = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([]);
@@ -177,7 +179,6 @@ export function VehicleReviewForm() {
     sessionStorage.removeItem("dealeros:vehicle-review");
     notify.success("Vehicle created.");
     router.push(`/admin/stock/${vehicleId}?created=1&tab=media`);
-    router.refresh();
   }
 
   async function retryPhotoUploads() {
@@ -215,10 +216,12 @@ export function VehicleReviewForm() {
 
   async function createVehicle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (creationPending.current || creationUncertain || saving) return;
     if (createdVehicleId) {
       void retryPhotoUploads();
       return;
     }
+    creationPending.current = true;
     setSaving(true);
     setError("");
     const data = new FormData(event.currentTarget);
@@ -282,6 +285,7 @@ export function VehicleReviewForm() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20_000),
       });
       const result = (await response.json().catch(() => null)) as
         | {
@@ -345,9 +349,14 @@ export function VehicleReviewForm() {
         }
         return;
       }
-      const id = result?.vehicle?.id ?? result?.data?.id ?? result?.id ?? "new";
-      if (stagedPhotos.length && id !== "new") {
-        setCreatedVehicleId(id);
+      const id = result?.vehicle?.id ?? result?.data?.id ?? result?.id;
+      if (!id) {
+        setCreationUncertain(true);
+        setError("The server did not return a vehicle reference. Check Stock before creating this vehicle again; it may already have been saved.");
+        return;
+      }
+      setCreatedVehicleId(id);
+      if (stagedPhotos.length) {
         const failed = await uploadStagedPhotos(id, payload.publicTitle);
         if (failed.length) {
           setStagedPhotos(failed);
@@ -359,8 +368,10 @@ export function VehicleReviewForm() {
       }
       finishCreation(id);
     } catch {
-      setError("DealerOS could not reach the server. Nothing was saved; please try again.");
+      setCreationUncertain(true);
+      setError("The save response could not be confirmed. Check Stock before creating this vehicle again; it may already have been saved.");
     } finally {
+      creationPending.current = false;
       setSaving(false);
     }
   }
@@ -584,6 +595,7 @@ export function VehicleReviewForm() {
             </span>
           </button>
           <input
+            aria-label="Vehicle photos"
             ref={photoInput}
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -605,7 +617,7 @@ export function VehicleReviewForm() {
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
           <div>
             <p className="text-xs font-extrabold">
-              {createdVehicleId ? "Photos not uploaded" : "Vehicle not created"}
+              {createdVehicleId ? "Photos not uploaded" : creationUncertain ? "Check Stock before retrying" : "Vehicle not created"}
             </p>
             <p className="mt-1 text-xs leading-5 opacity-75">{error}</p>
           </div>
@@ -630,7 +642,7 @@ export function VehicleReviewForm() {
               Continue without them
             </Button>
           ) : null}
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || creationUncertain}>
             {saving ? <LoaderCircle className="animate-spin" /> : null}
             {saving
               ? uploadProgress

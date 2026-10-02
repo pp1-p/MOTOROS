@@ -72,7 +72,7 @@ export function RecordSaleForm({
       router.push(`/admin/sales/${result.sale.sale_id}`);
       router.refresh();
     } catch {
-      setMessage("DealerOS could not reach the server. No sale was recorded.");
+      setMessage("The server response was lost. Check Sales before trying again; the sale may already have been recorded.");
     } finally {
       setSaving(false);
     }

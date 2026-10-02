@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -110,6 +111,7 @@ const roleAccess: Record<StaffRole, readonly string[]> = {
     "/admin/invoices",
     "/admin/reports",
     "/admin/settings",
+    "/admin/website",
   ],
   salesperson: [
     "/admin",
@@ -190,6 +192,7 @@ export function AdminShell({
   displayName: string;
   isPlatformAdmin?: boolean;
 }) {
+  const hydrated = useHydrated();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -592,6 +595,7 @@ export function AdminShell({
             type="button"
             className="grid size-10 place-items-center rounded-xl border bg-white text-foreground/65 lg:hidden"
             onClick={() => openDialog("navigation")}
+            disabled={!hydrated}
             aria-label="Open navigation"
             aria-haspopup="dialog"
             aria-expanded={mobileOpen}
@@ -602,6 +606,7 @@ export function AdminShell({
             type="button"
             onClick={() => openDialog("search")}
             className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border bg-[#f7f7f4] px-3 text-left text-sm text-foreground/40 transition hover:border-foreground/20 sm:max-w-xl"
+            disabled={!hydrated}
             aria-label="Search MOTOR.OS"
             aria-haspopup="dialog"
             aria-expanded={commandOpen}
@@ -621,7 +626,7 @@ export function AdminShell({
           </span>
           <button
             type="button"
-            onClick={() => openDialog("quick")}
+            disabled={!hydrated} onClick={() => openDialog("quick")}
             aria-haspopup="dialog"
             aria-expanded={quickOpen}
             className="hud-cta-gold hidden h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-extrabold text-white transition sm:flex"
@@ -631,7 +636,7 @@ export function AdminShell({
           </button>
           <button
             type="button"
-            onClick={() => openDialog("quick")}
+            disabled={!hydrated} onClick={() => openDialog("quick")}
             className="hud-cta-gold grid size-10 place-items-center rounded-xl text-white sm:hidden"
             aria-label="Quick create"
             aria-haspopup="dialog"
@@ -643,6 +648,7 @@ export function AdminShell({
             type="button"
             onClick={() => openDialog("notifications")}
             className="relative grid size-10 shrink-0 place-items-center rounded-xl border bg-white text-foreground/60 transition hover:bg-surface-muted hover:text-foreground"
+            disabled={!hydrated}
             aria-label={`${unread} unread notifications`}
             aria-haspopup="dialog"
             aria-expanded={notificationsOpen}

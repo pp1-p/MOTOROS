@@ -11,7 +11,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useEffect, useState } from "react";
+
+import { useHydrated } from "@/lib/use-hydrated";
 
 import { Button } from "@/components/ui/button";
 import { AlternateThemeHeader } from "@/components/public/themes/theme-chrome";
@@ -48,29 +51,11 @@ export function PublicHeader({
 }
 
 function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
+  const hydrated = useHydrated();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const menuPanelRef = useRef<HTMLDivElement>(null);
   const contact = getPublicContactDetails(config);
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    if (open) {
-      menuPanelRef.current?.querySelector<HTMLAnchorElement>("a")?.focus();
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !open) return;
-      setOpen(false);
-      menuButtonRef.current?.focus();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -80,6 +65,7 @@ function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
   }, []);
 
   return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
     <header
       className={cn(
         "material-dark sticky -top-[37px] z-50 text-white transition-[border-color,box-shadow] duration-300 ease-out",
@@ -152,17 +138,18 @@ function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
               </Link>
             </Button>
           )}
+          <Dialog.Trigger asChild>
           <button
-            ref={menuButtonRef}
             type="button"
             className="grid size-11 place-items-center rounded-xl border border-white/20 text-white transition hover:bg-white/10 lg:hidden"
-            onClick={() => setOpen((value) => !value)}
+            disabled={!hydrated}
             aria-expanded={open}
             aria-controls="mobile-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}
           >
             {open ? <X aria-hidden /> : <Menu aria-hidden />}
           </button>
+          </Dialog.Trigger>
         </div>
       </div>
 
@@ -179,6 +166,7 @@ function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative py-1.5 text-sm font-bold tracking-wide text-white/70 uppercase transition hover:text-white",
                   active &&
@@ -192,15 +180,14 @@ function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
         </div>
       </nav>
 
-      {open ? (
-        <div
-          ref={menuPanelRef}
-          id="mobile-navigation"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Main navigation menu"
-          className="material-dark absolute inset-x-0 top-full h-[calc(100dvh-5rem)] overflow-y-auto px-4 pb-8 lg:hidden"
-        >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/60" />
+        <Dialog.Content id="mobile-navigation" aria-describedby={undefined}
+          className="material-dark fixed inset-y-0 right-0 z-[110] w-full max-w-sm overflow-y-auto px-4 py-5 text-white">
+          <div className="flex items-center justify-between gap-3">
+            <Dialog.Title className="text-lg font-bold">Main navigation menu</Dialog.Title>
+            <Dialog.Close asChild><button type="button" aria-label="Close navigation" className="grid size-11 place-items-center rounded-xl border border-white/20"><X aria-hidden /></button></Dialog.Close>
+          </div>
           <nav
             aria-label="Mobile navigation"
             className="container-shell flex flex-col border-t border-white/10 pt-4"
@@ -244,8 +231,9 @@ function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
               </Button>
             </div>
           </nav>
-        </div>
-      ) : null}
+        </Dialog.Content>
+      </Dialog.Portal>
     </header>
+    </Dialog.Root>
   );
 }

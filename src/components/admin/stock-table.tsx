@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Download, Grid2X2, List, Plus, Search, X } from "lucide-react";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import type { AdminVehicle } from "./admin-data";
 import { EmptyState, StatusPill } from "./page-kit";
 import { filterAndSortStock, type StockSort } from "./stock-filters";
@@ -55,10 +57,12 @@ function StockCard({ vehicle, canViewCommercial }: {
   );
 }
 
-export function StockTable({ vehicles, canViewCommercial }: {
+export function StockTable({ vehicles, canViewCommercial, canManageStock = false }: {
   vehicles: AdminVehicle[];
   canViewCommercial: boolean;
+  canManageStock?: boolean;
 }) {
+  const hydrated = useHydrated();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All active stock");
   const [sort, setSort] = useState<StockSort>("stock-number");
@@ -76,7 +80,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
 
   return (
     <div className="min-w-0 max-w-full space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 shadow-sm">
+      <fieldset disabled={!hydrated} className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 shadow-sm">
         <div className="relative min-w-0 basis-full md:flex-1 md:basis-auto">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/70" aria-hidden="true" />
           <Input value={query} onChange={(event) => setQuery(event.target.value)}
@@ -89,14 +93,14 @@ export function StockTable({ vehicles, canViewCommercial }: {
             </button>
           ) : null}
         </div>
-        <label className="min-w-0 flex-1 sm:flex-none">
+        <label className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-auto sm:flex-none">
           <span className="sr-only">Stock status</span>
           <select value={status} onChange={(event) => setStatus(event.target.value)}
             className="h-11 w-full rounded-lg border bg-white px-3 text-xs font-semibold sm:w-44">
             {statuses.map((option) => <option key={option}>{option}</option>)}
           </select>
         </label>
-        <label className="min-w-0 flex-1 sm:flex-none">
+        <label className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-auto sm:flex-none">
           <span className="sr-only">Sort stock</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as StockSort)}
             className="h-11 w-full rounded-lg border bg-white px-3 text-xs font-semibold sm:w-40">
@@ -106,7 +110,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
             <option value="price-high">Price: high to low</option>
           </select>
         </label>
-        <Button asChild variant="outline" size="sm" className="h-11">
+        <Button asChild variant="outline" size="sm" className="h-11 w-full sm:w-auto">
           <a href="/api/admin/vehicles/export" download><Download className="size-4" />Export CSV</a>
         </Button>
         <div className="hidden rounded-lg border bg-surface-muted p-1 md:flex" role="group" aria-label="Stock layout">
@@ -118,7 +122,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <p className="font-medium text-foreground/70" role="status" aria-live="polite" aria-atomic="true">
@@ -135,7 +139,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
         <>
           {view === "table" ? (
             <div className="workspace-data-card hidden min-w-0 overflow-hidden md:block">
-              <div className="workspace-table-scroll w-full overflow-x-auto overscroll-x-contain"
+              <div className="workspace-table-scroll relative w-full overflow-x-auto overscroll-x-contain"
                 role="region" aria-label="Stock inventory table" tabIndex={0}>
                 <table className="w-full min-w-[940px] border-collapse text-left text-sm">
                   <caption className="sr-only">Vehicle stock with status, mileage, retail price and age</caption>
@@ -182,7 +186,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
         </>
       ) : vehicles.length === 0 ? (
         <EmptyState title="No cars in stock yet" description="Add your first vehicle using a registration lookup or manual entry."
-          actionHref="/admin/stock/new" actionLabel="Add your first vehicle" />
+          actionHref={canManageStock ? "/admin/stock/new" : undefined} actionLabel={canManageStock ? "Add your first vehicle" : undefined} />
       ) : (
         <div className="rounded-xl border bg-white px-6 py-12 text-center">
           <h2 className="text-lg font-bold">No vehicles match those filters</h2>
@@ -191,11 +195,11 @@ export function StockTable({ vehicles, canViewCommercial }: {
         </div>
       )}
 
-      <div className="fixed bottom-5 right-5 z-20 sm:hidden">
+      {canManageStock ? <div className="fixed bottom-5 right-5 z-20 sm:hidden">
         <Button asChild size="icon" className="size-12 rounded-full shadow-xl">
           <Link href="/admin/stock/new" aria-label="Add a vehicle"><Plus /></Link>
         </Button>
-      </div>
+      </div> : null}
     </div>
   );
 }

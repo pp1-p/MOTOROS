@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,14 +21,15 @@ import {
   HoneypotField,
   PublicSelect,
 } from "./form-field";
+import { FormErrorSummary } from "./form-error-summary";
 import { postJson } from "./form-submit";
 
 const contactSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name").max(100),
   email: z.string().trim().email("Enter a valid email address").max(200),
-  phone: z.string().trim().max(30).optional(),
+  phone: z.string().trim().max(30).refine((value) => !value || (value.length >= 7 && /^[+()\d\s-]+$/.test(value)), "Enter a valid telephone number").optional(),
   subject: z.enum(["general", "sales", "sourcing", "repairs"]),
-  message: z.string().trim().min(10, "Please add a little more detail").max(3000),
+  message: z.string().trim().min(10, "Please add a little more detail").max(2900),
   consent: z.boolean().refine(Boolean, {
     message: "Please agree so we can respond to your message",
   }),
@@ -36,13 +39,15 @@ const contactSchema = z.object({
 type ContactValues = z.infer<typeof contactSchema>;
 
 export function ContactForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<ContactValues>({
+    shouldFocusError: false,
     resolver: zodResolver(contactSchema),
     defaultValues: {
       name: "",
@@ -81,7 +86,9 @@ export function ContactForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
+      <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field>
@@ -91,8 +98,9 @@ export function ContactForm() {
             autoComplete="name"
             {...register("name")}
             aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "name-error" : undefined}
           />
-          <FieldError message={errors.name?.message} />
+          <FieldError id="name-error" message={errors.name?.message} />
         </Field>
         <Field>
           <FieldLabel htmlFor="contactPhone">Telephone (optional)</FieldLabel>
@@ -102,8 +110,10 @@ export function ContactForm() {
             inputMode="tel"
             autoComplete="tel"
             {...register("phone")}
+            aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
           />
-          <FieldError message={errors.phone?.message} />
+          <FieldError id="phone-error" message={errors.phone?.message} />
         </Field>
       </div>
       <Field>
@@ -114,8 +124,9 @@ export function ContactForm() {
           autoComplete="email"
           {...register("email")}
           aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
         />
-        <FieldError message={errors.email?.message} />
+        <FieldError id="email-error" message={errors.email?.message} />
       </Field>
       <Field>
         <FieldLabel htmlFor="contactSubject">What is this about?</FieldLabel>
@@ -133,8 +144,9 @@ export function ContactForm() {
           placeholder="Tell us what you need and the best time to reach you."
           {...register("message")}
           aria-invalid={Boolean(errors.message)}
+            aria-describedby={errors.message ? "message-error" : undefined}
         />
-        <FieldError message={errors.message?.message} />
+        <FieldError id="message-error" message={errors.message?.message} />
       </Field>
       <ConsentField
         id="contactConsent"
@@ -142,14 +154,6 @@ export function ContactForm() {
         error={errors.consent?.message}
         {...register("consent")}
       />
-      {submitError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-        >
-          {submitError}
-        </div>
-      ) : null}
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (
           <>
@@ -163,6 +167,7 @@ export function ContactForm() {
           </>
         )}
       </Button>
+      </fieldset>
     </form>
   );
 }

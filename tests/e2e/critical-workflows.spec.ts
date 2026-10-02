@@ -61,19 +61,19 @@ test("unknown mock registration returns manual fallback without invented data", 
   }
 });
 
-test("full authenticated Supabase workflow", async ({ page }) => {
+test("authenticated Supabase sign-in and vehicle lookup", async ({ page }) => {
   test.skip(
-    !process.env.E2E_ADMIN_EMAIL || !process.env.E2E_ADMIN_PASSWORD,
-    "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD for the live Supabase journey.",
+    process.env.E2E_USE_SUPABASE !== "true" || !process.env.E2E_ADMIN_EMAIL || !process.env.E2E_ADMIN_PASSWORD,
+    "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD alongside E2E_USE_SUPABASE=true and E2E_DISPOSABLE_SUPABASE=true for an isolated Supabase check.",
   );
 
-  await page.goto("/admin/sign-in");
+  await page.goto("/admin/sign-in", { waitUntil: "domcontentloaded" });
   await page.getByLabel(/email/i).fill(process.env.E2E_ADMIN_EMAIL!);
   await page.getByLabel(/password/i).fill(process.env.E2E_ADMIN_PASSWORD!);
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page).toHaveURL(/\/admin$/);
 
-  await page.goto("/admin/stock/new");
+  await page.goto("/admin/stock/new", { waitUntil: "domcontentloaded" });
   await page.getByLabel(/registration/i).fill("DE24 LER");
   await page.getByRole("button", { name: /look up/i }).click();
   await expect(page.getByText(/review|manual/i).first()).toBeVisible();

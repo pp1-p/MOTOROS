@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 
 import type { PublicVehicleImage } from "@/lib/data/vehicles";
+import { useHydrated } from "@/lib/use-hydrated";
 import { cn } from "@/lib/utils";
 
 type VehicleGalleryProps = {
@@ -14,6 +15,7 @@ type VehicleGalleryProps = {
 };
 
 export function VehicleGallery({ images, title }: VehicleGalleryProps) {
+  const hydrated = useHydrated();
   const [selected, setSelected] = useState(0);
   const touchStart = useRef<number | null>(null);
   const current = images[selected];
@@ -67,6 +69,7 @@ export function VehicleGallery({ images, title }: VehicleGalleryProps) {
             </span>
             <Dialog.Trigger asChild>
               <button
+                disabled={!hydrated}
                 type="button"
                 className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-bold text-foreground shadow-sm transition hover:bg-surface-muted"
               >
@@ -79,6 +82,7 @@ export function VehicleGallery({ images, title }: VehicleGalleryProps) {
           {images.length > 1 ? (
             <>
               <button
+                disabled={!hydrated}
                 type="button"
                 onClick={() => show(selected - 1)}
                 aria-label="Previous image"
@@ -87,6 +91,7 @@ export function VehicleGallery({ images, title }: VehicleGalleryProps) {
                 <ChevronLeft aria-hidden />
               </button>
               <button
+                disabled={!hydrated}
                 type="button"
                 onClick={() => show(selected + 1)}
                 aria-label="Next image"
@@ -102,6 +107,7 @@ export function VehicleGallery({ images, title }: VehicleGalleryProps) {
           <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2">
             {images.map((item, index) => (
               <button
+                disabled={!hydrated}
                 type="button"
                 key={`${item.url}-${index}`}
                 onClick={() => setSelected(index)}
@@ -150,6 +156,7 @@ export function VehicleGallery({ images, title }: VehicleGalleryProps) {
           {images.length > 1 ? (
             <>
               <button
+                disabled={!hydrated}
                 type="button"
                 onClick={() => show(selected - 1)}
                 aria-label="Previous full-screen image"
@@ -158,6 +165,7 @@ export function VehicleGallery({ images, title }: VehicleGalleryProps) {
                 <ChevronLeft aria-hidden />
               </button>
               <button
+                disabled={!hydrated}
                 type="button"
                 onClick={() => show(selected + 1)}
                 aria-label="Next full-screen image"

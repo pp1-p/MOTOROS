@@ -260,8 +260,8 @@ export function VehicleSaleInvoiceForm({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-5">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 space-y-5">
         <section className="rounded-2xl border bg-white p-5">
           <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-brand">
             Buyer &amp; vehicle
@@ -624,7 +624,7 @@ export function VehicleSaleInvoiceForm({
         </section>
       </div>
 
-      <aside className="space-y-4 self-start lg:sticky lg:top-4">
+      <aside className="min-w-0 space-y-4 self-start lg:sticky lg:top-4">
         <div className="rounded-2xl border bg-white p-5">
           <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-brand">
             Totals

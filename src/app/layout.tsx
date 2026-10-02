@@ -40,6 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="en-GB"
+      data-scroll-behavior="smooth"
       className={`${displayFont.variable} ${sansFont.variable}`}
     >
       <body>

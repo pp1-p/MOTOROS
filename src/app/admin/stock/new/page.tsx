@@ -1,7 +1,10 @@
 import { PageHeader } from "@/components/admin/page-kit";
 import { VehicleLookupForm } from "@/components/admin/vehicle-lookup-form";
 
-export default function NewVehiclePage() {
+import { requireStaff } from "@/lib/auth/permissions";
+
+export default async function NewVehiclePage() {
+  await requireStaff("stock:manage");
   return (
     <div className="space-y-8">
       <PageHeader

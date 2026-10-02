@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +22,7 @@ import {
   HoneypotField,
   PublicSelect,
 } from "./form-field";
+import { FormErrorSummary } from "./form-error-summary";
 import { postJson } from "./form-submit";
 
 const enquirySchema = z.object({
@@ -64,14 +67,16 @@ export function VehicleEnquiryForm({
   vehicleTitle,
   defaultType = "vehicle_enquiry",
 }: VehicleEnquiryFormProps) {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<EnquiryValues>({
+    shouldFocusError: false,
     resolver: zodResolver(enquirySchema),
     defaultValues: {
       enquiryType: defaultType,
@@ -117,7 +122,9 @@ export function VehicleEnquiryForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
+      <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
       <Field>
@@ -128,7 +135,7 @@ export function VehicleEnquiryForm({
           <option value="callback_request">Request a callback</option>
           <option value="part_exchange">Discuss a part exchange</option>
         </PublicSelect>
-        <FieldError message={errors.enquiryType?.message} />
+        <FieldError id="enquiryType-error" message={errors.enquiryType?.message} />
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -139,8 +146,9 @@ export function VehicleEnquiryForm({
             autoComplete="name"
             {...register("name")}
             aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "name-error" : undefined}
           />
-          <FieldError message={errors.name?.message} />
+          <FieldError id="name-error" message={errors.name?.message} />
         </Field>
         <Field>
           <FieldLabel htmlFor="enquiryPhone">Telephone</FieldLabel>
@@ -151,8 +159,9 @@ export function VehicleEnquiryForm({
             autoComplete="tel"
             {...register("phone")}
             aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
           />
-          <FieldError message={errors.phone?.message} />
+          <FieldError id="phone-error" message={errors.phone?.message} />
         </Field>
       </div>
 
@@ -165,8 +174,9 @@ export function VehicleEnquiryForm({
           autoComplete="email"
           {...register("email")}
           aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
         />
-        <FieldError message={errors.email?.message} />
+        <FieldError id="email-error" message={errors.email?.message} />
       </Field>
 
       <Field>
@@ -204,8 +214,9 @@ export function VehicleEnquiryForm({
           id="enquiryMessage"
           {...register("message")}
           aria-invalid={Boolean(errors.message)}
+            aria-describedby={errors.message ? "message-error" : undefined}
         />
-        <FieldError message={errors.message?.message} />
+        <FieldError id="message-error" message={errors.message?.message} />
       </Field>
 
       <ConsentField
@@ -220,14 +231,6 @@ export function VehicleEnquiryForm({
         {...register("marketingConsent")}
       />
 
-      {submitError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-        >
-          {submitError}
-        </div>
-      ) : null}
 
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (
@@ -246,6 +249,7 @@ export function VehicleEnquiryForm({
         <LockKeyhole className="size-3.5" aria-hidden />
         Your details are sent securely and are never sold.
       </p>
+      </fieldset>
     </form>
   );
 }

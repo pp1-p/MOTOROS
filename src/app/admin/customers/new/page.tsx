@@ -1,3 +1,4 @@
+import { requireStaff } from "@/lib/auth/permissions";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
@@ -7,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-export default function NewCustomerPage() {
+export default async function NewCustomerPage() {
+  await requireStaff("customers:manage");
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
@@ -29,7 +31,8 @@ export default function NewCustomerPage() {
         className="rounded-2xl border bg-white"
         buttonClassName="border-t p-5"
         submitLabel="Create customer"
-        onSuccessMessage="Customer created. Return to the customer list to open the record."
+        onSuccessMessage="Customer created."
+        successRedirect="/admin/customers"
       >
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <label className="text-xs font-extrabold sm:col-span-2">

@@ -12,7 +12,8 @@ These are deliberate, visible boundaries rather than fabricated integrations.
 - Finance is an enquiry/referral only. DealerOS implements no lending,
   underwriting, approval or credit-broking logic.
 - Repair booking reserves a discussion call, not workshop capacity.
-- Email console mode relies on in-app notifications.
+- Email console mode relies on in-app notifications. Invoice email is explicitly
+  unavailable until Resend is configured; provider acceptance is not a delivery receipt.
 - No SMS delivery adapter is included; selecting SMS as a contact preference
   records the preference but does not send a message.
 - The included rate limiter is per application process; use a distributed
