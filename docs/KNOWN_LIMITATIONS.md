@@ -38,8 +38,11 @@ These are deliberate, visible boundaries rather than fabricated integrations.
   creation rather than being embedded in the platform wizard.
 - Browser E2E tests that mutate Supabase require a dedicated seeded test project
   and credentials.
-- Labour and parts rows on repair jobs are currently live but read-only in the
-  admin UI; dedicated item add/edit/delete operations are not included.
+- Owners, managers and service advisors can add, edit and soft-remove labour
+  and parts on open repair jobs. Fee, inspection, discount, note and legacy
+  cancelled rows remain read-only in this editor. Item totals do not overwrite
+  the recorded estimate or previously created invoices. Demo jobs stay
+  read-only; see [REPAIR_JOB_ITEMS.md](REPAIR_JOB_ITEMS.md).
 - Website editing covers dealership branding, theme selection/preview/publication
   and the homepage. Legal, FAQ, testimonial and opening-hours editing screens
   are not included.
