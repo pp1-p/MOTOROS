@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AsyncForm } from "@/components/admin/async-form";
+import { RepairItemsWorkspace } from "@/components/admin/repair-items-workspace";
 import { CreateRepairInvoiceButtons } from "@/components/admin/create-repair-invoice-buttons";
 import { Notice, StatusPill } from "@/components/admin/page-kit";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ import {
   getRepairDetail,
   repairStatusValues,
 } from "@/lib/data/admin-repairs";
-import { formatCurrency } from "@/lib/utils";
 import { getInvoicesForRepair } from "@/lib/data/admin-invoices";
 import {
   formatMoney,
@@ -236,7 +236,7 @@ export default async function RepairJobPage({
             <ArrowLeft />
           </Link>
         </Button>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[calc(100%-3.25rem)] sm:basis-auto">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-extrabold tracking-[-0.035em] sm:text-2xl">
               {job.reference} · {job.vehicle}
@@ -289,7 +289,7 @@ export default async function RepairJobPage({
                   CircleDollarSign,
                   "Estimate",
                   (job.estimateTotal ?? 0) > 0
-                    ? formatCurrency(job.estimateTotal ?? 0)
+                    ? formatMoney(job.estimateTotal ?? 0)
                     : "Pending",
                 ],
               ]
@@ -310,8 +310,8 @@ export default async function RepairJobPage({
         })}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
+      <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-5">
           <section className="rounded-2xl border bg-white">
             <div className="border-b p-5">
               <h2 className="font-extrabold">Job details</h2>
@@ -328,72 +328,29 @@ export default async function RepairJobPage({
             )}
           </section>
 
+          <RepairItemsWorkspace
+            jobId={job.id} items={job.items} canManage={canManage}
+            canViewCommercial={canViewCommercial} isDemo={isDemo}
+            closed={job.status === "collected" || job.status === "cancelled"}
+          />
           <section className="rounded-2xl border bg-white">
             <div className="border-b p-5">
-              <h2 className="font-extrabold">Labour &amp; parts</h2>
-              <p className="mt-1 text-xs text-foreground/42">
-                {canViewCommercial
-                  ? "Live job items. Prices shown excluding VAT."
-                  : "Live labour and parts recorded for this job."}
-              </p>
+              <h2 className="font-extrabold">Recorded estimate</h2>
+              <p className="mt-1 text-xs text-foreground/50">The estimate recorded in Job details is separate from the item totals.</p>
             </div>
-            {job.items.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[620px] text-left">
-                  <thead className="border-b bg-[#fafaf8] text-[9px] font-extrabold uppercase tracking-wider text-foreground/38">
-                    <tr>
-                      <th className="px-5 py-3">Description</th>
-                      <th className="px-4 py-3">Type</th>
-                      <th className="px-4 py-3">Qty / hours</th>
-                      {canViewCommercial ? (
-                        <>
-                          <th className="px-4 py-3">Rate</th>
-                          <th className="px-5 py-3 text-right">Total</th>
-                        </>
-                      ) : null}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y text-xs">
-                    {job.items.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-5 py-3 font-bold">{item.description}</td>
-                        <td className="px-4 py-3 capitalize text-foreground/50">
-                          {item.itemType}
-                        </td>
-                        <td className="px-4 py-3">{item.quantity}</td>
-                        {canViewCommercial ? (
-                          <>
-                            <td className="px-4 py-3">
-                              {formatCurrency(item.unitPrice ?? 0)}
-                            </td>
-                            <td className="px-5 py-3 text-right font-extrabold">
-                              {formatCurrency(item.lineTotal ?? 0)}
-                            </td>
-                          </>
-                        ) : null}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="p-5 text-xs text-foreground/50">
-                No labour or parts have been recorded for this job.
-              </p>
-            )}
             {canViewCommercial ? (
               <div className="ml-auto w-full max-w-xs space-y-2 border-t p-5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-foreground/45">Subtotal</span>
-                  <strong>{formatCurrency(job.estimateNet ?? 0)}</strong>
+                  <strong>{formatMoney(job.estimateNet ?? 0)}</strong>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-foreground/45">VAT</span>
-                  <strong>{formatCurrency(job.estimateVat ?? 0)}</strong>
+                  <strong>{formatMoney(job.estimateVat ?? 0)}</strong>
                 </div>
                 <div className="flex justify-between border-t pt-2 text-base">
                   <span className="font-extrabold">Estimate total</span>
-                  <strong>{formatCurrency(job.estimateTotal ?? 0)}</strong>
+                  <strong>{formatMoney(job.estimateTotal ?? 0)}</strong>
                 </div>
                 {job.customerEmail && (job.estimateTotal ?? 0) > 0 ? (
                   <Button asChild size="sm" className="mt-3 w-full">

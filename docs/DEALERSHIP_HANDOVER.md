@@ -128,8 +128,10 @@ Complete these steps in an isolated MOTOR.OS staging project first:
 
 ## Visible limits to communicate to the dealership
 
-See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md). Repair job labour/parts are
-read-only; their item CRUD interface remains outside this pass. Finance forms
+See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md). The follow-up
+[repair labour/parts editor](REPAIR_JOB_ITEMS.md) adds item management for open
+jobs; its scope and verification are documented separately from this handover
+snapshot. Finance forms
 collect an enquiry, not a finance application or approval. SMS delivery and
 external social publishing require their own adapters and provider setup.
 Auto Trader remains sandbox-only and account-specific read permission must be

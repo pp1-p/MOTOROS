@@ -75,7 +75,7 @@ const technicianDetailColumns =
   "id,reference,assigned_technician_id,status,registration,vehicle_make_model,mileage,reported_fault,diagnosis,work_completed,technician_notes,customer_facing_notes,start_date,due_date,collection_date";
 
 const managementItemColumns =
-  "id,description,item_type,quantity,unit_price,vat_rate,line_total,status,sort_order";
+  "id,description,item_type,quantity,unit_price,vat_rate,line_total,status,sort_order,supplier,part_number,updated_at";
 const technicianItemColumns =
   "id,description,item_type,quantity,status,sort_order";
 

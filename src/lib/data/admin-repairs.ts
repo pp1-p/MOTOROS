@@ -57,6 +57,9 @@ export type RepairJobItem = {
   vatRate: number | null;
   lineTotal: number | null;
   status: string;
+  supplier?: string | null;
+  partNumber?: string | null;
+  updatedAt?: string;
 };
 
 export type RepairDocument = {
@@ -140,6 +143,9 @@ type RepairItemRow = {
   vat_rate?: number | null;
   line_total?: number | null;
   status: string;
+  supplier?: string | null;
+  part_number?: string | null;
+  updated_at?: string;
 };
 
 const demoIds = [
@@ -624,6 +630,11 @@ export async function getRepairDetail(
         ? numberValue(item.line_total)
         : null,
       status: item.status,
+      ...(access.canViewCommercial ? {
+        supplier: item.supplier ?? null,
+        partNumber: item.part_number ?? null,
+        updatedAt: item.updated_at,
+      } : {}),
     }),
   );
   const timeline = (auditResult.data ?? []).map(
