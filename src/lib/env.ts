@@ -29,8 +29,8 @@ const optionalNonEmptyString = z.preprocess(
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: optionalUrl.default("http://localhost:3000"),
   NEXT_PUBLIC_SUPABASE_URL: optionalUrl,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalNonEmptyString,
+  SUPABASE_SERVICE_ROLE_KEY: optionalNonEmptyString,
   DEALEROS_DEMO_MODE: z.enum(["true", "false"]).default("false"),
   DEALEROS_PUBLIC_ORGANISATION_ID: z.uuid().optional(),
   MOTOROS_BASE_DOMAIN: optionalHostname,

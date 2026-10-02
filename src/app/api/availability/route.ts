@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!rate.allowed) {
     return NextResponse.json(
       { message: "Too many availability requests. Please wait a moment." },
-      { status: 429 },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
 

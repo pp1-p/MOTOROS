@@ -4,6 +4,7 @@ import { addMinutes, isAfter, isBefore, parseISO } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import { isSupabaseConfigured } from "@/lib/env";
+import { getDemoSubmissions, isDevelopmentDemoMode } from "@/lib/demo/store";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { getPublicTenant } from "@/lib/tenancy/public-tenant";
 
@@ -76,6 +77,9 @@ export async function getAvailableRepairCallSlots(
         .maybeSingle(),
     ]);
 
+    if (ruleResult.error || exceptionResult.error) {
+      throw new Error("Repair-call availability rules could not be loaded.");
+    }
     if (ruleResult.data) rule = ruleResult.data as Rule;
     else return [];
     isClosed = Boolean(exceptionResult.data?.is_closed);
@@ -89,7 +93,12 @@ export async function getAvailableRepairCallSlots(
       .lt("starts_at", dayEnd.toISOString())
       .gt("ends_at", dayStart.toISOString())
       .not("status", "in", '("cancelled","no_show")');
+    if (bookings.error) throw new Error("Existing repair-call appointments could not be loaded.");
     existing = (bookings.data ?? []) as typeof existing;
+  } else if (isDevelopmentDemoMode()) {
+    existing = getDemoSubmissions()
+      .filter((item) => item.type === "booking" && typeof item.payload.timeSlot === "string")
+      .map((item) => ({ starts_at: String(item.payload.timeSlot), ends_at: addMinutes(parseISO(String(item.payload.timeSlot)), rule.slot_duration_minutes).toISOString() }));
   }
 
   if (isClosed) return [];

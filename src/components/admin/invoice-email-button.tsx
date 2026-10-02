@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Mail, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ export function InvoiceEmailButton({
   invoiceId: string;
   compact?: boolean;
 }) {
+  const router = useRouter();
   const [sending, setSending] = useState(false);
 
   async function sendInvoice() {
@@ -27,7 +29,8 @@ export function InvoiceEmailButton({
       if (!response.ok || !result?.ok) {
         throw new Error(result?.message ?? "The invoice could not be emailed.");
       }
-      toast.success("Invoice emailed to the customer.");
+      toast.success("Invoice accepted by the email provider.");
+      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "The invoice could not be emailed.",
