@@ -78,6 +78,10 @@ test("contact validation focuses a summary and links to the invalid field", asyn
   await page.locator('form button[type="submit"]').click();
   const summary = page.getByRole("alert", { name: "Please check this form" });
   await expect(summary).toBeFocused();
+  await expect(summary).toBeInViewport({ ratio: 1 });
+  const summaryBox = await summary.boundingBox();
+  const headerBox = await page.locator("header").first().boundingBox();
+  expect(summaryBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
   await summary.getByRole("button", { name: "Enter a valid email address" }).click();
   await expect(page.locator("#contactEmail")).toBeFocused();
   await expect(page.locator("#contactEmail")).toHaveAttribute("aria-describedby", "email-error");

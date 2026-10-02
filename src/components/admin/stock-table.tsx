@@ -93,14 +93,14 @@ export function StockTable({ vehicles, canViewCommercial, canManageStock = false
             </button>
           ) : null}
         </div>
-        <label className="min-w-0 flex-1 sm:flex-none">
+        <label className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-auto sm:flex-none">
           <span className="sr-only">Stock status</span>
           <select value={status} onChange={(event) => setStatus(event.target.value)}
             className="h-11 w-full rounded-lg border bg-white px-3 text-xs font-semibold sm:w-44">
             {statuses.map((option) => <option key={option}>{option}</option>)}
           </select>
         </label>
-        <label className="min-w-0 flex-1 sm:flex-none">
+        <label className="min-w-0 flex-1 basis-[calc(50%-0.375rem)] sm:basis-auto sm:flex-none">
           <span className="sr-only">Sort stock</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as StockSort)}
             className="h-11 w-full rounded-lg border bg-white px-3 text-xs font-semibold sm:w-40">
@@ -110,7 +110,7 @@ export function StockTable({ vehicles, canViewCommercial, canManageStock = false
             <option value="price-high">Price: high to low</option>
           </select>
         </label>
-        <Button asChild variant="outline" size="sm" className="h-11">
+        <Button asChild variant="outline" size="sm" className="h-11 w-full sm:w-auto">
           <a href="/api/admin/vehicles/export" download><Download className="size-4" />Export CSV</a>
         </Button>
         <div className="hidden rounded-lg border bg-surface-muted p-1 md:flex" role="group" aria-label="Stock layout">

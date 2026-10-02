@@ -52,6 +52,22 @@ responsive overflow, visual contrast or browser behaviour. Run the three
 Playwright tests and a visual review in a browser-capable environment before
 merging/deploying this change.
 
+## Handover verification update — 2 October 2026
+
+The browser-installation limitation above describes the earlier design pass.
+The follow-up [dealership handover review](DEALERSHIP_HANDOVER.md) has now run
+Chromium successfully: **83 browser checks passed, one authenticated Supabase
+check skipped**, including all three admin-design tests at phone, tablet and
+desktop widths. Public navigation, forms, all 15 vehicle sections, galleries,
+reduced-motion/enlarged-text containment and all four theme previews are also
+covered. Six focused browser checks also passed after the final filter-label
+and sticky-header/error-summary polish. The unit/component suite now has **216 passing tests across 38 files**.
+
+These are isolated demo and mocked-write checks, with the existing font mock.
+Real-device Safari, live tenant content, persistent writes, cross-tenant RLS,
+provider delivery and the handover acceptance steps still need staging review.
+No database migration or application dependency was added by the follow-up.
+
 ## Changed files
 
 - `src/app/admin/admin.css`

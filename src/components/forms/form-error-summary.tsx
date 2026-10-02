@@ -16,12 +16,15 @@ export function FormErrorSummary({ errors, submitCount, submitError }: {
     const newServerError = Boolean(submitError && submitError !== lastServerError.current);
     lastSubmission.current = submitCount;
     lastServerError.current = submitError;
-    if ((newSubmission && entries.length > 0) || newServerError) summary.current?.focus();
+    if ((newSubmission && entries.length > 0) || newServerError) {
+      summary.current?.focus({ preventScroll: true });
+      summary.current?.scrollIntoView?.({ block: "start", behavior: "instant" });
+    }
   }, [submitCount, submitError, entries.length]);
   if (!entries.length && !submitError) return null;
   return (
     <div ref={summary} tabIndex={-1} role="alert" aria-label="Please check this form"
-      className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 focus:outline-2 focus:outline-offset-2 focus:outline-red-700">
+      className="scroll-mt-28 rounded-xl border md:scroll-mt-64 border-red-200 bg-red-50 p-4 text-sm text-red-900 focus:outline-2 focus:outline-offset-2 focus:outline-red-700">
       <p className="font-extrabold">{submitError ?? "Please check the following details."}</p>
       {entries.length ? <ul className="mt-2 space-y-1">{entries.map(([name, error]) => (
         <li key={name}><button type="button" className="min-h-11 text-left font-semibold underline underline-offset-2"

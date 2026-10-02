@@ -36,6 +36,8 @@ that the production database and external providers are working.
 - Mobile public navigation uses the project's Radix dialog primitive for focus
   trapping, Escape, background scroll locking and focus return. Narrow stock
   tables, invoice forms, team tables and long page headings remain contained.
+  Phone filters use separate rows so their labels stay readable. Error summaries
+  scroll below sticky headers when focused.
 - Route-error logging records the digest without copying raw error messages.
 
 The user-requested [UI UX Pro Max skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
@@ -45,17 +47,31 @@ extended; no application dependency or remote installer was added.
 
 ## Automated evidence
 
-Final results are recorded below after the full verification run. The source
-contains repeatable tests rather than a claim that demo data persists.
+The final unit and browser results below come from isolated local verification.
+The source contains repeatable tests rather than a claim that demo data persists.
 
 - Unit suite: 216 tests across 38 files passed, including 13 invoice-email route
   tests, seven availability tests, five submission-helper tests, four rounding
   tests, four administrative form tests and two additional permission/UI regression tests.
-- ESLint and TypeScript passed during implementation; rerun on the final tree.
+- ESLint, TypeScript and `git diff --check` passed on the final code tree.
 - Supabase static security/parity checks verified all 26 existing migrations,
   technician guards, RPC ACL declarations and customer-audit redaction.
-- Browser suite: final verification pending.
-- Production compilation: final verification pending.
+- Browser suite: **83 passed, one skipped** in one clean 84-test run (six minutes).
+  The skipped check is authenticated Supabase sign-in/lookup, which requires
+  credentials for a dedicated test project. The run had no development-cache
+  recovery errors. Six focused browser checks also passed after the final
+  sticky-header/error-summary and phone-filter polish, including an explicit
+  assertion that the focused error summary is fully visible below the header.
+- Production build passed with the existing offline Google-font mock, including
+  TypeScript and generation of all 72 static pages. An initial Turbopack
+  persistence-cache panic was resolved by moving only the generated production
+  cache aside and rerunning the same build command; no source workaround or
+  production font change was needed.
+- Visual review inspected contact errors and stock at phone/desktop widths,
+  with no page runtime errors in those captures. It uses the offline font mock.
+- Vercel preview deployment passed for code commit
+  `217aacf62e7287313a090638ad068fdbe603765d`. This is a deployment check, not a
+  persisted production acceptance test.
 
 Browser coverage includes 52 public/admin routes, phone and desktop containment,
 stock layouts at tablet width, accessible dialogs, public form submissions,
@@ -158,6 +174,66 @@ The PR diff is the authoritative file inventory. Changes cover:
   availability/configuration validation and invoice preview calculation.
 - Unit/component tests, isolated Playwright configuration and browser regression
   tests; README, design evidence, limitations and launch/handover instructions.
+
+Exact changed paths (55 files):
+
+```text
+README.md
+docs/ADMIN_DESIGN.md
+docs/DEALERSHIP_HANDOVER.md
+docs/KNOWN_LIMITATIONS.md
+docs/LAUNCH_CHECKLIST.md
+playwright.config.ts
+src/app/admin/admin.css
+src/app/admin/customers/new/page.tsx
+src/app/admin/stock/new/page.tsx
+src/app/admin/stock/new/review/page.tsx
+src/app/admin/stock/page.tsx
+src/app/admin/team/page.tsx
+src/app/api/admin/invoices/[id]/email/route.test.ts
+src/app/api/admin/invoices/[id]/email/route.ts
+src/app/api/availability/route.ts
+src/app/error.tsx
+src/app/globals.css
+src/app/layout.tsx
+src/components/admin/admin-design.test.tsx
+src/components/admin/admin-shell.tsx
+src/components/admin/async-form.test.tsx
+src/components/admin/async-form.tsx
+src/components/admin/general-invoice-form.tsx
+src/components/admin/invoice-email-button.tsx
+src/components/admin/record-sale-form.tsx
+src/components/admin/repair-invoice-form.tsx
+src/components/admin/stock-table.tsx
+src/components/admin/vehicle-review-form.tsx
+src/components/admin/vehicle-sale-invoice-form.tsx
+src/components/admin/vehicle-workspace.tsx
+src/components/forms/contact-form.tsx
+src/components/forms/finance-enquiry-form.tsx
+src/components/forms/form-error-summary.tsx
+src/components/forms/form-field.tsx
+src/components/forms/form-submit.test.ts
+src/components/forms/form-submit.ts
+src/components/forms/part-exchange-form.tsx
+src/components/forms/repair-booking-form.tsx
+src/components/forms/source-car-form.tsx
+src/components/forms/vehicle-enquiry-form.tsx
+src/components/public/public-header.tsx
+src/components/public/themes/theme-chrome.tsx
+src/components/public/vehicle-gallery.tsx
+src/lib/availability.test.ts
+src/lib/availability.ts
+src/lib/env.test.ts
+src/lib/env.ts
+src/lib/invoices/totals.test.ts
+src/lib/invoices/totals.ts
+src/lib/use-hydrated.ts
+tests/e2e/admin-design.spec.ts
+tests/e2e/critical-workflows.spec.ts
+tests/e2e/handover.spec.ts
+tests/e2e/public-smoke.spec.ts
+tests/e2e/theme-previews.spec.ts
+```
 
 No application package or lockfile change, production configuration change or
 new SQL migration is required. Publishing preserves the original GitHub history
