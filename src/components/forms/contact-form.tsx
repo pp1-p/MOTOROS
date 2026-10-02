@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +39,7 @@ const contactSchema = z.object({
 type ContactValues = z.infer<typeof contactSchema>;
 
 export function ContactForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
@@ -83,7 +86,8 @@ export function ContactForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
       <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
       <div className="grid gap-5 sm:grid-cols-2">
@@ -163,6 +167,7 @@ export function ContactForm() {
           </>
         )}
       </Button>
+      </fieldset>
     </form>
   );
 }

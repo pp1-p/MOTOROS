@@ -14,6 +14,8 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,6 +97,7 @@ function getSlotLabel(slot: AvailabilitySlot) {
 }
 
 export function RepairBookingForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(
@@ -224,7 +227,8 @@ export function RepairBookingForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
       <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
@@ -493,6 +497,7 @@ export function RepairBookingForm() {
         The selected slot is checked again when you submit to prevent
         double-booking.
       </p>
+      </fieldset>
     </form>
   );
 }

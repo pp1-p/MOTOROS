@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Download, Grid2X2, List, Plus, Search, X } from "lucide-react";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import type { AdminVehicle } from "./admin-data";
 import { EmptyState, StatusPill } from "./page-kit";
 import { filterAndSortStock, type StockSort } from "./stock-filters";
@@ -60,6 +62,7 @@ export function StockTable({ vehicles, canViewCommercial, canManageStock = false
   canViewCommercial: boolean;
   canManageStock?: boolean;
 }) {
+  const hydrated = useHydrated();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All active stock");
   const [sort, setSort] = useState<StockSort>("stock-number");
@@ -77,7 +80,7 @@ export function StockTable({ vehicles, canViewCommercial, canManageStock = false
 
   return (
     <div className="min-w-0 max-w-full space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 shadow-sm">
+      <fieldset disabled={!hydrated} className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3 shadow-sm">
         <div className="relative min-w-0 basis-full md:flex-1 md:basis-auto">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/70" aria-hidden="true" />
           <Input value={query} onChange={(event) => setQuery(event.target.value)}
@@ -119,7 +122,7 @@ export function StockTable({ vehicles, canViewCommercial, canManageStock = false
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <p className="font-medium text-foreground/70" role="status" aria-live="polite" aria-atomic="true">

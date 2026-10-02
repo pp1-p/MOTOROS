@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,6 +71,7 @@ const partExchangeSchema = z.object({
 type PartExchangeValues = z.infer<typeof partExchangeSchema>;
 
 export function PartExchangeForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
@@ -134,7 +137,8 @@ export function PartExchangeForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-6" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-6" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
       <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
@@ -306,6 +310,7 @@ export function PartExchangeForm() {
           </>
         )}
       </Button>
+      </fieldset>
     </form>
   );
 }

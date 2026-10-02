@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,6 +57,7 @@ const financeSchema = z.object({
 type FinanceValues = z.infer<typeof financeSchema>;
 
 export function FinanceEnquiryForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -163,7 +166,8 @@ export function FinanceEnquiryForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
       <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
       {prefill.hasAnyPrefill ? (
@@ -339,6 +343,7 @@ export function FinanceEnquiryForm() {
           </>
         )}
       </Button>
+      </fieldset>
     </form>
   );
 }

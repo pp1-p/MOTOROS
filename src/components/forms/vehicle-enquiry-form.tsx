@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +67,7 @@ export function VehicleEnquiryForm({
   vehicleTitle,
   defaultType = "vehicle_enquiry",
 }: VehicleEnquiryFormProps) {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
@@ -119,7 +122,8 @@ export function VehicleEnquiryForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
       <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
@@ -245,6 +249,7 @@ export function VehicleEnquiryForm({
         <LockKeyhole className="size-3.5" aria-hidden />
         Your details are sent securely and are never sold.
       </p>
+      </fieldset>
     </form>
   );
 }

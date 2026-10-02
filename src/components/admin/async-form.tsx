@@ -6,6 +6,7 @@ import { LoaderCircle, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormErrorSummary } from "@/components/forms/form-error-summary";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/lib/use-hydrated";
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ export function AsyncForm({
   onSuccessMessage?: string;
   successRedirect?: string;
 }) {
+  const hydrated = useHydrated();
   const router = useRouter();
   const pending = useRef(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, { message?: string }>>({});
@@ -76,7 +78,13 @@ export function AsyncForm({
         notify.error(errorMessage);
         return;
       }
-      const successMessage = result?.message ?? onSuccessMessage;
+      if (!result) {
+        setFailed(true);
+        setMessage("The server did not confirm the save. Check the record before submitting again; it may already have been saved.");
+        setSubmitCount((count) => count + 1);
+        return;
+      }
+      const successMessage = result.message ?? onSuccessMessage;
       setMessage(successMessage);
       notify.success(successMessage);
       if (successRedirect) router.push(successRedirect);
@@ -95,7 +103,8 @@ export function AsyncForm({
   }
 
   return (
-    <form onSubmit={submit} className={className} aria-busy={saving}>
+    <form method="post" onSubmit={submit} className={className} aria-busy={!hydrated || saving}>
+      <fieldset disabled={!hydrated} className="contents">
       {failed ? <FormErrorSummary errors={fieldErrors} submitCount={submitCount} submitError={message} /> : null}
       {children}
       <div className={cn("mt-5 flex flex-wrap items-center justify-end gap-3", buttonClassName)}>
@@ -112,6 +121,7 @@ export function AsyncForm({
           {saving ? "Saving…" : submitLabel}
         </Button>
       </div>
+      </fieldset>
     </form>
   );
 }

@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("stock layouts, filters and empty states work at phone, tablet and desktop widths", async ({ page }) => {
   for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/admin/stock");
+    await page.goto("/admin/stock", { waitUntil: "load" });
     await expect(page.getByRole("heading", { name: "Stock", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(page.getByLabel("Stock status")).toBeVisible();
@@ -31,7 +31,7 @@ test("stock layouts, filters and empty states work at phone, tablet and desktop 
 
 test("search and quick create trap keyboard focus, close with Escape and return focus", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/admin");
+  await page.goto("/admin", { waitUntil: "load" });
   const search = page.getByRole("button", { name: "Search MOTOR.OS", exact: true });
   await search.click();
   const searchDialog = page.getByRole("dialog", { name: "Global search", exact: true });
@@ -58,7 +58,7 @@ test("search and quick create trap keyboard focus, close with Escape and return 
 
 test("mobile navigation and notifications use accessible dialogs", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/admin/stock");
+  await page.goto("/admin/stock", { waitUntil: "load" });
   const open = page.getByRole("button", { name: "Open navigation", exact: true });
   await expect(page.getByRole("link", { name: "Today", exact: true })).not.toBeVisible();
   await open.click();

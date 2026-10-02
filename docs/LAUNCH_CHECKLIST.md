@@ -1,5 +1,7 @@
 # Launch-readiness checklist
 
+See [the dealership handover guide](DEALERSHIP_HANDOVER.md) for the current code checks, remaining acceptance tests and rollout procedure.
+
 ## Identity and content
 
 - [ ] Replace the working product name where appropriate

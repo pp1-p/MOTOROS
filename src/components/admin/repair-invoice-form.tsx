@@ -194,11 +194,15 @@ export function RepairInvoiceForm({
       .map((line) => ({
         item_type: line.item_type,
         description: line.description.trim() || lineTypeLabels[line.item_type],
-        quantity: Number(line.quantity) || 1,
+        quantity: line.item_type === "note" ? 1 : Number(line.quantity),
         unit_price: line.item_type === "note" ? 0 : Number(line.unit_price) || 0,
         vat_rate: ["note", "discount"].includes(line.item_type) ? 0 : Number(line.vat_rate) || 0,
         repair_code_id: line.repair_code_id ?? undefined,
       }));
+    if (activeLines.some((line) => !Number.isFinite(line.quantity) || line.quantity <= 0)) {
+      setError("Each charged line needs a quantity or number of hours greater than zero.");
+      return;
+    }
     if (activeLines.length === 0) {
       setError("Add at least one repair line");
       return;
@@ -474,7 +478,7 @@ export function RepairInvoiceForm({
                   }
                   type="number"
                   step="0.25"
-                  min={0}
+                  min={0.01}
                   className="h-10 text-right"
                   aria-label="Quantity or hours"
                   disabled={line.item_type === "note"}

@@ -14,6 +14,8 @@ import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useState } from "react";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { AlternateThemeHeader } from "@/components/public/themes/theme-chrome";
 import { getPublicContactDetails } from "@/lib/public-contact";
@@ -49,6 +51,7 @@ export function PublicHeader({
 }
 
 function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
+  const hydrated = useHydrated();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -139,6 +142,7 @@ function ClassicPublicHeader({ config }: { config: PublicSiteConfig }) {
           <button
             type="button"
             className="grid size-11 place-items-center rounded-xl border border-white/20 text-white transition hover:bg-white/10 lg:hidden"
+            disabled={!hydrated}
             aria-expanded={open}
             aria-controls="mobile-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}

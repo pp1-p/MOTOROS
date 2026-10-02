@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useHydrated } from "@/lib/use-hydrated";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,6 +89,7 @@ const sourceCarSchema = z.object({
 type SourceCarValues = z.infer<typeof sourceCarSchema>;
 
 export function SourceCarForm() {
+  const hydrated = useHydrated();
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
@@ -158,7 +161,8 @@ export function SourceCarForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+    <form method="post" aria-busy={!hydrated} onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+      <fieldset disabled={!hydrated} className="contents">
       <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
@@ -473,6 +477,7 @@ export function SourceCarForm() {
         This is a sourcing enquiry, not a commitment to buy or a finance
         application.
       </p>
+      </fieldset>
     </form>
   );
 }

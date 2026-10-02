@@ -9,7 +9,7 @@ const themes = [
 
 for (const [themeId, themeName] of themes) {
   test(`${themeName} can be previewed with dealership content`, async ({ page }) => {
-    await page.goto(`/admin/website/preview/${themeId}`);
+    await page.goto(`/admin/website/preview/${themeId}`, { waitUntil: "domcontentloaded" });
 
     await expect(
       page.getByRole("heading", { level: 1, name: new RegExp(themeName) }).first(),

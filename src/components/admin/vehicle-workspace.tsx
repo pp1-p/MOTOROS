@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
@@ -111,6 +112,7 @@ export function VehicleWorkspace({
   const [tab, setTab] = useState<Tab>(
     tabIds.includes(initialTab as Tab) ? (initialTab as Tab) : "overview",
   );
+  const hydrated = useHydrated();
   const router = useRouter();
   const [status, setStatus] = useState(vehicle.status);
   const [saving, setSaving] = useState(false);
@@ -669,6 +671,7 @@ export function VehicleWorkspace({
                 tab === item.id ? "text-brand" : "text-foreground/42 hover:text-foreground",
               )}
               aria-label={item.label}
+              disabled={!hydrated}
               aria-pressed={tab === item.id}
             >
               {item.label}

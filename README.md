@@ -45,7 +45,7 @@ as production persistence.
 
 Prerequisites:
 
-- Node.js 20.9 or newer
+- Node.js 22 or newer
 - npm 11 or newer
 - a Supabase project, or the Supabase CLI with Docker
 
@@ -139,10 +139,24 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The public/demo-safe journeys run without external credentials. Set
-`E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` against a seeded Supabase test
-project to enable the authenticated stock journey. Never run the destructive
-test suite against a live dealership database.
+The default browser suite uses isolated process-memory demo data and mocked
+administrative writes. It clears Supabase, Auto Trader, DVLA and email-delivery
+configuration for the test server, starts a fresh server and runs one worker.
+It does not verify durable database writes or provider connectivity.
+
+The optional authenticated sign-in/lookup check requires a **dedicated seeded
+Supabase test project**, `E2E_USE_SUPABASE=true`,
+`E2E_DISPOSABLE_SUPABASE=true`, and securely configured `E2E_ADMIN_EMAIL` and
+`E2E_ADMIN_PASSWORD`. Supply these through your shell or deployment secret
+manager; never a tracked file. This check covers sign-in and lookup only; use
+[the dealership handover guide](docs/DEALERSHIP_HANDOVER.md) for full persisted
+acceptance testing. Never point tests at a live dealership database.
+
+If Chromium is already installed outside Playwright's cache, set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its executable. The normal suite uses
+Playwright's installed browser. `E2E_REUSE_SERVER=true` is an explicit local-only
+opt-in; avoid it for repeatable runs because demo bookings and rate limits are
+process state.
 
 ## Application routes
 

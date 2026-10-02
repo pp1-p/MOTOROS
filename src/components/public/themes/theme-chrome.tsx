@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { getPublicContactDetails } from "@/lib/public-contact";
 import { getSiteLogoInitial } from "@/lib/site-metadata";
 import type { ThemeId } from "@/lib/themes";
+import { useHydrated } from "@/lib/use-hydrated";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -89,11 +90,12 @@ function DesktopNavigation({ themeId }: { themeId: ThemeId }) {
 }
 
 function MobileNavigation({ config }: { config: PublicSiteConfig }) {
+  const hydrated = useHydrated();
   const contact = getPublicContactDetails(config);
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
-        <button type="button" className="grid size-11 shrink-0 place-items-center rounded-xl border lg:hidden" aria-label="Open navigation">
+        <button disabled={!hydrated} type="button" className="grid size-11 shrink-0 place-items-center rounded-xl border lg:hidden" aria-label="Open navigation">
           <Menu aria-hidden />
         </button>
       </Dialog.Trigger>
