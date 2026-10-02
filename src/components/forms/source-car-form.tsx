@@ -20,6 +20,7 @@ import {
   HoneypotField,
   PublicSelect,
 } from "./form-field";
+import { FormErrorSummary } from "./form-error-summary";
 import { postJson } from "./form-submit";
 
 const sourceCarSchema = z.object({
@@ -33,8 +34,8 @@ const sourceCarSchema = z.object({
     .regex(/^[+()\d\s-]+$/, "Enter a valid telephone number"),
   preferredContact: z.enum(["phone", "email", "either"]),
   make: z.string().trim().min(1, "Tell us your preferred make").max(80),
-  model: z.string().trim().min(1, "Tell us your preferred model").max(100),
-  alternatives: z.string().trim().max(500).optional(),
+  model: z.string().trim().min(1, "Tell us your preferred model").max(80),
+  alternatives: z.string().trim().max(300).optional(),
   minYear: z
     .number({ error: "Enter the earliest year you would consider" })
     .int()
@@ -53,8 +54,8 @@ const sourceCarSchema = z.object({
     "electric",
   ]),
   transmission: z.enum(["no_preference", "automatic", "manual"]),
-  colourPreferences: z.string().trim().max(300).optional(),
-  requiredFeatures: z.string().trim().max(1200).optional(),
+  colourPreferences: z.string().trim().max(200).optional(),
+  requiredFeatures: z.string().trim().max(1000).optional(),
   budget: z
     .number({ error: "Enter your maximum budget" })
     .min(2000, "Budget must be at least £2,000")
@@ -91,8 +92,9 @@ export function SourceCarForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<SourceCarValues>({
+    shouldFocusError: false,
     resolver: zodResolver(sourceCarSchema),
     defaultValues: {
       name: "",
@@ -157,6 +159,7 @@ export function SourceCarForm() {
 
   return (
     <form onSubmit={onSubmit} className="relative grid gap-9" noValidate>
+      <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
       <fieldset className="grid gap-5">
@@ -171,8 +174,9 @@ export function SourceCarForm() {
               placeholder="e.g. BMW"
               {...register("make")}
               aria-invalid={Boolean(errors.make)}
+            aria-describedby={errors.make ? "make-error" : undefined}
             />
-            <FieldError message={errors.make?.message} />
+            <FieldError id="make-error" message={errors.make?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="sourceModel">Preferred model</FieldLabel>
@@ -181,8 +185,9 @@ export function SourceCarForm() {
               placeholder="e.g. 3 Series Touring"
               {...register("model")}
               aria-invalid={Boolean(errors.model)}
+            aria-describedby={errors.model ? "model-error" : undefined}
             />
-            <FieldError message={errors.model?.message} />
+            <FieldError id="model-error" message={errors.model?.message} />
           </Field>
         </div>
         <Field>
@@ -210,7 +215,7 @@ export function SourceCarForm() {
                   value === "" ? undefined : Number(value),
               })}
             />
-            <FieldError message={errors.minYear?.message} />
+            <FieldError id="minYear-error" message={errors.minYear?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="sourceMaxMileage">
@@ -229,7 +234,7 @@ export function SourceCarForm() {
                   value === "" ? undefined : Number(value),
               })}
             />
-            <FieldError message={errors.maxMileage?.message} />
+            <FieldError id="maxMileage-error" message={errors.maxMileage?.message} />
           </Field>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
@@ -294,9 +299,10 @@ export function SourceCarForm() {
               className="pl-8"
               {...register("budget", { valueAsNumber: true })}
               aria-invalid={Boolean(errors.budget)}
+            aria-describedby={errors.budget ? "budget-error" : undefined}
             />
           </div>
-          <FieldError message={errors.budget?.message} />
+          <FieldError id="budget-error" message={errors.budget?.message} />
           <FieldHint>
             Your full purchase budget, excluding any part exchange.
           </FieldHint>
@@ -320,7 +326,7 @@ export function SourceCarForm() {
                 {...register("depositAvailable", { valueAsNumber: true })}
               />
             </div>
-            <FieldError message={errors.depositAvailable?.message} />
+            <FieldError id="depositAvailable-error" message={errors.depositAvailable?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="sourceFinance">
@@ -367,8 +373,9 @@ export function SourceCarForm() {
             placeholder="How will you use the car? What matters most? Include anything that will help us narrow the search."
             {...register("requirements")}
             aria-invalid={Boolean(errors.requirements)}
+            aria-describedby={errors.requirements ? "requirements-error" : undefined}
           />
-          <FieldError message={errors.requirements?.message} />
+          <FieldError id="requirements-error" message={errors.requirements?.message} />
         </Field>
       </fieldset>
 
@@ -384,8 +391,9 @@ export function SourceCarForm() {
               autoComplete="name"
               {...register("name")}
               aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "name-error" : undefined}
             />
-            <FieldError message={errors.name?.message} />
+            <FieldError id="name-error" message={errors.name?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="sourcePhone">Telephone</FieldLabel>
@@ -396,8 +404,9 @@ export function SourceCarForm() {
               autoComplete="tel"
               {...register("phone")}
               aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
             />
-            <FieldError message={errors.phone?.message} />
+            <FieldError id="phone-error" message={errors.phone?.message} />
           </Field>
         </div>
         <Field>
@@ -408,8 +417,9 @@ export function SourceCarForm() {
             autoComplete="email"
             {...register("email")}
             aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
           />
-          <FieldError message={errors.email?.message} />
+          <FieldError id="email-error" message={errors.email?.message} />
         </Field>
         <Field>
           <FieldLabel htmlFor="sourcePreferredContact">
@@ -444,14 +454,6 @@ export function SourceCarForm() {
         />
       </fieldset>
 
-      {submitError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-        >
-          {submitError}
-        </div>
-      ) : null}
 
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (

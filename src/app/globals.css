@@ -696,3 +696,9 @@ select {
     transform: none !important;
   }
 }
+
+/* Keep long page titles legible on narrow screens. */
+.theme-standard-hero h1 { overflow-wrap: anywhere; }
+@media (max-width: 639px) {
+  .theme-standard-hero h1 { font-size: clamp(2.5rem, 10vw, 3.25rem); line-height: 1.06; }
+}

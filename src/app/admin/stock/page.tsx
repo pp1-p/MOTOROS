@@ -6,7 +6,11 @@ import { StockTable } from "@/components/admin/stock-table";
 import { Button } from "@/components/ui/button";
 import { getAdminVehicleInventory } from "@/lib/data/admin-vehicles";
 
+import { hasPermission, requireStaff } from "@/lib/auth/permissions";
+
 export default async function StockPage() {
+  const staff = await requireStaff("stock:view");
+  const canManageStock = hasPermission(staff.role, "stock:manage");
   const { vehicles, canViewCommercial } = await getAdminVehicleInventory();
   const activeVehicles = vehicles.filter(
     (vehicle) => !["Sold", "Returned", "Archived"].includes(vehicle.status),
@@ -45,12 +49,12 @@ export default async function StockPage() {
                 Advertising
               </Link>
             </Button>
-            <Button asChild size="sm">
+            {canManageStock ? <Button asChild size="sm">
               <Link href="/admin/stock/new">
                 <Plus />
                 Add vehicle
               </Link>
-            </Button>
+            </Button> : null}
           </div>
         }
       />
@@ -72,6 +76,7 @@ export default async function StockPage() {
       <StockTable
         vehicles={vehicles}
         canViewCommercial={canViewCommercial}
+        canManageStock={canManageStock}
       />
     </div>
   );

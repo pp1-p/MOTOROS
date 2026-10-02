@@ -19,11 +19,12 @@ import {
   FieldLabel,
   HoneypotField,
 } from "./form-field";
+import { FormErrorSummary } from "./form-error-summary";
 import { postJson } from "./form-submit";
 
 const partExchangeSchema = z.object({
-  firstName: z.string().trim().min(2, "Please enter your first name").max(80),
-  surname: z.string().trim().min(2, "Please enter your surname").max(80),
+  firstName: z.string().trim().min(2, "Please enter your first name").max(59),
+  surname: z.string().trim().min(2, "Please enter your surname").max(60),
   email: z.string().trim().email("Enter a valid email address").max(200),
   phone: z
     .string()
@@ -73,8 +74,9 @@ export function PartExchangeForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<PartExchangeValues>({
+    shouldFocusError: false,
     resolver: zodResolver(partExchangeSchema),
     defaultValues: {
       firstName: "",
@@ -133,6 +135,7 @@ export function PartExchangeForm() {
 
   return (
     <form onSubmit={onSubmit} className="relative grid gap-6" noValidate>
+      <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
 
       <div>
@@ -147,8 +150,9 @@ export function PartExchangeForm() {
               autoComplete="given-name"
               {...register("firstName")}
               aria-invalid={Boolean(errors.firstName)}
+            aria-describedby={errors.firstName ? "firstName-error" : undefined}
             />
-            <FieldError message={errors.firstName?.message} />
+            <FieldError id="firstName-error" message={errors.firstName?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxSurname">Surname</FieldLabel>
@@ -157,8 +161,9 @@ export function PartExchangeForm() {
               autoComplete="family-name"
               {...register("surname")}
               aria-invalid={Boolean(errors.surname)}
+            aria-describedby={errors.surname ? "surname-error" : undefined}
             />
-            <FieldError message={errors.surname?.message} />
+            <FieldError id="surname-error" message={errors.surname?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxPhone">Telephone</FieldLabel>
@@ -169,8 +174,9 @@ export function PartExchangeForm() {
               autoComplete="tel"
               {...register("phone")}
               aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
             />
-            <FieldError message={errors.phone?.message} />
+            <FieldError id="phone-error" message={errors.phone?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxEmail">Email address</FieldLabel>
@@ -180,8 +186,9 @@ export function PartExchangeForm() {
               autoComplete="email"
               {...register("email")}
               aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
             />
-            <FieldError message={errors.email?.message} />
+            <FieldError id="email-error" message={errors.email?.message} />
           </Field>
         </div>
       </div>
@@ -198,8 +205,9 @@ export function PartExchangeForm() {
               placeholder="e.g. Land Rover"
               {...register("make")}
               aria-invalid={Boolean(errors.make)}
+            aria-describedby={errors.make ? "make-error" : undefined}
             />
-            <FieldError message={errors.make?.message} />
+            <FieldError id="make-error" message={errors.make?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxModel">Model</FieldLabel>
@@ -208,8 +216,9 @@ export function PartExchangeForm() {
               placeholder="e.g. Range Rover Sport"
               {...register("model")}
               aria-invalid={Boolean(errors.model)}
+            aria-describedby={errors.model ? "model-error" : undefined}
             />
-            <FieldError message={errors.model?.message} />
+            <FieldError id="model-error" message={errors.model?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxReg">Registration</FieldLabel>
@@ -219,8 +228,9 @@ export function PartExchangeForm() {
               className="uppercase"
               {...register("registration")}
               aria-invalid={Boolean(errors.registration)}
+            aria-describedby={errors.registration ? "registration-error" : undefined}
             />
-            <FieldError message={errors.registration?.message} />
+            <FieldError id="registration-error" message={errors.registration?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxMileage">Mileage</FieldLabel>
@@ -231,8 +241,9 @@ export function PartExchangeForm() {
               min={0}
               {...register("mileage", { valueAsNumber: true })}
               aria-invalid={Boolean(errors.mileage)}
+            aria-describedby={errors.mileage ? "mileage-error" : undefined}
             />
-            <FieldError message={errors.mileage?.message} />
+            <FieldError id="mileage-error" message={errors.mileage?.message} />
           </Field>
           <Field>
             <FieldLabel htmlFor="pxYear">
@@ -281,14 +292,6 @@ export function PartExchangeForm() {
         {...register("consent")}
       />
 
-      {submitError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-        >
-          {submitError}
-        </div>
-      ) : null}
 
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (

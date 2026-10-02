@@ -110,6 +110,7 @@ const roleAccess: Record<StaffRole, readonly string[]> = {
     "/admin/invoices",
     "/admin/reports",
     "/admin/settings",
+    "/admin/website",
   ],
   salesperson: [
     "/admin",

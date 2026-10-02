@@ -40,10 +40,10 @@ export function FieldHint({
   );
 }
 
-export function FieldError({ message }: { message?: string }) {
+export function FieldError({ message, id }: { message?: string; id?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="text-xs font-bold text-danger">
+    <p id={id} className="text-xs font-bold text-danger">
       {message}
     </p>
   );
@@ -79,13 +79,15 @@ export function ConsentField({
       >
         <input
           id={id}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
           type="checkbox"
           className="mt-1 size-4 shrink-0 accent-brand"
           {...props}
         />
         <span>{label}</span>
       </label>
-      <FieldError message={error} />
+      <FieldError id={`${id}-error`} message={error} />
     </div>
   );
 }

@@ -152,3 +152,5 @@
   .motor-sidebar a[data-active="true"] { outline: 2px solid Highlight; }
   .hud-shell :focus-visible { outline-color: Highlight; }
 }
+
+.hud-shell select { min-width: 0; max-width: 100%; }

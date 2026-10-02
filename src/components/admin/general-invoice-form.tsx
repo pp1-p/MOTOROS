@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { calculateInvoicePreview } from "@/lib/invoices/totals";
+
 import { Button } from "@/components/ui/button";
 import type {
   GeneralInvoiceCustomerOption,
@@ -111,27 +113,7 @@ export function GeneralInvoiceForm({
 
   const effectiveVat =
     showVat && !["zero", "exempt", "not_registered"].includes(vatTreatment);
-  const totals = useMemo(() => {
-    let subtotal = 0;
-    let discount = 0;
-    let vat = 0;
-    for (const line of lines) {
-      const net = Math.max(Number(line.quantity) || 0, 0) *
-        Math.max(Number(line.unitPrice) || 0, 0);
-      if (line.itemType === "discount") {
-        discount += net;
-      } else {
-        subtotal += net;
-        vat += effectiveVat ? net * (Math.max(Number(line.vatRate) || 0, 0) / 100) : 0;
-      }
-    }
-    return {
-      subtotal: Math.max(subtotal, 0),
-      discount: Math.max(discount, 0),
-      vat: Math.max(vat, 0),
-      total: Math.max(subtotal - discount + vat, 0),
-    };
-  }, [effectiveVat, lines]);
+  const totals = useMemo(() => calculateInvoicePreview(lines, effectiveVat), [effectiveVat, lines]);
 
   function updateLine(key: string, patch: Partial<EditableLine>) {
     setLines((current) =>
@@ -176,8 +158,8 @@ export function GeneralInvoiceForm({
           item_type: line.itemType,
           description: line.description,
           quantity: Number(line.quantity),
-          unit_price: Number(line.unitPrice),
-          vat_rate: effectiveVat ? Number(line.vatRate) : 0,
+          unit_price: line.itemType === "note" ? 0 : Number(line.unitPrice),
+          vat_rate: effectiveVat && !["note", "discount"].includes(line.itemType) ? Number(line.vatRate) : 0,
         })),
       };
       const response = await fetch(
@@ -196,7 +178,6 @@ export function GeneralInvoiceForm({
       }
       toast.success(initial ? "Invoice updated." : "Invoice created.");
       router.push(`/admin/invoices/${result.invoiceId ?? initial?.id}`);
-      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "The invoice could not be saved.",

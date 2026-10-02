@@ -116,6 +116,14 @@ describe("admin design semantics and modal behaviour (DOM, not visual layout)", 
     expect(screen.getByRole("link", { name: "Current Golf" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("1 matching results");
   });
+  it("shows managers website controls without granting team management", async () => {
+    render(<AdminShell role="manager" organisationName="Demo" displayName="Manager"><h1>Workspace</h1></AdminShell>);
+    fireEvent.click(screen.getByRole("button", { name: "More tools" }));
+    expect(screen.getByRole("link", { name: "Website" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Team" })).not.toBeInTheDocument();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+  });
+
 });
 
 describe("stock controls", () => {
@@ -150,4 +158,11 @@ describe("stock controls", () => {
     rerender(<StockTable vehicles={vehicles} canViewCommercial={true} />);
     expect(screen.getByRole("columnheader", { name: "Est. margin" })).toBeInTheDocument();
   });
+  it("hides stock creation links for users without manage permission", () => {
+    const { rerender } = render(<StockTable vehicles={[]} canViewCommercial={false} />);
+    expect(screen.queryByRole("link", { name: /Add.*vehicle/i })).not.toBeInTheDocument();
+    rerender(<StockTable vehicles={[]} canViewCommercial={false} canManageStock />);
+    expect(screen.getByRole("link", { name: "Add your first vehicle" })).toBeInTheDocument();
+  });
+
 });

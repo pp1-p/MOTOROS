@@ -668,6 +668,7 @@ export function VehicleWorkspace({
                 "relative py-3 text-xs font-extrabold",
                 tab === item.id ? "text-brand" : "text-foreground/42 hover:text-foreground",
               )}
+              aria-label={item.label}
               aria-pressed={tab === item.id}
             >
               {item.label}

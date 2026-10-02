@@ -10,6 +10,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { calculateInvoicePreview } from "@/lib/invoices/totals";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -175,28 +177,7 @@ export function RepairInvoiceForm({
     setCodeSearch("");
   }
 
-  const totals = useMemo(() => {
-    let subtotal = 0;
-    let discount = 0;
-    let vat = 0;
-    for (const line of lines) {
-      const qty = Number(line.quantity) || 0;
-      const unit = Number(line.unit_price) || 0;
-      const rate = Number(line.vat_rate) || 0;
-      if (line.item_type === "note") continue;
-      const net = qty * unit;
-      if (line.item_type === "discount") {
-        discount += Math.abs(net);
-        continue;
-      }
-      subtotal += net;
-      if (showVat && !["zero", "exempt", "not_registered"].includes(vatTreatment)) {
-        vat += (net * rate) / 100;
-      }
-    }
-    const total = Math.max(subtotal - discount + vat, 0);
-    return { subtotal, discount, vat, total };
-  }, [lines, showVat, vatTreatment]);
+  const totals = useMemo(() => calculateInvoicePreview(lines.map((line) => ({ itemType: line.item_type, quantity: line.quantity, unitPrice: line.unit_price, vatRate: line.vat_rate })), showVat && !["zero", "exempt", "not_registered"].includes(vatTreatment)), [lines, showVat, vatTreatment]);
 
   async function submit(status: "draft" | "sent") {
     setError(null);
@@ -214,8 +195,8 @@ export function RepairInvoiceForm({
         item_type: line.item_type,
         description: line.description.trim() || lineTypeLabels[line.item_type],
         quantity: Number(line.quantity) || 1,
-        unit_price: Number(line.unit_price) || 0,
-        vat_rate: Number(line.vat_rate) || 0,
+        unit_price: line.item_type === "note" ? 0 : Number(line.unit_price) || 0,
+        vat_rate: ["note", "discount"].includes(line.item_type) ? 0 : Number(line.vat_rate) || 0,
         repair_code_id: line.repair_code_id ?? undefined,
       }));
     if (activeLines.length === 0) {
@@ -278,8 +259,8 @@ export function RepairInvoiceForm({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="space-y-5">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 space-y-5">
         <section className="rounded-2xl border bg-white p-5">
           <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-brand">
             Customer &amp; vehicle
@@ -616,7 +597,7 @@ export function RepairInvoiceForm({
         </section>
       </div>
 
-      <aside className="space-y-4 self-start lg:sticky lg:top-4">
+      <aside className="min-w-0 space-y-4 self-start lg:sticky lg:top-4">
         <div className="rounded-2xl border bg-white p-5">
           <h2 className="text-sm font-extrabold uppercase tracking-[0.14em] text-brand">
             Totals

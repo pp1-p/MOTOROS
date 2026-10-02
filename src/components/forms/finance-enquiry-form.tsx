@@ -23,6 +23,7 @@ import {
   HoneypotField,
   PublicSelect,
 } from "./form-field";
+import { FormErrorSummary } from "./form-error-summary";
 import { postJson } from "./form-submit";
 
 const financeSchema = z.object({
@@ -69,8 +70,9 @@ export function FinanceEnquiryForm() {
     handleSubmit,
     reset,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<FinanceValues>({
+    shouldFocusError: false,
     resolver: zodResolver(financeSchema),
     defaultValues: {
       name: "",
@@ -162,6 +164,7 @@ export function FinanceEnquiryForm() {
 
   return (
     <form onSubmit={onSubmit} className="relative grid gap-5" noValidate>
+      <FormErrorSummary errors={errors} submitCount={submitCount} submitError={submitError} />
       <HoneypotField registerProps={register("website")} />
       {prefill.hasAnyPrefill ? (
         <div className="rounded-2xl border border-brand/25 bg-brand-soft/70 p-4 text-xs font-semibold leading-6 text-brand-strong">
@@ -222,8 +225,9 @@ export function FinanceEnquiryForm() {
             autoComplete="name"
             {...register("name")}
             aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "name-error" : undefined}
           />
-          <FieldError message={errors.name?.message} />
+          <FieldError id="name-error" message={errors.name?.message} />
         </Field>
         <Field>
           <FieldLabel htmlFor="finPhone">Telephone</FieldLabel>
@@ -234,8 +238,9 @@ export function FinanceEnquiryForm() {
             autoComplete="tel"
             {...register("phone")}
             aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "phone-error" : undefined}
           />
-          <FieldError message={errors.phone?.message} />
+          <FieldError id="phone-error" message={errors.phone?.message} />
         </Field>
       </div>
       <Field>
@@ -246,8 +251,9 @@ export function FinanceEnquiryForm() {
           autoComplete="email"
           {...register("email")}
           aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
         />
-        <FieldError message={errors.email?.message} />
+        <FieldError id="email-error" message={errors.email?.message} />
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field>
@@ -320,14 +326,6 @@ export function FinanceEnquiryForm() {
         error={errors.consent?.message}
         {...register("consent")}
       />
-      {submitError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800"
-        >
-          {submitError}
-        </div>
-      ) : null}
       <Button type="submit" size="lg" disabled={isSubmitting}>
         {isSubmitting ? (
           <>

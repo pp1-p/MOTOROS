@@ -55,9 +55,10 @@ function StockCard({ vehicle, canViewCommercial }: {
   );
 }
 
-export function StockTable({ vehicles, canViewCommercial }: {
+export function StockTable({ vehicles, canViewCommercial, canManageStock = false }: {
   vehicles: AdminVehicle[];
   canViewCommercial: boolean;
+  canManageStock?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All active stock");
@@ -135,7 +136,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
         <>
           {view === "table" ? (
             <div className="workspace-data-card hidden min-w-0 overflow-hidden md:block">
-              <div className="workspace-table-scroll w-full overflow-x-auto overscroll-x-contain"
+              <div className="workspace-table-scroll relative w-full overflow-x-auto overscroll-x-contain"
                 role="region" aria-label="Stock inventory table" tabIndex={0}>
                 <table className="w-full min-w-[940px] border-collapse text-left text-sm">
                   <caption className="sr-only">Vehicle stock with status, mileage, retail price and age</caption>
@@ -182,7 +183,7 @@ export function StockTable({ vehicles, canViewCommercial }: {
         </>
       ) : vehicles.length === 0 ? (
         <EmptyState title="No cars in stock yet" description="Add your first vehicle using a registration lookup or manual entry."
-          actionHref="/admin/stock/new" actionLabel="Add your first vehicle" />
+          actionHref={canManageStock ? "/admin/stock/new" : undefined} actionLabel={canManageStock ? "Add your first vehicle" : undefined} />
       ) : (
         <div className="rounded-xl border bg-white px-6 py-12 text-center">
           <h2 className="text-lg font-bold">No vehicles match those filters</h2>
@@ -191,11 +192,11 @@ export function StockTable({ vehicles, canViewCommercial }: {
         </div>
       )}
 
-      <div className="fixed bottom-5 right-5 z-20 sm:hidden">
+      {canManageStock ? <div className="fixed bottom-5 right-5 z-20 sm:hidden">
         <Button asChild size="icon" className="size-12 rounded-full shadow-xl">
           <Link href="/admin/stock/new" aria-label="Add a vehicle"><Plus /></Link>
         </Button>
-      </div>
+      </div> : null}
     </div>
   );
 }

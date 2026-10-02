@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { TeamMemberControls } from "@/components/admin/team-member-controls";
 import { getAdminTeamList } from "@/lib/data/admin-operational";
 
+import { hasPermission, requireStaff } from "@/lib/auth/permissions";
+import type { StaffRole } from "@/lib/types";
+
+const roleNames: [StaffRole, string][] = [["owner", "Owner"], ["manager", "Manager"], ["salesperson", "Salesperson"], ["service_advisor", "Service advisor"], ["technician", "Technician"], ["website_editor", "Website editor"]];
+
 export default async function TeamPage() {
+  await requireStaff("team:manage");
   const { members, metrics } = await getAdminTeamList();
   return (
     <div className="space-y-6">
@@ -99,8 +105,8 @@ export default async function TeamPage() {
           </table>
         </div>
       </div>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-2xl border bg-white p-5">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="min-w-0 rounded-2xl border bg-white p-5">
           <div className="flex items-center gap-2">
             <KeyRound className="size-4 text-brand" />
             <h2 className="font-extrabold">Role access summary</h2>
@@ -118,14 +124,14 @@ export default async function TeamPage() {
                 </tr>
               </thead>
               <tbody className="divide-y font-bold">
-                {[
-                  ["Owner", "Full", "Full", "Full", "Full", "Full"],
-                  ["Manager", "Full", "Full", "Operational", "View", "Limited"],
-                  ["Salesperson", "Assigned", "View", "Sales only", "View", "None"],
-                  ["Service advisor", "View", "Full", "Repair only", "None", "None"],
-                  ["Technician", "None", "Assigned jobs", "None", "None", "None"],
-                  ["Website editor", "Presentation", "None", "None", "Full", "None"],
-                ].map((row) => (
+                {roleNames.map(([role, label]) => [
+                  label,
+                  [hasPermission(role, "stock:manage") ? "Stock manage" : hasPermission(role, "stock:view") ? "Stock view" : "No stock", hasPermission(role, "leads:manage") ? "leads manage" : hasPermission(role, "leads:view") ? "leads view" : "no leads"].join(" / "),
+                  hasPermission(role, "repairs:manage") ? "Manage" : hasPermission(role, "technician:update") ? "Assigned jobs" : hasPermission(role, "repairs:view") ? "View" : "None",
+                  hasPermission(role, "commercial:view") ? "Full" : hasPermission(role, "invoices:manage") ? "Invoices manage" : hasPermission(role, "invoices:view") ? "Invoices view" : "None",
+                  hasPermission(role, "website:manage") ? "Manage" : "None",
+                  [hasPermission(role, "team:manage") ? "Team manage" : "No team", hasPermission(role, "settings:manage") ? "settings manage" : "no settings"].join(" / "),
+                ]).map((row) => (
                   <tr key={row[0]}>
                     {row.map((cell, index) => (
                       <td key={index} className={`py-2.5 pr-3 ${index ? "text-foreground/48" : ""}`}>
@@ -141,7 +147,7 @@ export default async function TeamPage() {
         <AsyncForm
           endpoint="/api/admin/team/invitations"
           method="POST"
-          className="rounded-2xl border bg-white p-5"
+          className="min-w-0 rounded-2xl border bg-white p-5"
           submitLabel="Send secure invite"
           onSuccessMessage="Invitation sent and audit event recorded."
         >

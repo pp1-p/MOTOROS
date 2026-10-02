@@ -61,10 +61,10 @@ test("unknown mock registration returns manual fallback without invented data", 
   }
 });
 
-test("full authenticated Supabase workflow", async ({ page }) => {
+test("authenticated Supabase sign-in and vehicle lookup", async ({ page }) => {
   test.skip(
-    !process.env.E2E_ADMIN_EMAIL || !process.env.E2E_ADMIN_PASSWORD,
-    "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD for the live Supabase journey.",
+    process.env.E2E_USE_SUPABASE !== "true" || !process.env.E2E_ADMIN_EMAIL || !process.env.E2E_ADMIN_PASSWORD,
+    "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD alongside E2E_USE_SUPABASE=true and E2E_DISPOSABLE_SUPABASE=true for an isolated Supabase check.",
   );
 
   await page.goto("/admin/sign-in");
