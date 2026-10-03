@@ -50,6 +50,7 @@ These are deliberate, visible boundaries rather than fabricated integrations.
   regulated finance/referral calculator is selected and approved.
 - Error-monitoring instrumentation such as Sentry is not bundled. Configure an
   approved monitoring service as a separate launch task.
-- The SQL migrations were statically reviewed and the application build/tests
-  run locally, but migrations and authenticated journeys must still be applied
-  and verified against a dedicated staging Supabase project before launch.
+- The connected database passed 30 rollback-only repair workflow and permission
+  checks; see [DATABASE_VERIFICATION.md](DATABASE_VERIFICATION.md). Full migration
+  replay and authenticated browser journeys still need a dedicated staging
+  Supabase project before dealership handover.
