@@ -9,7 +9,7 @@ combined initial deployment bundle on an existing database.
 
 ## Permission correction
 
-`20261003165914_database_permission_hardening.sql` closes these verified gaps:
+`20261003171933_database_permission_hardening.sql` closes these verified gaps:
 
 - Authenticated users had table-wide reads on repair jobs and items. Assigned
   technicians could query commercial fields even though the app omitted them.
@@ -62,7 +62,13 @@ The proposed migration and test ran together in a rollback-only transaction
 against MOTOR.OS: all 30 checks passed. A separate read confirmed no verification
 dealerships remained, customer count stayed at two, and job/item counts remained
 zero. No existing customer values were read. The preflight also rolled back its
-permission changes; deploying the focused migration is a separate step.
+permission changes. The focused migration was then applied to MOTOR.OS and
+recorded as version 20261003171933; all 30 checks passed again against the saved
+permissions. The tracked filename matches the database migration history.
+Supabase's anonymous SECURITY DEFINER warnings fell from five to one: the
+remaining anonymous entry is the intentional availability projection.
+GitHub Quality passed bundle verification, type checking, lint, all 270 unit
+tests and the production build. Vercel's preview check passed.
 
 This proves PostgreSQL behaviour with the real schema, RLS and roles. It does
 not prove authenticated browser save/reload/sign-in journeys or simultaneous

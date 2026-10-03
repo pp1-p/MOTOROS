@@ -14263,7 +14263,7 @@ $$;
 
 commit;
 
--- ===== 20261003165914_database_permission_hardening.sql =====
+-- ===== 20261003171933_database_permission_hardening.sql =====
 
 begin;
 set local lock_timeout = '5s';
