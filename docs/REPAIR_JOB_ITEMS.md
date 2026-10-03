@@ -72,8 +72,11 @@ production build passed with the repository's existing offline Google-font mock.
 Screenshots of the repair items at phone and desktop widths were reviewed; the
 browser check covers 390, 768 and 1440 pixels with no page runtime errors.
 
-These tests do not establish persistence or database isolation in MOTOR.OS's live
-Supabase project. Before dealership acceptance, use an isolated project to add,
+The follow-up [database verification](DATABASE_VERIFICATION.md) passed 30
+rollback-only checks against MOTOR.OS's real schema, covering item changes,
+tenant/technician isolation and draft estimate creation. No test fixtures remain.
+This does not verify an authenticated browser's complete save journey.
+Before dealership acceptance, use an isolated project to add,
 edit and remove a test row; reload and sign in again, race two staff edits, verify
 the job activity and create an estimate from the remaining rows. Verify that
 another dealership and an assigned technician cannot change item pricing.
